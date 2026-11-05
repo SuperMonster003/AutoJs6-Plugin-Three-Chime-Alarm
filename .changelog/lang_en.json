@@ -14,7 +14,7 @@
       ],
       "feature": [
         "Plugin skeleton: Wake activation protocol, Plugin Center identity service and alarm capability service",
-        "No native libraries: a single APK for every device",
+        "A single APK for every device, including devices with 16 KB memory pages",
         "README, Plugin Center instructions and changelogs in 10 languages, generated from JSON sources"
       ],
       "dependency": [

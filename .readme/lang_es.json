@@ -38,7 +38,7 @@
     "Abra el complemento y conceda los permisos de notificaciones, alarmas exactas y alertas a pantalla completa cuando se soliciten; después funciona como una aplicación de reloj normal.",
     "Para usar el módulo `alarms` en scripts, actualice AutoJs6 a la compilación interna {{ required_host_version_code }} ({{ required_host_version_name }}) o posterior y active el complemento en el centro de complementos."
   ],
-  "p_usage_note": "El complemento es compatible con dispositivos con Android {{ min_android_version }} (API {{ android_min_sdk }}) o posterior. El APK no contiene bibliotecas nativas, por lo que hay un único paquete y la comprobación del tamaño de página de memoria de 16 KB no se aplica.",
+  "p_usage_note": "El complemento es compatible con dispositivos con Android {{ min_android_version }} (API {{ android_min_sdk }}) o posterior. Hay un único paquete para todos los dispositivos; su única biblioteca nativa procede del kit de interfaz Compose y está alineada a páginas de memoria de 16 KB, por lo que también funciona en dispositivos con páginas de 16 KB.",
   "p_script_api_intro": "Los scripts usan estas funciones mediante el módulo global `alarms` (también disponible como `$alarms`) (borrador de diseño de la 1.0.0; prevalece la documentación de la versión publicada)",
   "api_points": [
     "`alarms.add(options)` crea una alarma y devuelve un objeto de alarma; `alarms.list`, `get`, `update`, `remove`, `setEnabled` y `skipNext` gestionan todas las alarmas del complemento, incluidas las creadas en sus pantallas.",

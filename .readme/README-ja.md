@@ -71,7 +71,7 @@
 2. プラグインを開き, 求められたら通知, 正確なアラーム, 全画面通知の権限を許可します. あとは普通の時計アプリとして使えます.
 3. スクリプトで `alarms` モジュールを使うには, AutoJs6 を内部バージョン 6641 (6.8.1) 以降に更新し, プラグインセンターでプラグインを有効にします.
 
-> プラグインは Android 7.0 (API 24) 以降の端末に対応しています. APK にはネイティブライブラリが含まれないため, パッケージは 1 つだけで, 16 KB メモリページサイズの検査も対象外です.
+> プラグインは Android 7.0 (API 24) 以降の端末に対応しています. パッケージはすべての端末に共通の 1 つだけです. 含まれる唯一のネイティブライブラリは UI フレームワーク Compose のもので, 16 KB メモリページに合わせて配置されているため, 16 KB ページの端末でも動作します.
 
 ******
 
@@ -146,7 +146,7 @@ info service: org.autojs.plugin.INFO (category three-chime-alarm)
 capability service: org.autojs.plugin.ALARM (category alarm)
 wake action: org.autojs.plugin.action.WAKE
 minimum host build: 6641
-native libraries: none (a single APK for every ABI; the 16 KB page size check does not apply)
+native libraries: libandroidx.graphics.path.so only (Compose graphics-path, 4 ABIs, uncompressed, 16 KB aligned; a single APK for every ABI)
 ```
 
 ******
@@ -173,7 +173,7 @@ _2026/11/05_
 - `ヒント` AutoJs6 6.8.1 (6641) 以降が必要です (正確な最低バージョンはホスト側の変更が反映された後に記入されます)
 - `ヒント` 現在のアイコンは候補のデザインで, 今後変わる可能性があります
 - `機能` プラグインの骨組み: Wake 有効化プロトコル, プラグインセンターの識別サービス, アラーム機能サービス
-- `機能` ネイティブライブラリを含まず, すべての端末で使える APK は 1 つだけです
+- `機能` すべての端末で使える APK は 1 つだけで, 16 KB メモリページの端末にも対応します
 - `機能` 10 言語の README, プラグインセンターの説明, 変更履歴を JSON ソースから一括生成
 - `依存関係` AndroidX Core KTX 1.15.0 を追加
 - `依存関係` lib-recur 0.17.1 を追加 (アラームの繰り返しルールを計算)

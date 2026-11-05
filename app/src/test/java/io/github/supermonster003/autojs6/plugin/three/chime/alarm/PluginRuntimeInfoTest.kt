@@ -77,10 +77,13 @@ class PluginRuntimeInfoTest {
         assertTrue(build.contains("resValue(\"string\", \"plugin_requires_host_version\", \"\$requiredHostVersion\")"))
         // The minimum host build is changed in the build script, the constant and the README sources together.
         assertTrue(build.contains("val requiredHostVersion = ${ThreeChimeAlarmContract.REQUIRED_HOST_VERSION}\n"))
-        // Roadmap T20: one APK, no ABI splits, and the release task rejects native code.
+        // Roadmap T20, T34: one APK, no ABI splits, and the release task accepts only the Compose graphics-path library,
+        // stored uncompressed and 16 KB aligned.
         assertFalse("no ABI splits (roadmap T20)", build.contains("splits {") || build.contains("abi {"))
         assertTrue(build.contains("register(\"appendDigestToReleasedFiles\")"))
-        assertTrue(build.contains("it.startsWith(\"lib/\") || it.endsWith(\".so\")"))
+        assertTrue(build.contains("val allowedNativeLibraries = listOf(\"libandroidx.graphics.path.so\")"))
+        assertTrue(build.contains("verifyNativeLibraries(apk)"))
+        assertTrue(build.contains("jniLibs.useLegacyPackaging = false"))
         assertTrue(build.contains("ApkVerifier.Builder(apk).build().verify()"))
 
         val settings = RepositoryFiles.text("settings.gradle.kts")

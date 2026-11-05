@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.ThreeChimeAlarm" parent="android:Theme.Material.NoActionBar" />
+    <style name="Theme.ThreeChimeAlarm" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/chime_window_background</item>
+        <item name="android:colorBackground">@color/chime_window_background</item>
+    </style>
+
+    <color name="chime_window_background">#121212</color>
 </resources>

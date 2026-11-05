@@ -38,7 +38,7 @@
     "プラグインを開き, 求められたら通知, 正確なアラーム, 全画面通知の権限を許可します. あとは普通の時計アプリとして使えます.",
     "スクリプトで `alarms` モジュールを使うには, AutoJs6 を内部バージョン {{ required_host_version_code }} ({{ required_host_version_name }}) 以降に更新し, プラグインセンターでプラグインを有効にします."
   ],
-  "p_usage_note": "プラグインは Android {{ min_android_version }} (API {{ android_min_sdk }}) 以降の端末に対応しています. APK にはネイティブライブラリが含まれないため, パッケージは 1 つだけで, 16 KB メモリページサイズの検査も対象外です.",
+  "p_usage_note": "プラグインは Android {{ min_android_version }} (API {{ android_min_sdk }}) 以降の端末に対応しています. パッケージはすべての端末に共通の 1 つだけです. 含まれる唯一のネイティブライブラリは UI フレームワーク Compose のもので, 16 KB メモリページに合わせて配置されているため, 16 KB ページの端末でも動作します.",
   "p_script_api_intro": "スクリプトはグローバルモジュール `alarms` (`$alarms` とも書けます) からこれらの機能を使います (1.0.0 の設計草案です. リリース版のドキュメントが優先されます)",
   "api_points": [
     "`alarms.add(options)` はアラームを作成してアラームオブジェクトを返します. `alarms.list`, `get`, `update`, `remove`, `setEnabled`, `skipNext` はプラグイン画面で作成したものを含むすべてのアラームを管理します.",

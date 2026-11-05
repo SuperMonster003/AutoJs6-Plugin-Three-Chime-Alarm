@@ -38,7 +38,7 @@
     "Open the plugin and grant the notification, exact alarm and full screen alert permissions when asked; it then works like an ordinary clock app.",
     "To use the `alarms` module in scripts, upgrade AutoJs6 to internal build {{ required_host_version_code }} ({{ required_host_version_name }}) or later and enable the plugin in the Plugin Center."
   ],
-  "p_usage_note": "The plugin supports devices running Android {{ min_android_version }} (API {{ android_min_sdk }}) or later. The APK contains no native libraries, so there is a single package and the 16 KB memory page size check does not apply.",
+  "p_usage_note": "The plugin supports devices running Android {{ min_android_version }} (API {{ android_min_sdk }}) or later. There is a single package for every device; its only native library comes from the Compose UI toolkit and is aligned to 16 KB memory pages, so it also runs on devices with 16 KB pages.",
   "p_script_api_intro": "Scripts use these features through the global module `alarms` (also available as `$alarms`) (1.0.0 design draft; the documentation of the released version is authoritative)",
   "api_points": [
     "`alarms.add(options)` creates an alarm and returns an alarm object; `alarms.list`, `get`, `update`, `remove`, `setEnabled` and `skipNext` manage every alarm of the plugin, including those created on the plugin screens.",

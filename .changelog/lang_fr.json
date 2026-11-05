@@ -14,7 +14,7 @@
       ],
       "feature": [
         "Squelette du plugin: protocole d'activation Wake, service d'identité du centre des plugins et service de capacité d'alarme",
-        "Aucune bibliothèque native: un seul APK pour tous les appareils",
+        "Un seul APK pour tous les appareils, y compris ceux à pages mémoire de 16 KB",
         "README, instructions du centre des plugins et journaux des modifications en 10 langues, générés à partir de sources JSON"
       ],
       "dependency": [

@@ -79,16 +79,18 @@ class BindingHints(private val file: File) {
     fun owners(): List<String> = synchronized(lock) { loaded().keys.toList() }
 
     /**
-     * Drops the rows of a removed alarm from every table (after its `remove` broadcast went out); a failed save keeps
-     * the change in memory and answers false, the next send of the host corrects the file through `unknownIds`.
-     * zh-CN: 从所有提示表删除已删除闹钟的行 (在其 `remove` 广播发出之后); 保存失败时只在内存中生效并返回 false, 宿主下一次发送时经 `unknownIds` 纠正文件.
+     * Drops the rows of a removed alarm from every table (after its `remove` broadcast went out), or only from the table
+     * of [only] (a host that answered `unbind`, roadmap D20); a failed save keeps the change in memory and answers false,
+     * the next send of the host corrects the file.
+     * zh-CN: 从所有提示表删除已删除闹钟的行 (在其 `remove` 广播发出之后), 或只从 [only] 的提示表删除 (应答了 `unbind` 的宿主, 路线图 D20);
+     * 保存失败时只在内存中生效并返回 false, 宿主下一次发送时纠正文件.
      */
-    fun forget(alarmId: String): Boolean = synchronized(lock) {
+    fun forget(alarmId: String, only: String? = null): Boolean = synchronized(lock) {
         val current = loaded()
-        if (current.values.none { rows -> rows.any { it.alarmId == alarmId } }) return true
+        if (current.filterKeys { only == null || it == only }.values.none { rows -> rows.any { it.alarmId == alarmId } }) return true
         val next = LinkedHashMap<String, List<BindingHint>>()
         for ((owner, rows) in current) {
-            val left = rows.filter { it.alarmId != alarmId }
+            val left = if (only == null || owner == only) rows.filter { it.alarmId != alarmId } else rows
             if (left.isNotEmpty()) next[owner] = left
         }
         tables = next

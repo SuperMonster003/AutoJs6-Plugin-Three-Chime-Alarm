@@ -71,7 +71,7 @@
 2. 打开插件, 按提示授予通知, 精确闹钟与全屏提醒权限, 之后就可以像普通时钟应用一样使用.
 3. 要在脚本中使用 `alarms` 模块, 请将 AutoJs6 升级到内部版本号 6641 (6.8.1) 或更高版本, 并在插件中心启用本插件.
 
-> 插件支持 Android 7.0 (API 24) 及以上的设备. APK 不含原生库, 因此只有一个安装包, 也不涉及 16 KB 内存页大小的校验.
+> 插件支持 Android 7.0 (API 24) 及以上的设备. 只有一个适用于全部设备的安装包; 其中唯一的原生库来自界面框架 Compose, 已按 16 KB 内存页对齐, 在 16 KB 内存页的设备上也能运行.
 
 ******
 
@@ -146,7 +146,7 @@ info service: org.autojs.plugin.INFO (category three-chime-alarm)
 capability service: org.autojs.plugin.ALARM (category alarm)
 wake action: org.autojs.plugin.action.WAKE
 minimum host build: 6641
-native libraries: none (a single APK for every ABI; the 16 KB page size check does not apply)
+native libraries: libandroidx.graphics.path.so only (Compose graphics-path, 4 ABIs, uncompressed, 16 KB aligned; a single APK for every ABI)
 ```
 
 ******
@@ -173,7 +173,7 @@ _2026/11/05_
 - `提示` 需要 AutoJs6 6.8.1 (6641) 或更高版本 (准确的最低版本号待宿主侧改动落地后回填)
 - `提示` 当前图标为候选图案, 之后可能更换
 - `新增` 插件骨架: Wake 激活协议, 插件中心身份服务与闹钟能力服务
-- `新增` 安装包不含原生库, 只有一个适用于全部设备的 APK
+- `新增` 只有一个适用于全部设备的 APK, 支持 16 KB 内存页的设备
 - `新增` 10 种语言的 README, 插件中心说明与更新日志, 由 JSON 源文件统一生成
 - `依赖` 附加 AndroidX Core KTX 版本 1.15.0
 - `依赖` 附加 lib-recur 版本 0.17.1 (计算闹钟的重复规则)

@@ -1,7 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Platform theme of the skeleton screens; roadmap P3.1 moves the screens to Compose and Material 3 (T22). -->
-    <style name="Theme.ThreeChimeAlarm" parent="android:Theme.Material.Light.NoActionBar" />
+    <!--
+        Window theme of the plugin's Compose screens (roadmap P3, T22): no action bar, the neutral page background of the
+        standalone settings specification (section 6); Compose draws everything else from ChimePalette.
+    -->
+    <style name="Theme.ThreeChimeAlarm" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/chime_window_background</item>
+        <item name="android:colorBackground">@color/chime_window_background</item>
+    </style>
+
+    <color name="chime_window_background">#F3F4F5</color>
 
     <!-- The spinner time picker of the system clock intent page (roadmap P2.6), small enough for an alert dialog. -->
     <style name="Widget.ThreeChimeAlarm.TimePicker" parent="android:Widget.Material.TimePicker">

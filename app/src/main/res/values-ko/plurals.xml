@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="home_delete_title">
+        <item quantity="other">알람 %1$d개를 삭제할까요?</item>
+    </plurals>
+    <plurals name="home_limit_enabled">
+        <item quantity="other">동시에 켤 수 있는 알람은 최대 %1$d개입니다</item>
+    </plurals>
+    <plurals name="home_selected_count">
+        <item quantity="other">%1$d개 선택됨</item>
+    </plurals>
+    <plurals name="home_unbind_done">
+        <item quantity="other">스크립트 연결 %1$d개를 해제했습니다</item>
+    </plurals>
+    <plurals name="update_ignored_count">
+        <item quantity="other">무시한 릴리스 %1$d개</item>
+    </plurals>
+</resources>

@@ -71,7 +71,7 @@
 2. 플러그인을 열고 요청이 나오면 알림, 정확한 알람, 전체 화면 알림 권한을 허용합니다. 그다음에는 일반 시계 앱처럼 쓸 수 있습니다.
 3. 스크립트에서 `alarms` 모듈을 쓰려면 AutoJs6를 내부 빌드 6641 (6.8.1) 이상으로 업데이트하고 플러그인 센터에서 플러그인을 활성화하세요.
 
-> 플러그인은 Android 7.0 (API 24) 이상 기기를 지원합니다. APK에 네이티브 라이브러리가 없으므로 패키지는 하나뿐이며 16 KB 메모리 페이지 크기 검사도 해당되지 않습니다.
+> 플러그인은 Android 7.0 (API 24) 이상 기기를 지원합니다. 모든 기기에 쓰는 패키지 하나만 제공됩니다. 포함된 유일한 네이티브 라이브러리는 UI 프레임워크 Compose의 것으로 16 KB 메모리 페이지에 맞춰 정렬되어 있어 16 KB 페이지 기기에서도 동작합니다.
 
 ******
 
@@ -146,7 +146,7 @@ info service: org.autojs.plugin.INFO (category three-chime-alarm)
 capability service: org.autojs.plugin.ALARM (category alarm)
 wake action: org.autojs.plugin.action.WAKE
 minimum host build: 6641
-native libraries: none (a single APK for every ABI; the 16 KB page size check does not apply)
+native libraries: libandroidx.graphics.path.so only (Compose graphics-path, 4 ABIs, uncompressed, 16 KB aligned; a single APK for every ABI)
 ```
 
 ******
@@ -173,7 +173,7 @@ _2026/11/05_
 - `힌트` AutoJs6 6.8.1 (6641) 이상이 필요합니다 (정확한 최소 버전은 호스트 쪽 변경이 반영된 뒤 기입됩니다)
 - `힌트` 현재 아이콘은 후보 디자인이며 이후 바뀔 수 있습니다
 - `기능` 플러그인 골격: Wake 활성화 프로토콜, 플러그인 센터 식별 서비스, 알람 기능 서비스
-- `기능` 네이티브 라이브러리가 없어 모든 기기에 쓰는 APK 하나만 제공됩니다
+- `기능` 모든 기기에 쓰는 APK 하나만 제공되며 16 KB 메모리 페이지 기기도 지원합니다
 - `기능` 10개 언어의 README, 플러그인 센터 안내, 변경 기록을 JSON 원본에서 일괄 생성
 - `의존성` AndroidX Core KTX 1.15.0 추가
 - `의존성` lib-recur 0.17.1 추가 (알람 반복 규칙 계산)

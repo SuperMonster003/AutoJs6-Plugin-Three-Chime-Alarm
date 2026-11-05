@@ -38,7 +38,7 @@
     "Ouvrez le plugin et accordez les autorisations de notification, d'alarme exacte et d'alerte plein écran lorsqu'elles sont demandées; il fonctionne ensuite comme une application d'horloge ordinaire.",
     "Pour utiliser le module `alarms` dans les scripts, mettez à jour AutoJs6 vers la version interne {{ required_host_version_code }} ({{ required_host_version_name }}) ou ultérieure et activez le plugin dans le centre des plugins."
   ],
-  "p_usage_note": "Le plugin prend en charge les appareils sous Android {{ min_android_version }} (API {{ android_min_sdk }}) ou ultérieur. L'APK ne contient aucune bibliothèque native, il n'y a donc qu'un seul paquet et la vérification de la taille de page mémoire de 16 KB ne s'applique pas.",
+  "p_usage_note": "Le plugin prend en charge les appareils sous Android {{ min_android_version }} (API {{ android_min_sdk }}) ou ultérieur. Il n'y a qu'un seul paquet pour tous les appareils; sa seule bibliothèque native provient de la boîte à outils d'interface Compose et est alignée sur des pages mémoire de 16 KB, il fonctionne donc aussi sur les appareils à pages de 16 KB.",
   "p_script_api_intro": "Les scripts utilisent ces fonctions via le module global `alarms` (également disponible sous le nom `$alarms`) (projet de conception de la 1.0.0; la documentation de la version publiée fait foi)",
   "api_points": [
     "`alarms.add(options)` crée une alarme et renvoie un objet alarme; `alarms.list`, `get`, `update`, `remove`, `setEnabled` et `skipNext` gèrent toutes les alarmes du plugin, y compris celles créées depuis ses écrans.",

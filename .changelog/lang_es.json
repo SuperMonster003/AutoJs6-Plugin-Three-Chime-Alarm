@@ -14,7 +14,7 @@
       ],
       "feature": [
         "Esqueleto del complemento: protocolo de activación Wake, servicio de identidad del centro de complementos y servicio de capacidad de alarmas",
-        "Sin bibliotecas nativas: un único APK para todos los dispositivos",
+        "Un único APK para todos los dispositivos, incluidos los que usan páginas de memoria de 16 KB",
         "README, instrucciones del centro de complementos y registros de cambios en 10 idiomas, generados a partir de fuentes JSON"
       ],
       "dependency": [

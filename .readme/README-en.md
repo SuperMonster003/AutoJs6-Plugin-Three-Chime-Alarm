@@ -71,7 +71,7 @@ The plugin schedules and rings alarms itself with Android exact alarms, so alarm
 2. Open the plugin and grant the notification, exact alarm and full screen alert permissions when asked; it then works like an ordinary clock app.
 3. To use the `alarms` module in scripts, upgrade AutoJs6 to internal build 6641 (6.8.1) or later and enable the plugin in the Plugin Center.
 
-> The plugin supports devices running Android 7.0 (API 24) or later. The APK contains no native libraries, so there is a single package and the 16 KB memory page size check does not apply.
+> The plugin supports devices running Android 7.0 (API 24) or later. There is a single package for every device; its only native library comes from the Compose UI toolkit and is aligned to 16 KB memory pages, so it also runs on devices with 16 KB pages.
 
 ******
 
@@ -146,7 +146,7 @@ info service: org.autojs.plugin.INFO (category three-chime-alarm)
 capability service: org.autojs.plugin.ALARM (category alarm)
 wake action: org.autojs.plugin.action.WAKE
 minimum host build: 6641
-native libraries: none (a single APK for every ABI; the 16 KB page size check does not apply)
+native libraries: libandroidx.graphics.path.so only (Compose graphics-path, 4 ABIs, uncompressed, 16 KB aligned; a single APK for every ABI)
 ```
 
 ******
@@ -173,7 +173,7 @@ _2026/11/05_
 - `Hint` Requires AutoJs6 6.8.1 (6641) or later (the exact minimum build will be filled in once the host changes land)
 - `Hint` The current icon is a candidate design and may still change
 - `Feature` Plugin skeleton: Wake activation protocol, Plugin Center identity service and alarm capability service
-- `Feature` No native libraries: a single APK for every device
+- `Feature` A single APK for every device, including devices with 16 KB memory pages
 - `Feature` README, Plugin Center instructions and changelogs in 10 languages, generated from JSON sources
 - `Dependency` Attach AndroidX Core KTX 1.15.0
 - `Dependency` Attach lib-recur 0.17.1 (calculates the repeat rules of alarms)

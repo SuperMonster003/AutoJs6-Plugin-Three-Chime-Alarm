@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="home_delete_title">
+        <item quantity="one">Удалить %1$d будильник?</item>
+        <item quantity="few">Удалить %1$d будильника?</item>
+        <item quantity="many">Удалить %1$d будильников?</item>
+        <item quantity="other">Удалить %1$d будильника?</item>
+    </plurals>
+    <plurals name="home_limit_enabled">
+        <item quantity="one">Одновременно можно включить не более %1$d будильника</item>
+        <item quantity="few">Одновременно можно включить не более %1$d будильников</item>
+        <item quantity="many">Одновременно можно включить не более %1$d будильников</item>
+        <item quantity="other">Одновременно можно включить не более %1$d будильника</item>
+    </plurals>
+    <plurals name="home_selected_count">
+        <item quantity="one">Выбран %1$d</item>
+        <item quantity="few">Выбрано %1$d</item>
+        <item quantity="many">Выбрано %1$d</item>
+        <item quantity="other">Выбрано %1$d</item>
+    </plurals>
+    <plurals name="home_unbind_done">
+        <item quantity="one">Отвязан %1$d скрипт</item>
+        <item quantity="few">Отвязано %1$d скрипта</item>
+        <item quantity="many">Отвязано %1$d скриптов</item>
+        <item quantity="other">Отвязано %1$d скрипта</item>
+    </plurals>
+    <plurals name="update_ignored_count">
+        <item quantity="one">Игнорируется %1$d выпуск</item>
+        <item quantity="few">Игнорируется %1$d выпуска</item>
+        <item quantity="many">Игнорируется %1$d выпусков</item>
+        <item quantity="other">Игнорируется %1$d выпуска</item>
+    </plurals>
+</resources>

@@ -71,7 +71,7 @@ El complemento programa y hace sonar las alarmas por sí mismo con las alarmas e
 2. Abra el complemento y conceda los permisos de notificaciones, alarmas exactas y alertas a pantalla completa cuando se soliciten; después funciona como una aplicación de reloj normal.
 3. Para usar el módulo `alarms` en scripts, actualice AutoJs6 a la compilación interna 6641 (6.8.1) o posterior y active el complemento en el centro de complementos.
 
-> El complemento es compatible con dispositivos con Android 7.0 (API 24) o posterior. El APK no contiene bibliotecas nativas, por lo que hay un único paquete y la comprobación del tamaño de página de memoria de 16 KB no se aplica.
+> El complemento es compatible con dispositivos con Android 7.0 (API 24) o posterior. Hay un único paquete para todos los dispositivos; su única biblioteca nativa procede del kit de interfaz Compose y está alineada a páginas de memoria de 16 KB, por lo que también funciona en dispositivos con páginas de 16 KB.
 
 ******
 
@@ -146,7 +146,7 @@ info service: org.autojs.plugin.INFO (category three-chime-alarm)
 capability service: org.autojs.plugin.ALARM (category alarm)
 wake action: org.autojs.plugin.action.WAKE
 minimum host build: 6641
-native libraries: none (a single APK for every ABI; the 16 KB page size check does not apply)
+native libraries: libandroidx.graphics.path.so only (Compose graphics-path, 4 ABIs, uncompressed, 16 KB aligned; a single APK for every ABI)
 ```
 
 ******
@@ -173,7 +173,7 @@ _2026/11/05_
 - `Aviso` Requiere AutoJs6 6.8.1 (6641) o posterior (la versión mínima exacta se indicará cuando se integren los cambios del anfitrión)
 - `Aviso` El icono actual es un diseño candidato y aún puede cambiar
 - `Función` Esqueleto del complemento: protocolo de activación Wake, servicio de identidad del centro de complementos y servicio de capacidad de alarmas
-- `Función` Sin bibliotecas nativas: un único APK para todos los dispositivos
+- `Función` Un único APK para todos los dispositivos, incluidos los que usan páginas de memoria de 16 KB
 - `Función` README, instrucciones del centro de complementos y registros de cambios en 10 idiomas, generados a partir de fuentes JSON
 - `Dependencia` Se agrega AndroidX Core KTX 1.15.0
 - `Dependencia` Se agrega lib-recur 0.17.1 (calcula las reglas de repetición de las alarmas)

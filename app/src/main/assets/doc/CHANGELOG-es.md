@@ -12,7 +12,7 @@
 * `Aviso` Requiere AutoJs6 6.8.1 (6641) o posterior (la versión mínima exacta se indicará cuando se integren los cambios del anfitrión)
 * `Aviso` El icono actual es un diseño candidato y aún puede cambiar
 * `Función` Esqueleto del complemento: protocolo de activación Wake, servicio de identidad del centro de complementos y servicio de capacidad de alarmas
-* `Función` Sin bibliotecas nativas: un único APK para todos los dispositivos
+* `Función` Un único APK para todos los dispositivos, incluidos los que usan páginas de memoria de 16 KB
 * `Función` README, instrucciones del centro de complementos y registros de cambios en 10 idiomas, generados a partir de fuentes JSON
 * `Dependencia` Se agrega AndroidX Core KTX 1.15.0
 * `Dependencia` Se agrega lib-recur 0.17.1 (calcula las reglas de repetición de las alarmas)

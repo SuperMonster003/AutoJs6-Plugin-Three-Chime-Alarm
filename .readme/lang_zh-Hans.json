@@ -38,7 +38,7 @@
     "打开插件, 按提示授予通知, 精确闹钟与全屏提醒权限, 之后就可以像普通时钟应用一样使用.",
     "要在脚本中使用 `alarms` 模块, 请将 AutoJs6 升级到内部版本号 {{ required_host_version_code }} ({{ required_host_version_name }}) 或更高版本, 并在插件中心启用本插件."
   ],
-  "p_usage_note": "插件支持 Android {{ min_android_version }} (API {{ android_min_sdk }}) 及以上的设备. APK 不含原生库, 因此只有一个安装包, 也不涉及 16 KB 内存页大小的校验.",
+  "p_usage_note": "插件支持 Android {{ min_android_version }} (API {{ android_min_sdk }}) 及以上的设备. 只有一个适用于全部设备的安装包; 其中唯一的原生库来自界面框架 Compose, 已按 16 KB 内存页对齐, 在 16 KB 内存页的设备上也能运行.",
   "p_script_api_intro": "脚本通过全局模块 `alarms` (也可写作 `$alarms`) 使用这些能力 (1.0.0 设计草案, 以发布版本的文档为准)",
   "api_points": [
     "`alarms.add(options)` 新建闹钟并返回闹钟对象; `alarms.list`, `get`, `update`, `remove`, `setEnabled` 与 `skipNext` 管理插件中的全部闹钟, 包括在插件界面建的闹钟.",

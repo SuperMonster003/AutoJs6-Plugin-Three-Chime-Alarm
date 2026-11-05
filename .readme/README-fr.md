@@ -71,7 +71,7 @@ Le plugin programme et fait sonner les alarmes lui-même grâce aux alarmes exac
 2. Ouvrez le plugin et accordez les autorisations de notification, d'alarme exacte et d'alerte plein écran lorsqu'elles sont demandées; il fonctionne ensuite comme une application d'horloge ordinaire.
 3. Pour utiliser le module `alarms` dans les scripts, mettez à jour AutoJs6 vers la version interne 6641 (6.8.1) ou ultérieure et activez le plugin dans le centre des plugins.
 
-> Le plugin prend en charge les appareils sous Android 7.0 (API 24) ou ultérieur. L'APK ne contient aucune bibliothèque native, il n'y a donc qu'un seul paquet et la vérification de la taille de page mémoire de 16 KB ne s'applique pas.
+> Le plugin prend en charge les appareils sous Android 7.0 (API 24) ou ultérieur. Il n'y a qu'un seul paquet pour tous les appareils; sa seule bibliothèque native provient de la boîte à outils d'interface Compose et est alignée sur des pages mémoire de 16 KB, il fonctionne donc aussi sur les appareils à pages de 16 KB.
 
 ******
 
@@ -146,7 +146,7 @@ info service: org.autojs.plugin.INFO (category three-chime-alarm)
 capability service: org.autojs.plugin.ALARM (category alarm)
 wake action: org.autojs.plugin.action.WAKE
 minimum host build: 6641
-native libraries: none (a single APK for every ABI; the 16 KB page size check does not apply)
+native libraries: libandroidx.graphics.path.so only (Compose graphics-path, 4 ABIs, uncompressed, 16 KB aligned; a single APK for every ABI)
 ```
 
 ******
@@ -173,7 +173,7 @@ _2026/11/05_
 - `Note` Nécessite AutoJs6 6.8.1 (6641) ou ultérieur (la version minimale exacte sera renseignée une fois les modifications de l'hôte intégrées)
 - `Note` L'icône actuelle est une proposition et peut encore changer
 - `Fonctionnalité` Squelette du plugin: protocole d'activation Wake, service d'identité du centre des plugins et service de capacité d'alarme
-- `Fonctionnalité` Aucune bibliothèque native: un seul APK pour tous les appareils
+- `Fonctionnalité` Un seul APK pour tous les appareils, y compris ceux à pages mémoire de 16 KB
 - `Fonctionnalité` README, instructions du centre des plugins et journaux des modifications en 10 langues, générés à partir de sources JSON
 - `Dépendance` Ajout de AndroidX Core KTX 1.15.0
 - `Dépendance` Ajout de lib-recur 0.17.1 (calcule les règles de répétition des alarmes)

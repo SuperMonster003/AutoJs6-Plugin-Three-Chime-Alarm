@@ -71,7 +71,7 @@
 2. 開啟外掛, 依提示授予通知, 精確鬧鐘與全螢幕提醒權限, 之後就可以像一般時鐘應用程式一樣使用.
 3. 若要在指令碼中使用 `alarms` 模組, 請將 AutoJs6 升級到內部版本號 6641 (6.8.1) 或更新版本, 並在外掛中心啟用本外掛.
 
-> 外掛支援 Android 7.0 (API 24) 以上的裝置. APK 不含原生程式庫, 因此只有一個安裝包, 也不涉及 16 KB 記憶體分頁大小的檢查.
+> 外掛支援 Android 7.0 (API 24) 以上的裝置. 只有一個適用於所有裝置的安裝包; 其中唯一的原生程式庫來自介面框架 Compose, 已按 16 KB 記憶體分頁對齊, 在 16 KB 記憶體分頁的裝置上也能執行.
 
 ******
 
@@ -146,7 +146,7 @@ info service: org.autojs.plugin.INFO (category three-chime-alarm)
 capability service: org.autojs.plugin.ALARM (category alarm)
 wake action: org.autojs.plugin.action.WAKE
 minimum host build: 6641
-native libraries: none (a single APK for every ABI; the 16 KB page size check does not apply)
+native libraries: libandroidx.graphics.path.so only (Compose graphics-path, 4 ABIs, uncompressed, 16 KB aligned; a single APK for every ABI)
 ```
 
 ******
@@ -173,7 +173,7 @@ _2026/11/05_
 - `提示` 需要 AutoJs6 6.8.1 (6641) 或更高版本 (確切的最低版本號待宿主端變更完成後回填)
 - `提示` 目前圖示為候選圖案, 之後可能更換
 - `新增` 外掛骨架: Wake 啟用協定, 外掛中心身分服務與鬧鐘能力服務
-- `新增` 安裝包不含原生程式庫, 只有一個適用於所有裝置的 APK
+- `新增` 只有一個適用於所有裝置的 APK, 支援 16 KB 記憶體分頁的裝置
 - `新增` 10 種語言的 README, 外掛中心說明與更新日誌, 由 JSON 來源檔案統一產生
 - `相依性` 附加 AndroidX Core KTX 版本 1.15.0
 - `相依性` 附加 lib-recur 版本 0.17.1 (計算鬧鐘的重複規則)

@@ -12,7 +12,7 @@
 * `Hint` Requires AutoJs6 6.8.1 (6641) or later (the exact minimum build will be filled in once the host changes land)
 * `Hint` The current icon is a candidate design and may still change
 * `Feature` Plugin skeleton: Wake activation protocol, Plugin Center identity service and alarm capability service
-* `Feature` No native libraries: a single APK for every device
+* `Feature` A single APK for every device, including devices with 16 KB memory pages
 * `Feature` README, Plugin Center instructions and changelogs in 10 languages, generated from JSON sources
 * `Dependency` Attach AndroidX Core KTX 1.15.0
 * `Dependency` Attach lib-recur 0.17.1 (calculates the repeat rules of alarms)

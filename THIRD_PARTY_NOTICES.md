@@ -1,7 +1,8 @@
 # Third-party notices
 
 3-Chime Alarm is licensed under the Mozilla Public License 2.0 (see `LICENSE`). The APK bundles the
-components below; their licenses apply to those components only. The APK contains no native libraries.
+components below; their licenses apply to those components only. The only native library is the Compose
+graphics-path library listed below (roadmap T34).
 
 ## AutoJs6 host contract libraries
 
@@ -16,8 +17,15 @@ Provenance and SHA-256 digests are recorded in `locks/host-api-aars.lock` and `l
 
 | Library | Version | License |
 | --- | --- | --- |
+| Jetpack Compose (BOM `androidx.compose:compose-bom`: runtime, ui, foundation, material3, ui-tooling-preview) | 2026.09.00 | Apache-2.0 |
+| AndroidX Activity Compose (`androidx.activity:activity-compose`) | 1.12.2 | Apache-2.0 |
 | AndroidX Core KTX (`androidx.core:core-ktx`) | 1.15.0 | Apache-2.0 |
+| Kotlin Coroutines (`org.jetbrains.kotlinx:kotlinx-coroutines-android`) | 1.11.0 | Apache-2.0 |
+| Material Color Utilities, Kotlin port by MaterialKolor (`com.materialkolor:material-color-utilities`; the theme accent of the plugin's screens) | 4.1.1 | MIT (https://github.com/jordond/materialkolor) |
 | Kotlin standard library (`org.jetbrains.kotlin:kotlin-stdlib`, added by the Android Gradle Plugin) | follows the build's Kotlin version | Apache-2.0 |
+
+Jetpack Compose `ui-graphics` depends on `androidx.graphics:graphics-path`, whose
+`libandroidx.graphics.path.so` (Apache-2.0) is packaged for arm64-v8a, armeabi-v7a, x86_64 and x86.
 
 ## Recurrence rule libraries (Maven)
 

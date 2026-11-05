@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="home_delete_title">
+        <item quantity="other">删除 %1$d 个闹钟?</item>
+    </plurals>
+    <plurals name="home_limit_enabled">
+        <item quantity="other">最多同时启用 %1$d 个闹钟</item>
+    </plurals>
+    <plurals name="home_selected_count">
+        <item quantity="other">已选择 %1$d 项</item>
+    </plurals>
+    <plurals name="home_unbind_done">
+        <item quantity="other">已解除 %1$d 个脚本绑定</item>
+    </plurals>
+    <plurals name="update_ignored_count">
+        <item quantity="other">已忽略 %1$d 个发行版</item>
+    </plurals>
+</resources>

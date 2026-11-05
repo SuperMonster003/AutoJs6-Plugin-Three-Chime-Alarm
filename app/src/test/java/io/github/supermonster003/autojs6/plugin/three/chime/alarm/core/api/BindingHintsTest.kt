@@ -71,6 +71,21 @@ class BindingHintsTest {
     }
 
     @Test
+    fun `an unbind answer drops the rows of that host only`() {
+        val hints = BindingHints(file)
+        hints.replace(HOST, table(row(A, "ring"), row(B, "ring")), known::contains)
+        hints.replace(OTHER, table(row(A, "dismiss")), known::contains)
+        assertTrue(hints.forget(A, only = HOST))
+        assertEquals(listOf(B), BindingHints(file).table(HOST).map { it.alarmId })
+        assertEquals(listOf(A), BindingHints(file).table(OTHER).map { it.alarmId })
+        assertTrue("the other host still binds the alarm", hints.hasBindings(A))
+        assertTrue("a host without rows for the alarm changes nothing", hints.forget(A, only = HOST))
+        assertTrue(hints.forget(A, only = OTHER))
+        assertEquals(listOf(HOST), BindingHints(file).owners())
+        assertFalse(hints.hasBindings(A))
+    }
+
+    @Test
     fun `a corrupt file starts empty`() {
         file.writeText("{not json", Charsets.UTF_8)
         val hints = BindingHints(file)

@@ -4,6 +4,7 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.RepositoryFile
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.RepositoryFiles.androidOrNull
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.RepositoryFiles.child
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.RepositoryFiles.children
+import org.autojs.plugin.alarm.api.AlarmPluginActions
 import org.autojs.plugin.common.api.PluginActions
 import org.autojs.plugin.common.api.PluginCapabilityKeys
 import org.junit.Assert.assertEquals
@@ -71,22 +72,20 @@ class ManifestContractTest {
         assertEquals("@mipmap/ic_icon_studio_application", application.android("icon"))
         assertEquals("@mipmap/ic_icon_studio_application", application.android("roundIcon"))
         assertEquals(".ThreeChimeAlarmApplication", application.android("name"))
-        assertNull("no native libraries, so no extraction override (roadmap T20)", application.androidOrNull("extractNativeLibs"))
+        assertNull("native libraries stay uncompressed through the packaging option (roadmap T34)", application.androidOrNull("extractNativeLibs"))
     }
 
     @Test
-    fun `application meta-data names the wake activity and the author only`() {
+    fun `application meta-data names the wake activity, the author and the native page alignment`() {
         val metaData = application.children("meta-data").associate { it.android("name") to it.android("value") }
         assertEquals(
             mapOf(
                 "org.autojs.plugin.WAKE_ACTIVITY" to ".WakeActivity",
                 "org.autojs.plugin.info.AUTHOR" to "@string/plugin_author",
+                // Roadmap T34: the Compose graphics-path library is the only native code and is 16 KB page aligned.
+                PluginCapabilityKeys.NATIVE_PAGE_ALIGNMENT to "16384",
             ),
             metaData,
-        )
-        assertTrue(
-            "no native page alignment declaration without native code (roadmap T20)",
-            PluginCapabilityKeys.NATIVE_PAGE_ALIGNMENT !in metaData.keys,
         )
     }
 
@@ -102,12 +101,27 @@ class ManifestContractTest {
     }
 
     @Test
-    fun `the activities are the wake, home, clock intent and ring screens`() {
+    fun `the activities are the wake, home, open, clock intent and ring screens`() {
         assertEquals(
-            listOf(".WakeActivity", ".ui.home.HomeActivity", ".intent.ClockIntentActivity", ".intent.ClockDialogActivity", ".ring.RingActivity"),
+            listOf(
+                ".WakeActivity",
+                ".ui.home.HomeActivity",
+                ".ui.OpenPluginActivity",
+                ".intent.ClockIntentActivity",
+                ".intent.ClockDialogActivity",
+                ".ring.RingActivity",
+            ),
             application.children("activity").map { it.android("name") },
         )
         assertEquals("false", activity(".ui.home.HomeActivity").android("exported"))
+        // Roadmap T81: the window-less trampoline of alarms.openPlugin answers the frozen OPEN action without a permission.
+        val open = activity(".ui.OpenPluginActivity")
+        assertEquals("true", open.android("exported"))
+        assertEquals("true", open.android("excludeFromRecents"))
+        assertEquals("no task affinity: as the root of the plugin's task a second call would only bring it to the front", "", open.android("taskAffinity"))
+        assertNull(open.androidOrNull("permission"))
+        assertEquals("@android:style/Theme.NoDisplay", open.android("theme"))
+        assertFilter(open, action = AlarmPluginActions.OPEN, category = DEFAULT_CATEGORY)
         // The new alarm page and the chooser of the clock intents (roadmap P2.6) open only from ClockIntentActivity.
         val dialog = activity(".intent.ClockDialogActivity")
         assertEquals("false", dialog.android("exported"))
@@ -194,8 +208,10 @@ class ManifestContractTest {
         val components = listOf("activity", "service", "receiver", "provider").flatMap { application.children(it) }
         val exported = components.filter { it.androidOrNull("exported") == "true" }
         val unprotected = exported.filter { it.androidOrNull("permission") != PLUGIN_PERMISSION }
-        // The clock intents follow the AOSP clock (roadmap D21): any app holding SET_ALARM may call them.
-        assertEquals(listOf(".intent.ClockIntentActivity"), unprotected.map { it.android("name") })
+        // The OPEN trampoline only shows the plugin's own screens (roadmap T81); the clock intents follow the AOSP clock
+        // (roadmap D21): any app holding SET_ALARM may call them.
+        assertEquals(listOf(".ui.OpenPluginActivity", ".intent.ClockIntentActivity"), unprotected.map { it.android("name") })
+        assertEquals("com.android.alarm.permission.SET_ALARM", activity(".intent.ClockIntentActivity").android("permission"))
         assertTrue("no providers are declared", application.children("provider").isEmpty())
         // Launcher aliases are the only components exported without a permission: the launcher must start them.
         application.children("activity-alias").forEach { assertNull(it.androidOrNull("permission")) }
@@ -204,11 +220,18 @@ class ManifestContractTest {
     @Test
     fun `the scheduling receivers are private, direct boot aware and hear the T8 broadcasts`() {
         val receivers = application.children("receiver").associateBy { it.android("name") }
-        assertEquals(listOf(".schedule.AlarmTriggerReceiver", ".schedule.AlarmRescheduleReceiver"), receivers.keys.toList())
-        receivers.values.forEach {
+        assertEquals(
+            listOf(".schedule.AlarmTriggerReceiver", ".schedule.AlarmRescheduleReceiver", ".ui.appearance.LauncherIconUpdateReceiver"),
+            receivers.keys.toList(),
+        )
+        listOf(".schedule.AlarmTriggerReceiver", ".schedule.AlarmRescheduleReceiver").map(receivers::getValue).forEach {
             assertEquals("false", it.android("exported"))
             assertEquals("true", it.android("directBootAware"))
         }
+        // The launcher icon choice (roadmap P3.5) is applied again after an update; it needs no direct boot.
+        val icon = receivers.getValue(".ui.appearance.LauncherIconUpdateReceiver")
+        assertEquals("false", icon.android("exported"))
+        assertEquals(listOf("android.intent.action.MY_PACKAGE_REPLACED"), icon.child("intent-filter").children("action").map { it.android("name") })
         assertTrue(receivers.getValue(".schedule.AlarmTriggerReceiver").children("intent-filter").isEmpty())
         assertEquals(
             listOf(

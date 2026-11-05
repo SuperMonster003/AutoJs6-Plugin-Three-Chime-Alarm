@@ -108,6 +108,59 @@ class AlarmTriggerSender(context: Context, private val hints: BindingHints, bus:
         Log.i(TAG, "${outcome.type} $alarmId -> ${outcome.owner}: $detail")
     }
 
+    /** The answer of [unbind]: how many bindings the hosts removed and which hosts did not answer. zh-CN: [unbind] 的结果. */
+    data class UnbindResult(val removed: Int, val failed: List<String>)
+
+    /**
+     * Removes the script bindings of [alarmId] when the user does so on the alarm list (roadmap D20, T27): every host
+     * with a hint row for the alarm gets a `request=unbind` ordered broadcast; a host that answers `RESULT_OK` drops the
+     * bindings, resends its table later, and its row is dropped here at once. [done] runs on the main thread after every
+     * host answered; a host that did not answer keeps its row and is listed in [UnbindResult.failed].
+     * zh-CN: 用户在闹钟列表上解除 [alarmId] 的脚本绑定 (路线图 D20, T27): 向每个为该闹钟登记了提示行的宿主发送 `request=unbind` 有序广播; 应答
+     * `RESULT_OK` 的宿主删除绑定并稍后重发提示表, 这里立即删除其行. 所有宿主应答后在主线程调用 [done]; 未应答的宿主保留其行, 列入 [UnbindResult.failed].
+     */
+    fun unbind(alarmId: String, done: (UnbindResult) -> Unit) {
+        val owners = hints.owners().filter { owner -> hints.table(owner).any { it.alarmId == alarmId } }
+        if (owners.isEmpty()) {
+            done(UnbindResult(0, emptyList()))
+            return
+        }
+        val pending = owners.toMutableSet()
+        val failed = ArrayList<String>()
+        var removed = 0
+        fun answered(owner: String, ok: Boolean, count: Int) {
+            if (!pending.remove(owner)) return
+            if (ok) {
+                removed += count
+                hints.forget(alarmId, owner)
+            } else {
+                failed += owner
+            }
+            Log.i(TAG, "unbind $alarmId -> $owner: " + if (ok) "removed=$count" else "no answer")
+            if (pending.isEmpty()) done(UnbindResult(removed, failed.toList()))
+        }
+        for (owner in owners) {
+            val intent = Intent(AlarmPluginActions.HOST_TRIGGER)
+                .setPackage(owner)
+                .addFlags(Intent.FLAG_RECEIVER_FOREGROUND)
+                .putExtra(AlarmEventKeys.EXTRA_CONTRACT_VERSION, AlarmContract.CONTRACT_VERSION)
+                .putExtra(AlarmEventKeys.EXTRA_REQUEST, AlarmContract.REQUEST_UNBIND)
+                .putExtra(AlarmEventKeys.EXTRA_ALARM_ID, alarmId)
+            val answer = object : BroadcastReceiver() {
+                override fun onReceive(context: Context, intent: Intent) {
+                    answered(owner, resultCode == Activity.RESULT_OK, getResultExtras(false)?.getInt(AlarmEventKeys.RESULT_REMOVED) ?: 0)
+                }
+            }
+            try {
+                // The result receiver runs on the main thread (no scheduler given). zh-CN: 结果接收器在主线程运行 (未指定 Handler).
+                context.sendOrderedBroadcast(intent, AlarmPluginActions.PLUGIN_PERMISSION, answer, null, Activity.RESULT_CANCELED, null, null)
+            } catch (e: RuntimeException) {
+                Log.w(TAG, "unbind $alarmId -> $owner: not sent (${e.javaClass.simpleName})")
+                answered(owner, false, 0)
+            }
+        }
+    }
+
     /** `locked` while the user has not unlocked since boot, `unavailable` otherwise. zh-CN: 首次解锁前为 `locked`, 否则为 `unavailable`. */
     private fun skippedReason(): String {
         val unlocked = runCatching { context.getSystemService(UserManager::class.java).isUserUnlocked }.getOrDefault(true)

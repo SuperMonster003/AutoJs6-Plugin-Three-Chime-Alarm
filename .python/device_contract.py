@@ -1,7 +1,7 @@
 """Contract checks of 3-Chime Alarm through the AutoJs6 `alarms` module on one device (roadmap P2.7).
 
     py .python/device_smoke.py <serial> --contract [--incompatible-apk <file>]
-    py .python/device_contract.py <serial> [--modes full,permission] [--incompatible-apk <file>] [--cleanup]
+    py .python/device_contract.py <serial> [--modes full,permission,ui] [--incompatible-apk <file>] [--cleanup]
 
 The host must be a build with the alarm contract (versionCode 6641 or later, roadmap Q12). Every mode pushes one
 script to /sdcard/Download/autojs6-chime-contract, runs it through RunIntentActivity after bringing the host launcher
@@ -21,6 +21,10 @@ activity to the front, waits for its result file and prints one PASS / FAIL / SK
   host's Plugin Center switch (set off and back by the script). Every alarm the script made is removed.
 - permission (API 31 - 32 only): the exact alarm appop of the plugin is denied, an enabled alarm fails with
   PERMISSION_REQUIRED, a disabled one is accepted; the original appop mode is restored afterwards.
+- ui (silent, nothing rings): alarms.openPlugin() and each page of AlarmPluginActions.PAGES open the plugin (checked
+  in its ChimeOpen log lines), an unknown page fails with INVALID_OPTIONS; a disabled alarm bound to a script is
+  unbound in the alarm list through its menu by HomeUnbindProbe (the androidTest APK is installed for the run and
+  uninstalled after it), then the host lists no binding for it (roadmap D20, T27, T81).
 - incompatible (--incompatible-apk): a build of the plugin whose requiresHostVersion is above the host's versionCode
   is installed over the normal one, add / list fail with PLUGIN_INCOMPATIBLE, then the normal APK is installed again.
 - --cleanup: removes alarms left by an interrupted run (tags p27*, sample-*, shift; the labels of the examples).
@@ -42,6 +46,10 @@ import device_smoke as smoke  # noqa: E402
 
 PLUGIN = smoke.PLUGIN
 HOST = smoke.HOST
+TEST_PACKAGE = PLUGIN + ".test"
+RUNNER = f"{TEST_PACKAGE}/androidx.test.runner.AndroidJUnitRunner"
+UNBIND_PROBE = f"{PLUGIN}.HomeUnbindProbe#unbind"
+PAGES = ("alarms", "timers", "stopwatch", "permissions", "settings")
 REMOTE = "/sdcard/Download/autojs6-chime-contract"
 RING_LEAD_SECONDS = 75
 RING_WAIT_SECONDS = 150
@@ -398,11 +406,46 @@ function modeFull() {
     });
 }
 
+function modeUi() {
+    [null].concat(cfg.pages).forEach(function (page) {
+        check('openPlugin(' + (page === null ? '' : "'" + page + "'") + ') accepted', function () {
+            if (page === null) alarms.openPlugin(); else alarms.openPlugin(page);
+            sleep(1500);
+            return 'started';
+        });
+    });
+    expectCode("openPlugin('unknown-page') answers INVALID_OPTIONS", 'INVALID_OPTIONS', function () { return alarms.openPlugin('unknown-page'); });
+    var u = null;
+    check('a disabled alarm bound to ./bound.js', function () {
+        var a = add({ time: '06:00', label: 'p27-unbind', tag: 'p27', enabled: false });
+        a.bind('./bound.js', { events: ['ring', 'dismiss'] });
+        var again = alarms.get(a.id);
+        assert(again.hasBindings === true && again.enabled === false, 'hasBindings ' + again.hasBindings + ', enabled ' + again.enabled);
+        u = a;
+        return 'hasBindings true, enabled false';
+    });
+    if (u) {
+        files.write(DIR + '/stage-unbind', u.id);
+        var end = Date.now() + 240e3;
+        while (!exists('go') && Date.now() < end) sleep(1000);
+        check('host bindings gone after the unbind in the alarm list', function () {
+            assert(exists('go'), 'no go file in 240 s');
+            var listed = arr(alarms.bindings(u.id));
+            var again = alarms.get(u.id);
+            assert(listed.length === 0 && again.hasBindings === false, listed.length + ' bindings, hasBindings ' + again.hasBindings);
+            return '0 bindings, hasBindings false';
+        });
+    }
+    check('test alarms removed', function () { return removeCreated() + ' removed'; });
+    save();
+}
+
 try {
     if (cfg.mode === 'unavailable') modeUnavailable();
     else if (cfg.mode === 'incompatible') modeIncompatible();
     else if (cfg.mode === 'permission') modePermission();
     else if (cfg.mode === 'cleanup') modeCleanup();
+    else if (cfg.mode === 'ui') modeUi();
     else modeFull();
 } catch (e) {
     record('script', 'FAIL', describe(e));
@@ -443,10 +486,10 @@ def installed(serial):
 def push_files(serial, mode):
     adb(serial, "shell", "mkdir", "-p", REMOTE)
     adb(serial, "shell", "rm", "-f", f"{REMOTE}/done", f"{REMOTE}/result.json", f"{REMOTE}/bound-ring.json",
-        f"{REMOTE}/bound-dismiss.json", f"{REMOTE}/bound-change.json", f"{REMOTE}/bound-none.json")
+        f"{REMOTE}/bound-dismiss.json", f"{REMOTE}/bound-change.json", f"{REMOTE}/bound-none.json", f"{REMOTE}/stage-unbind", f"{REMOTE}/go")
     folder = Path(tempfile.gettempdir()) / f"chime-contract-{serial.replace(':', '_')}"
     folder.mkdir(exist_ok=True)
-    config = {"mode": mode, "pkg": PLUGIN, "ringLeadSeconds": RING_LEAD_SECONDS, "ringWaitSeconds": RING_WAIT_SECONDS}
+    config = {"mode": mode, "pkg": PLUGIN, "ringLeadSeconds": RING_LEAD_SECONDS, "ringWaitSeconds": RING_WAIT_SECONDS, "pages": list(PAGES)}
     texts = {
         "contract.js": SCRIPT.replace("@DIR@", REMOTE),
         "bound.js": BOUND.replace("@DIR@", REMOTE),
@@ -463,8 +506,9 @@ def push_files(serial, mode):
         adb(serial, "shell", "dd", "if=/dev/zero", f"of={REMOTE}/big.mp3", "bs=1048576", "count=21")
 
 
-def run_mode(serial, mode, report, timeout=900):
-    """Runs the script in [mode] and prints its checks; False when it gave no result."""
+def run_mode(serial, mode, report, timeout=900, stage=None):
+    """Runs the script in [mode] and prints its checks; False when it gave no result. [stage] gets the alarm id the
+    script writes to `stage-unbind` (mode ui) and must write `go` when it is done."""
     print(f"  contract {mode}:")
     push_files(serial, mode)
     adb(serial, "shell", "input", "keyevent", "KEYCODE_WAKEUP")
@@ -474,6 +518,13 @@ def run_mode(serial, mode, report, timeout=900):
         "-d", f"file://{REMOTE}/contract.js", "-n", f"{HOST}/org.autojs.autojs.external.open.RunIntentActivity")
     deadline = time.time() + timeout
     while time.time() < deadline and adb(serial, "shell", "cat", f"{REMOTE}/done").strip() != "1":
+        staged = adb(serial, "shell", f"cat {REMOTE}/stage-unbind 2>/dev/null").strip() if stage else ""
+        if staged:
+            adb(serial, "shell", "rm", "-f", f"{REMOTE}/stage-unbind")
+            try:
+                stage(staged)
+            finally:
+                adb(serial, "shell", f"echo 1 > {REMOTE}/go")
         time.sleep(3)
     raw = adb(serial, "shell", "cat", f"{REMOTE}/result.json")
     if not raw.startswith("{"):
@@ -503,6 +554,40 @@ def permission(serial, report):
     finally:
         adb(serial, "shell", "appops", "set", PLUGIN, "SCHEDULE_EXACT_ALARM", original)
     report.line(f"exact alarm appop restored ({original})", "PASS" if appop_mode(serial) == original else "FAIL", appop_mode(serial))
+
+
+def unbind_in_list(serial, alarm_id, report):
+    """Runs HomeUnbindProbe: the alarm list unbinds [alarm_id] through its menu, as a user would (roadmap D20, T27)."""
+    out = adb(serial, "shell", "am", "instrument", "-w", "-r", "-e", "class", UNBIND_PROBE, "-e", "chimeUnbind", alarm_id, RUNNER, timeout=180)
+    values = dict(re.findall(r"INSTRUMENTATION_STATUS: (chime\.[\w.-]+)=(.*)", out))
+    if not values:
+        failure = re.findall(r"INSTRUMENTATION_STATUS: stack=(.*)", out) or out.splitlines()[-1:]
+        report.line("alarm list unbind (HomeUnbindProbe)", "FAIL", (failure or ["no output"])[0][:200])
+        return
+    report.line("alarm list: the alarm shows as bound", "PASS" if values.get("chime.boundBefore") == "true" else "FAIL", f"boundBefore {values.get('chime.boundBefore')}")
+    report.line("alarm list: unbind drops the plugin's hint", "PASS" if values.get("chime.boundAfter") == "false" else "FAIL", f"boundAfter {values.get('chime.boundAfter')}")
+    report.line("alarm list: the binding mark is gone", "PASS" if values.get("chime.markGone") == "true" else "FAIL", f"markGone {values.get('chime.markGone')}")
+
+
+def ui(serial, report):
+    """The ui mode: every openPlugin page reaches the plugin (its ChimeOpen log lines) and the alarm list unbinds an
+    alarm through the host (HomeUnbindProbe of the androidTest APK, installed for the run and uninstalled after it)."""
+    tests = sorted((smoke.ROOT / "app" / "build" / "outputs" / "apk" / "androidTest" / "debug").glob("*.apk"), key=lambda p: p.stat().st_mtime)
+    if not tests:
+        report.line("contract ui", "FAIL", "build :app:assembleDebugAndroidTest first")
+        return
+    out = subprocess.run(["adb", "-s", serial, "install", "-r", "-t", str(tests[-1])], capture_output=True, text=True, timeout=300)
+    if not report.line(f"install {tests[-1].name}", "PASS" if out.returncode == 0 and "Success" in out.stdout else "FAIL", (out.stdout + out.stderr).strip()[-120:]):
+        return
+    try:
+        since = adb(serial, "shell", "date", "+%m-%d_%H:%M:%S.000").strip().replace("_", " ")
+        run_mode(serial, "ui", report, timeout=420, stage=lambda alarm_id: unbind_in_list(serial, alarm_id, report))
+        opened = re.findall(r"open page=(\S+)", adb(serial, "shell", f"logcat -d -s ChimeOpen -t '{since}'"))
+        expected = ["(none)", *PAGES]
+        report.line("openPlugin pages reached the plugin", "PASS" if opened == expected else "FAIL", f"[{', '.join(opened)}]")
+    finally:
+        out = subprocess.run(["adb", "-s", serial, "uninstall", TEST_PACKAGE], capture_output=True, text=True, timeout=120)
+        report.line("androidTest APK uninstalled", "PASS" if out.returncode == 0 else "FAIL")
 
 
 def incompatible(serial, apk, normal, report):
@@ -547,7 +632,7 @@ def after_smoke(serial, args, report, apk):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("serial")
-    parser.add_argument("--modes", default="full,permission", help="comma-separated: unavailable, full, permission (default: full,permission)")
+    parser.add_argument("--modes", default="full,permission", help="comma-separated: unavailable, full, permission, ui (default: full,permission)")
     parser.add_argument("--incompatible-apk", metavar="FILE", help="a build whose requiresHostVersion is above the host's versionCode")
     parser.add_argument("--apk", help="the normal APK installed again after --incompatible-apk (default: the newest debug APK)")
     parser.add_argument("--cleanup", action="store_true", help="only remove the alarms an interrupted run left")
@@ -562,6 +647,8 @@ def main(argv=None):
         for mode in [m.strip() for m in args.modes.split(",") if m.strip()]:
             if mode == "permission":
                 permission(args.serial, report)
+            elif mode == "ui":
+                ui(args.serial, report)
             else:
                 run_mode(args.serial, mode, report)
         if args.incompatible_apk:

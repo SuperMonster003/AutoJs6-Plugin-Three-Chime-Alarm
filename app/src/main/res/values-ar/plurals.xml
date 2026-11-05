@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="home_delete_title">
+        <item quantity="zero">حذف %1$d منبه?</item>
+        <item quantity="one">حذف منبه واحد?</item>
+        <item quantity="two">حذف منبهين?</item>
+        <item quantity="few">حذف %1$d منبهات?</item>
+        <item quantity="many">حذف %1$d منبها?</item>
+        <item quantity="other">حذف %1$d منبه?</item>
+    </plurals>
+    <plurals name="home_limit_enabled">
+        <item quantity="zero">لا يمكن تفعيل أي منبه في الوقت نفسه</item>
+        <item quantity="one">يمكن تفعيل منبه واحد على الأكثر في الوقت نفسه</item>
+        <item quantity="two">يمكن تفعيل منبهين على الأكثر في الوقت نفسه</item>
+        <item quantity="few">يمكن تفعيل %1$d منبهات على الأكثر في الوقت نفسه</item>
+        <item quantity="many">يمكن تفعيل %1$d منبها على الأكثر في الوقت نفسه</item>
+        <item quantity="other">يمكن تفعيل %1$d منبه على الأكثر في الوقت نفسه</item>
+    </plurals>
+    <plurals name="home_selected_count">
+        <item quantity="zero">لم يتم تحديد أي منبه</item>
+        <item quantity="one">تم تحديد منبه واحد</item>
+        <item quantity="two">تم تحديد منبهين</item>
+        <item quantity="few">تم تحديد %1$d منبهات</item>
+        <item quantity="many">تم تحديد %1$d منبها</item>
+        <item quantity="other">تم تحديد %1$d منبه</item>
+    </plurals>
+    <plurals name="home_unbind_done">
+        <item quantity="zero">لم يتم إلغاء ربط أي برنامج نصي</item>
+        <item quantity="one">تم إلغاء ربط برنامج نصي واحد</item>
+        <item quantity="two">تم إلغاء ربط برنامجين نصيين</item>
+        <item quantity="few">تم إلغاء ربط %1$d برامج نصية</item>
+        <item quantity="many">تم إلغاء ربط %1$d برنامجا نصيا</item>
+        <item quantity="other">تم إلغاء ربط %1$d برنامج نصي</item>
+    </plurals>
+    <plurals name="update_ignored_count">
+        <item quantity="zero">لا إصدارات متجاهلة</item>
+        <item quantity="one">إصدار واحد متجاهل</item>
+        <item quantity="two">إصداران متجاهلان</item>
+        <item quantity="few">%1$d إصدارات متجاهلة</item>
+        <item quantity="many">%1$d إصدارا متجاهلا</item>
+        <item quantity="other">%1$d إصدار متجاهل</item>
+    </plurals>
+</resources>

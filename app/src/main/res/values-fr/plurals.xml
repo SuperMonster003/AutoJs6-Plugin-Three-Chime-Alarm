@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="home_delete_title">
+        <item quantity="one">Supprimer %1$d alarme ?</item>
+        <item quantity="many">Supprimer %1$d alarmes ?</item>
+        <item quantity="other">Supprimer %1$d alarmes ?</item>
+    </plurals>
+    <plurals name="home_limit_enabled">
+        <item quantity="one">%1$d alarme au maximum peut être activée en même temps</item>
+        <item quantity="many">%1$d alarmes au maximum peuvent être activées en même temps</item>
+        <item quantity="other">%1$d alarmes au maximum peuvent être activées en même temps</item>
+    </plurals>
+    <plurals name="home_selected_count">
+        <item quantity="one">%1$d sélectionnée</item>
+        <item quantity="many">%1$d sélectionnées</item>
+        <item quantity="other">%1$d sélectionnées</item>
+    </plurals>
+    <plurals name="home_unbind_done">
+        <item quantity="one">%1$d script délié</item>
+        <item quantity="many">%1$d scripts déliés</item>
+        <item quantity="other">%1$d scripts déliés</item>
+    </plurals>
+    <plurals name="update_ignored_count">
+        <item quantity="one">%1$d version ignorée</item>
+        <item quantity="many">%1$d versions ignorées</item>
+        <item quantity="other">%1$d versions ignorées</item>
+    </plurals>
+</resources>

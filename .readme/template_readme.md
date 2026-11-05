@@ -114,7 +114,7 @@ info service: {{ info_action }} (category {{ info_category }})
 capability service: {{ discovery_action }} (category {{ discovery_category }})
 wake action: {{ wake_action }}
 minimum host build: {{ required_host_version_code }}
-native libraries: none (a single APK for every ABI; the 16 KB page size check does not apply)
+native libraries: libandroidx.graphics.path.so only (Compose graphics-path, 4 ABIs, uncompressed, 16 KB aligned; a single APK for every ABI)
 ```
 
 ******

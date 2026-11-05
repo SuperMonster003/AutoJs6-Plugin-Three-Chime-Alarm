@@ -50,6 +50,14 @@
             android:name="org.autojs.plugin.info.AUTHOR"
             android:value="@string/plugin_author" />
 
+        <!--
+            Roadmap T34: the only native code is the Compose graphics-path library, stored uncompressed and 16 KB page
+            aligned; the host's Plugin Center reads the declared alignment.
+        -->
+        <meta-data
+            android:name="org.autojs.plugin.contract.NATIVE_PAGE_ALIGNMENT"
+            android:value="16384" />
+
         <activity
             android:name=".WakeActivity"
             android:excludeFromRecents="true"
@@ -64,9 +72,10 @@
         </activity>
 
         <!--
-            The plugin's screens (roadmap D7, P3). The home screen is the launcher target: the launcher entry is one of four
+            The plugin's screens (roadmap D7, P3). The alarm list is the launcher target: the launcher entry is one of four
             fixed aliases that persist the icon choice as component state (icon specification section 4); only the
-            automatic alias is enabled by default, and the settings screen of roadmap P3 offers the choice.
+            automatic alias is enabled by default, and the settings screen of roadmap P3.5 offers the choice. The screens
+            are not exported; the host reaches them through the OPEN trampoline below.
         -->
         <activity
             android:name=".ui.home.HomeActivity"
@@ -120,6 +129,24 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
+
+        <!--
+            `alarms.openPlugin(page)` (roadmap T81, appendix A section 9): the frozen OPEN action with the optional `page`
+            extra. Exported without a permission, as it only shows the plugin's own screens. No task affinity: the host
+            starts it with FLAG_ACTIVITY_NEW_TASK, and as the root of the plugin's task it would only bring that task to
+            the front on the next call, which then never reaches onCreate and loses its page.
+        -->
+        <activity
+            android:name=".ui.OpenPluginActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.NoDisplay">
+            <intent-filter>
+                <action android:name="org.autojs.plugin.alarm.OPEN" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
 
         <!--
             The system clock intents (roadmap D21; SET_TIMER, SHOW_TIMERS and DISMISS_TIMER join in 1.1.0). Callers hold
@@ -198,6 +225,15 @@
                 <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
             </intent-filter>
         </receiver>
+        <!-- Package replacement repairs the launcher alias state only (no screen). -->
+        <receiver
+            android:name=".ui.appearance.LauncherIconUpdateReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
         <!-- Plugin Center identity (roadmap 4.5, category three-chime-alarm, engine alarm). -->
         <service
             android:name=".service.ThreeChimeAlarmInfoService"

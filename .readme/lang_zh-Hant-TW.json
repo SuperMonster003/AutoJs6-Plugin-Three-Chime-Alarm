@@ -38,7 +38,7 @@
     "開啟外掛, 依提示授予通知, 精確鬧鐘與全螢幕提醒權限, 之後就可以像一般時鐘應用程式一樣使用.",
     "若要在指令碼中使用 `alarms` 模組, 請將 AutoJs6 升級到內部版本號 {{ required_host_version_code }} ({{ required_host_version_name }}) 或更新版本, 並在外掛中心啟用本外掛."
   ],
-  "p_usage_note": "外掛支援 Android {{ min_android_version }} (API {{ android_min_sdk }}) 以上的裝置. APK 不含原生程式庫, 因此只有一個安裝包, 也不涉及 16 KB 記憶體分頁大小的檢查.",
+  "p_usage_note": "外掛支援 Android {{ min_android_version }} (API {{ android_min_sdk }}) 以上的裝置. 只有一個適用於所有裝置的安裝包; 其中唯一的原生程式庫來自介面框架 Compose, 已按 16 KB 記憶體分頁對齊, 在 16 KB 記憶體分頁的裝置上也能執行.",
   "p_script_api_intro": "指令碼透過全域模組 `alarms` (也可寫作 `$alarms`) 使用這些功能 (1.0.0 設計草案, 以發布版本的文件為準)",
   "api_points": [
     "`alarms.add(options)` 新增鬧鐘並傳回鬧鐘物件; `alarms.list`, `get`, `update`, `remove`, `setEnabled` 與 `skipNext` 管理外掛中的所有鬧鐘, 包括在外掛介面建立的鬧鐘.",
