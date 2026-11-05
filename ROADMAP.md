@@ -428,7 +428,7 @@ P0 (插件骨架, 含 P0.2 评估)          P1.1 - P1.3 (宿主契约, 桥接, �
 
 ### P6.1 文档 (AutoJs6-Documentation)
 
-- [ ] (文档) `api/alarms.md`: 模块总览与可用性 (插件 / 宿主版本), 闹钟选项, 重复规则 (RRULE 子集, 不支持项, 常见写法表), 响铃内容, 事件与两种联动 (`execArgv.alarm`, `currentEvent`, 未解锁 / 宿主被停止时的行为), `alarms.system` (ROM 已知差异表: `skipUi`, `days`, `ringtone`, `dismissAlarm` 搜索模式), 错误码与限制表, 示例; 首屏提示 "脚本可以读写用户在插件界面建的闹钟 (D15), 插件界面会标出修改来源". changelog 条目 (10 语言 JSON 同步). 证据: 文档仓库提交 hash (仅本地, 推送时机由维护者定).
+- [ ] (文档) `api/alarms.md`: 模块总览与可用性 (插件 / 宿主版本), 闹钟选项, 重复规则 (RRULE 子集, 不支持项, 常见写法表), 响铃内容, 事件与两种联动 (`execArgv.alarm`, `currentEvent`, 未解锁 / 宿主被停止时的行为), `alarms.system` (ROM 已知差异表: `skipUi`, `days`, `ringtone`, `dismissAlarm` 搜索模式), 错误码与限制表, 示例; 首屏提示 "脚本可以读写用户在插件界面建的闹钟 (D15), 插件界面会标出修改来源". changelog 条目 (10 语言 JSON 同步). 证据: 文档仓库提交 hash (仅本地, 推送时机由维护者定). 运行时支持表: 页面用文档仓库的 `node generator/runtime-support.js --insert alarms:alarms` 插入 runtime-support 块; 推迟期间 `check.py --docs-support` 把缺块的 alarms 记入 `deferredRoots` 而不判失败, 删掉 policy.json `deferredNameGate` 的 alarms 行 (Q11 (a)) 之后缺块即失败 (宿主 48efe0e65e).
 
 ### P6.2 声明与编辑器 (AutoJs6-TypeScript-Declarations, Ace Editor, Offline Docs)
 
