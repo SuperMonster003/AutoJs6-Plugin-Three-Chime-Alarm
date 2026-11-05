@@ -1,0 +1,151 @@
+name: Build integrity
+
+# Roadmap P0.4: only pushes to master and pull requests run the build by default, plus manual runs.
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-build:
+    name: Repository checks, unit tests and APKs
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          # check_repository.py compares VERSION_BUILD with the full commit count.
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Set up Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Verify the repository contract and generated documents
+        run: |
+          python .python/check_repository.py
+          python .python/generate_markdown.py --check
+          python -m py_compile .python/device_smoke.py
+
+      - name: Run unit tests, assemble APKs and lint
+        run: |
+          chmod +x gradlew
+          # The release APK is built explicitly: R8 and resource shrinking failures only surface there. It stays unsigned
+          # on CI; the signed collection task (appendDigestToReleasedFiles) and device_smoke.py run locally.
+          ./gradlew :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest :app:assembleRelease :app:lintDebug -Pautojs.gradle.build.number.auto.increment.enabled=false -Pautojs.gradle.build.time.update.enabled=false --console=plain --stacktrace
+
+      # Roadmap T20: exactly one release APK and no native code (the same rule appendDigestToReleasedFiles enforces locally).
+      - name: Check the release artifact
+        shell: python
+        run: |
+          import pathlib, sys, zipfile
+          apks = sorted(pathlib.Path("app/build/outputs/apk/release").glob("*.apk"))
+          if len(apks) != 1:
+              sys.exit(f"expected exactly one release APK, found {[apk.name for apk in apks]}")
+          with zipfile.ZipFile(apks[0]) as archive:
+              natives = [name for name in archive.namelist() if name.startswith("lib/") or name.endswith(".so")]
+          if natives:
+              sys.exit(f"{apks[0].name} must not contain native code: {sorted(natives)[:10]}")
+          print(f"RELEASE_OK {apks[0].name} {apks[0].stat().st_size} bytes, no native code")
+
+      - name: Upload debug, release and test APKs
+        uses: actions/upload-artifact@v7
+        with:
+          name: three-chime-alarm-apks
+          path: app/build/outputs/apk
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
+      - name: Upload test and lint reports after failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: reports
+          path: |
+            app/build/reports/
+            app/build/test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # Skeleton of the emulator job (roadmap P0.4): the activation and discovery contract runs now; roadmap P5.1 fills in the
+  # CI case set on API 33 (appendix D) and adds the alarm, ring and boot cases.
+  connected-avd:
+    name: Contract tests (API ${{ matrix.api-level }}, ${{ matrix.arch }})
+    needs: verify-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - api-level: 24
+            arch: x86
+            target: google_apis
+            profile: Nexus 5
+          - api-level: 33
+            arch: x86_64
+            target: google_apis
+            profile: pixel_6
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run the activation, discovery and Binder contract tests
+        uses: reactivecircus/android-emulator-runner@v2.38.0
+        with:
+          api-level: ${{ matrix.api-level }}
+          target: ${{ matrix.target }}
+          arch: ${{ matrix.arch }}
+          profile: ${{ matrix.profile }}
+          avd-name: Three_Chime_Alarm_CI_${{ matrix.api-level }}
+          disable-animations: true
+          # The emulator runner executes every script line as a separate shell command, so a backslash continuation would
+          # become a literal Gradle task name; keep each command on one line (3-Block Compose lesson).
+          script: |
+            chmod +x gradlew
+            ./gradlew :app:connectedDebugAndroidTest -Pautojs.gradle.build.number.auto.increment.enabled=false -Pautojs.gradle.build.time.update.enabled=false --console=plain --stacktrace
+
+      - name: Upload instrumentation reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: instrumentation-reports-api${{ matrix.api-level }}
+          path: |
+            app/build/reports/androidTests/
+            app/build/outputs/androidTest-results/connected/
+          if-no-files-found: ignore
+          retention-days: 7
