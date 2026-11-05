@@ -1,6 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="alarm_default_label">알람</string>
+    <string name="clock_choose_dismiss_title">어떤 알람을 해제할까요?</string>
+    <string name="clock_label_hint">라벨</string>
+    <string name="clock_new_alarm_title">새 알람</string>
+    <string name="clock_toast_alarm_set">알람이 %1$s(으)로 설정되었습니다</string>
+    <string name="clock_toast_dismissed">알람 해제됨: %1$s</string>
+    <string name="clock_toast_failed">요청을 처리하지 못했습니다: %1$s</string>
+    <string name="clock_toast_no_match">일치하는 알람이 없습니다</string>
+    <string name="clock_toast_not_ringing">울리고 있는 알람이 없습니다</string>
+    <string name="clock_toast_snooze_refused">울리고 있는 알람은 다시 알림을 할 수 없습니다</string>
+    <string name="clock_toast_snoozed">다시 알림이 설정되었습니다</string>
+    <string name="clock_toast_too_early">해제하지 않음: 다음 알람 %1$s까지 하루 이상 남았습니다</string>
     <string name="notification_channel_missed_description">기기가 꺼져 있었거나 시스템이 지연시켜 울리지 않은 알람</string>
     <string name="notification_channel_missed_name">놓친 알람</string>
     <string name="notification_channel_ring_description">울리는 알람과 전체 화면 알림을 표시합니다</string>

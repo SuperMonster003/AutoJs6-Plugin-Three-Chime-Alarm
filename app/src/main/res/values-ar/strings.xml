@@ -1,6 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="alarm_default_label">منبه</string>
+    <string name="clock_choose_dismiss_title">أي منبه تريد إيقافه?</string>
+    <string name="clock_label_hint">التسمية</string>
+    <string name="clock_new_alarm_title">منبه جديد</string>
+    <string name="clock_toast_alarm_set">تم ضبط المنبه على %1$s</string>
+    <string name="clock_toast_dismissed">تم إيقاف المنبه: %1$s</string>
+    <string name="clock_toast_failed">تعذر تنفيذ الطلب: %1$s</string>
+    <string name="clock_toast_no_match">لا يوجد منبه مطابق</string>
+    <string name="clock_toast_not_ringing">لا يوجد منبه يرن الآن</string>
+    <string name="clock_toast_snooze_refused">لا يمكن تأجيل المنبه الذي يرن</string>
+    <string name="clock_toast_snoozed">تم تأجيل المنبه</string>
+    <string name="clock_toast_too_early">لم يتم الإيقاف: الرنين التالي في %1$s بعد أكثر من يوم</string>
     <string name="notification_channel_missed_description">المنبهات التي لم ترن لأن الجهاز كان مطفأ أو لأن النظام أخرها</string>
     <string name="notification_channel_missed_name">المنبهات الفائتة</string>
     <string name="notification_channel_ring_description">يعرض المنبه الذي يرن وتنبيهه بملء الشاشة</string>

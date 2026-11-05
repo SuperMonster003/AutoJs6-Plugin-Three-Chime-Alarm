@@ -1,6 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="alarm_default_label">Alarme</string>
+    <string name="clock_choose_dismiss_title">Quelle alarme arrêter ?</string>
+    <string name="clock_label_hint">Libellé</string>
+    <string name="clock_new_alarm_title">Nouvelle alarme</string>
+    <string name="clock_toast_alarm_set">Alarme réglée pour %1$s</string>
+    <string name="clock_toast_dismissed">Alarme arrêtée : %1$s</string>
+    <string name="clock_toast_failed">Demande non traitée : %1$s</string>
+    <string name="clock_toast_no_match">Aucune alarme correspondante</string>
+    <string name="clock_toast_not_ringing">Aucune alarme ne sonne</string>
+    <string name="clock_toast_snooze_refused">L\'alarme qui sonne ne peut pas être reportée</string>
+    <string name="clock_toast_snoozed">Alarme reportée</string>
+    <string name="clock_toast_too_early">Non arrêtée : la prochaine sonnerie à %1$s est dans plus d\'un jour</string>
     <string name="notification_channel_missed_description">Alarmes qui n\'ont pas sonné parce que l\'appareil était éteint ou que le système les a retardées</string>
     <string name="notification_channel_missed_name">Alarmes manquées</string>
     <string name="notification_channel_ring_description">Affiche les alarmes qui sonnent et leur alerte en plein écran</string>

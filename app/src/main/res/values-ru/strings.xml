@@ -1,6 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="alarm_default_label">Будильник</string>
+    <string name="clock_choose_dismiss_title">Какой будильник выключить?</string>
+    <string name="clock_label_hint">Метка</string>
+    <string name="clock_new_alarm_title">Новый будильник</string>
+    <string name="clock_toast_alarm_set">Будильник установлен на %1$s</string>
+    <string name="clock_toast_dismissed">Будильник выключен: %1$s</string>
+    <string name="clock_toast_failed">Не удалось выполнить запрос: %1$s</string>
+    <string name="clock_toast_no_match">Нет подходящего будильника</string>
+    <string name="clock_toast_not_ringing">Сейчас не звонит ни один будильник</string>
+    <string name="clock_toast_snooze_refused">Звонящий будильник нельзя отложить</string>
+    <string name="clock_toast_snoozed">Будильник отложен</string>
+    <string name="clock_toast_too_early">Не выключен: следующий звонок в %1$s, более чем через сутки</string>
     <string name="notification_channel_missed_description">Будильники, которые не прозвонили, потому что устройство было выключено или система их задержала</string>
     <string name="notification_channel_missed_name">Пропущенные будильники</string>
     <string name="notification_channel_ring_description">Показывает звонящий будильник и полноэкранное оповещение</string>

@@ -1,6 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="alarm_default_label">アラーム</string>
+    <string name="clock_choose_dismiss_title">どのアラームを停止しますか?</string>
+    <string name="clock_label_hint">ラベル</string>
+    <string name="clock_new_alarm_title">新しいアラーム</string>
+    <string name="clock_toast_alarm_set">アラームを %1$s に設定しました</string>
+    <string name="clock_toast_dismissed">アラームを停止しました: %1$s</string>
+    <string name="clock_toast_failed">リクエストを処理できませんでした: %1$s</string>
+    <string name="clock_toast_no_match">一致するアラームがありません</string>
+    <string name="clock_toast_not_ringing">鳴っているアラームはありません</string>
+    <string name="clock_toast_snooze_refused">鳴っているアラームはスヌーズできません</string>
+    <string name="clock_toast_snoozed">アラームをスヌーズしました</string>
+    <string name="clock_toast_too_early">停止していません: 次に鳴るのは %1$s で, 1 日以上先です</string>
     <string name="notification_channel_missed_description">端末の電源が切れていたか, システムに遅延されたために鳴らなかったアラーム</string>
     <string name="notification_channel_missed_name">鳴らなかったアラーム</string>
     <string name="notification_channel_ring_description">鳴動中のアラームと全画面通知を表示します</string>

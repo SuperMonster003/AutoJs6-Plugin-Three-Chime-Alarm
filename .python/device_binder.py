@@ -28,9 +28,9 @@ PLUGIN = schedule.PLUGIN
 TESTS = [f"{PLUGIN}.ThreeChimeAlarmContractTest", f"{PLUGIN}.AlarmPluginBinderTest"]
 
 
-def instrument(serial):
-    """Runs the test classes and answers {test: None (passed) | first failure line} and the runner's summary."""
-    out = schedule.adb(serial, "shell", "am", "instrument", "-w", "-r", "-e", "class", ",".join(TESTS), schedule.RUNNER,
+def instrument(serial, classes=TESTS):
+    """Runs the test [classes] and answers {test: None (passed) | first failure line} and the runner's summary."""
+    out = schedule.adb(serial, "shell", "am", "instrument", "-w", "-r", "-e", "class", ",".join(classes), schedule.RUNNER,
                        check=False, timeout=600)
     results, current = {}, {}
     for line in out.splitlines():

@@ -1,6 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="alarm_default_label">Alarm</string>
+    <string name="clock_choose_dismiss_title">Dismiss which alarm?</string>
+    <string name="clock_label_hint">Label</string>
+    <string name="clock_new_alarm_title">New alarm</string>
+    <string name="clock_toast_alarm_set">Alarm set for %1$s</string>
+    <string name="clock_toast_dismissed">Alarm dismissed: %1$s</string>
+    <string name="clock_toast_failed">Request not handled: %1$s</string>
+    <string name="clock_toast_no_match">No matching alarm</string>
+    <string name="clock_toast_not_ringing">No alarm is ringing</string>
+    <string name="clock_toast_snooze_refused">The ringing alarm cannot be snoozed</string>
+    <string name="clock_toast_snoozed">Alarm snoozed</string>
+    <string name="clock_toast_too_early">Not dismissed: the next ring at %1$s is more than a day away</string>
     <string name="notification_channel_missed_description">Alarms that did not ring because the device was off or the system held them back</string>
     <string name="notification_channel_missed_name">Missed alarms</string>
     <string name="notification_channel_ring_description">Shows the ringing alarm and its full screen alert</string>

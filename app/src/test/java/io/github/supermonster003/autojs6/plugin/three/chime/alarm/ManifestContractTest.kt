@@ -104,10 +104,14 @@ class ManifestContractTest {
     @Test
     fun `the activities are the wake, home, clock intent and ring screens`() {
         assertEquals(
-            listOf(".WakeActivity", ".ui.home.HomeActivity", ".intent.ClockIntentActivity", ".ring.RingActivity"),
+            listOf(".WakeActivity", ".ui.home.HomeActivity", ".intent.ClockIntentActivity", ".intent.ClockDialogActivity", ".ring.RingActivity"),
             application.children("activity").map { it.android("name") },
         )
         assertEquals("false", activity(".ui.home.HomeActivity").android("exported"))
+        // The new alarm page and the chooser of the clock intents (roadmap P2.6) open only from ClockIntentActivity.
+        val dialog = activity(".intent.ClockDialogActivity")
+        assertEquals("false", dialog.android("exported"))
+        assertEquals("true", dialog.android("excludeFromRecents"))
         val ring = activity(".ring.RingActivity")
         assertEquals("false", ring.android("exported"))
         assertEquals("true", ring.android("showWhenLocked"))

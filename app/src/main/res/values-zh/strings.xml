@@ -1,6 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="alarm_default_label">闹钟</string>
+    <string name="clock_choose_dismiss_title">关闭哪个闹钟?</string>
+    <string name="clock_label_hint">标签</string>
+    <string name="clock_new_alarm_title">新建闹钟</string>
+    <string name="clock_toast_alarm_set">闹钟已设为 %1$s</string>
+    <string name="clock_toast_dismissed">已关闭闹钟: %1$s</string>
+    <string name="clock_toast_failed">未能处理请求: %1$s</string>
+    <string name="clock_toast_no_match">没有匹配的闹钟</string>
+    <string name="clock_toast_not_ringing">没有正在响铃的闹钟</string>
+    <string name="clock_toast_snooze_refused">正在响铃的闹钟不能贪睡</string>
+    <string name="clock_toast_snoozed">闹钟已贪睡</string>
+    <string name="clock_toast_too_early">未关闭: 下一次响铃 %1$s 在一天以后</string>
     <string name="notification_channel_missed_description">因设备关机或被系统推迟而没有响的闹钟</string>
     <string name="notification_channel_missed_name">错过的闹钟</string>
     <string name="notification_channel_ring_description">显示正在响铃的闹钟及其全屏提醒</string>

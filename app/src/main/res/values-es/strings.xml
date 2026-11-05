@@ -1,6 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="alarm_default_label">Alarma</string>
+    <string name="clock_choose_dismiss_title">Elige la alarma que quieres descartar</string>
+    <string name="clock_label_hint">Etiqueta</string>
+    <string name="clock_new_alarm_title">Nueva alarma</string>
+    <string name="clock_toast_alarm_set">Alarma programada para las %1$s</string>
+    <string name="clock_toast_dismissed">Alarma descartada: %1$s</string>
+    <string name="clock_toast_failed">No se pudo atender la solicitud: %1$s</string>
+    <string name="clock_toast_no_match">Ninguna alarma coincide</string>
+    <string name="clock_toast_not_ringing">No hay ninguna alarma sonando</string>
+    <string name="clock_toast_snooze_refused">La alarma que suena no se puede posponer</string>
+    <string name="clock_toast_snoozed">Alarma pospuesta</string>
+    <string name="clock_toast_too_early">No se descartó: el próximo aviso a las %1$s es dentro de más de un día</string>
     <string name="notification_channel_missed_description">Alarmas que no sonaron porque el dispositivo estaba apagado o el sistema las retrasó</string>
     <string name="notification_channel_missed_name">Alarmas perdidas</string>
     <string name="notification_channel_ring_description">Muestra la alarma que suena y su aviso a pantalla completa</string>
