@@ -69,7 +69,7 @@ Le plugin programme et fait sonner les alarmes lui-même grâce aux alarmes exac
 
 1. Téléchargez l'APK depuis [Releases](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/releases) et installez-le. Il n'existe qu'un seul paquet pour toutes les ABI.
 2. Ouvrez le plugin et accordez les autorisations de notification, d'alarme exacte et d'alerte plein écran lorsqu'elles sont demandées; il fonctionne ensuite comme une application d'horloge ordinaire.
-3. Pour utiliser le module `alarms` dans les scripts, mettez à jour AutoJs6 vers la version interne 6640 (6.8.1) ou ultérieure et activez le plugin dans le centre des plugins.
+3. Pour utiliser le module `alarms` dans les scripts, mettez à jour AutoJs6 vers la version interne 6641 (6.8.1) ou ultérieure et activez le plugin dans le centre des plugins.
 
 > Le plugin prend en charge les appareils sous Android 7.0 (API 24) ou ultérieur. L'APK ne contient aucune bibliothèque native, il n'y a donc qu'un seul paquet et la vérification de la taille de page mémoire de 16 KB ne s'applique pas.
 
@@ -145,7 +145,7 @@ variant: default
 info service: org.autojs.plugin.INFO (category three-chime-alarm)
 capability service: org.autojs.plugin.ALARM (category alarm)
 wake action: org.autojs.plugin.action.WAKE
-minimum host build: 6640
+minimum host build: 6641
 native libraries: none (a single APK for every ABI; the 16 KB page size check does not apply)
 ```
 
@@ -170,7 +170,7 @@ Les plans, décisions de conception et l'avancement sont suivis sous forme de li
 _2026/11/05_
 
 - `Note` Préversion de développement: le centre des plugins d'AutoJs6 peut détecter le plugin; les alarmes, les minuteurs, le chronomètre, les écrans du plugin et le module de script alarms ne sont pas encore livrés
-- `Note` Nécessite AutoJs6 6.8.1 (6640) ou ultérieur (la version minimale exacte sera renseignée une fois les modifications de l'hôte intégrées)
+- `Note` Nécessite AutoJs6 6.8.1 (6641) ou ultérieur (la version minimale exacte sera renseignée une fois les modifications de l'hôte intégrées)
 - `Note` L'icône actuelle est une proposition et peut encore changer
 - `Fonctionnalité` Squelette du plugin: protocole d'activation Wake, service d'identité du centre des plugins et service de capacité d'alarme
 - `Fonctionnalité` Aucune bibliothèque native: un seul APK pour tous les appareils

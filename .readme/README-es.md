@@ -69,7 +69,7 @@ El complemento programa y hace sonar las alarmas por sí mismo con las alarmas e
 
 1. Descargue el APK desde [Releases](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/releases) e instálelo. Hay un único paquete para todas las ABI.
 2. Abra el complemento y conceda los permisos de notificaciones, alarmas exactas y alertas a pantalla completa cuando se soliciten; después funciona como una aplicación de reloj normal.
-3. Para usar el módulo `alarms` en scripts, actualice AutoJs6 a la compilación interna 6640 (6.8.1) o posterior y active el complemento en el centro de complementos.
+3. Para usar el módulo `alarms` en scripts, actualice AutoJs6 a la compilación interna 6641 (6.8.1) o posterior y active el complemento en el centro de complementos.
 
 > El complemento es compatible con dispositivos con Android 7.0 (API 24) o posterior. El APK no contiene bibliotecas nativas, por lo que hay un único paquete y la comprobación del tamaño de página de memoria de 16 KB no se aplica.
 
@@ -145,7 +145,7 @@ variant: default
 info service: org.autojs.plugin.INFO (category three-chime-alarm)
 capability service: org.autojs.plugin.ALARM (category alarm)
 wake action: org.autojs.plugin.action.WAKE
-minimum host build: 6640
+minimum host build: 6641
 native libraries: none (a single APK for every ABI; the 16 KB page size check does not apply)
 ```
 
@@ -170,7 +170,7 @@ Los planes, las decisiones de diseño y el progreso se registran como lista de v
 _2026/11/05_
 
 - `Aviso` Versión preliminar de desarrollo: el centro de complementos de AutoJs6 puede detectar el complemento; las alarmas, los temporizadores, el cronómetro, las pantallas del complemento y el módulo de script alarms aún no están disponibles
-- `Aviso` Requiere AutoJs6 6.8.1 (6640) o posterior (la versión mínima exacta se indicará cuando se integren los cambios del anfitrión)
+- `Aviso` Requiere AutoJs6 6.8.1 (6641) o posterior (la versión mínima exacta se indicará cuando se integren los cambios del anfitrión)
 - `Aviso` El icono actual es un diseño candidato y aún puede cambiar
 - `Función` Esqueleto del complemento: protocolo de activación Wake, servicio de identidad del centro de complementos y servicio de capacidad de alarmas
 - `Función` Sin bibliotecas nativas: un único APK para todos los dispositivos

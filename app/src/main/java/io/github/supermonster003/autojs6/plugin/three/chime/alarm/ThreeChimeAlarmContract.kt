@@ -28,12 +28,12 @@ internal object ThreeChimeAlarmContract {
     const val CAPABILITY_DESCRIPTOR = "org.autojs.plugin.alarm.api.IAlarmPlugin"
 
     /**
-     * Minimum host build at the roadmap baseline (roadmap 4.5), mirrored by `plugin_requires_host_version` in
-     * `app/build.gradle.kts`; roadmap P1.3 and P6.4 replace both together.
-     * zh-CN: 路线图基线的最低宿主构建号 (路线图 4.5), 与 `app/build.gradle.kts` 中的 `plugin_requires_host_version` 一致; 路线图
-     * P1.3 与 P6.4 同时替换两者.
+     * Temporary minimum host build (roadmap 4.5, T33): the first host build with the alarm contract of roadmap P1.1 - P1.3,
+     * mirrored by `plugin_requires_host_version` in `app/build.gradle.kts`; roadmap P6.4 replaces both together.
+     * zh-CN: 临时最低宿主构建号 (路线图 4.5, T33): 第一个包含路线图 P1.1 - P1.3 闹钟契约的宿主构建, 与 `app/build.gradle.kts` 中的
+     * `plugin_requires_host_version` 一致; 路线图 P6.4 同时替换两者.
      */
-    const val REQUIRED_HOST_VERSION = 6640L
+    const val REQUIRED_HOST_VERSION = 6641L
 
     /** Alarm contract version (roadmap T25). zh-CN: 闹钟契约版本 (路线图 T25). */
     const val CONTRACT_VERSION = 1

@@ -69,7 +69,7 @@
 
 1. [Releases](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/releases)에서 APK를 내려받아 설치합니다. 모든 ABI에 공통인 패키지 하나만 있습니다.
 2. 플러그인을 열고 요청이 나오면 알림, 정확한 알람, 전체 화면 알림 권한을 허용합니다. 그다음에는 일반 시계 앱처럼 쓸 수 있습니다.
-3. 스크립트에서 `alarms` 모듈을 쓰려면 AutoJs6를 내부 빌드 6640 (6.8.1) 이상으로 업데이트하고 플러그인 센터에서 플러그인을 활성화하세요.
+3. 스크립트에서 `alarms` 모듈을 쓰려면 AutoJs6를 내부 빌드 6641 (6.8.1) 이상으로 업데이트하고 플러그인 센터에서 플러그인을 활성화하세요.
 
 > 플러그인은 Android 7.0 (API 24) 이상 기기를 지원합니다. APK에 네이티브 라이브러리가 없으므로 패키지는 하나뿐이며 16 KB 메모리 페이지 크기 검사도 해당되지 않습니다.
 
@@ -145,7 +145,7 @@ variant: default
 info service: org.autojs.plugin.INFO (category three-chime-alarm)
 capability service: org.autojs.plugin.ALARM (category alarm)
 wake action: org.autojs.plugin.action.WAKE
-minimum host build: 6640
+minimum host build: 6641
 native libraries: none (a single APK for every ABI; the 16 KB page size check does not apply)
 ```
 
@@ -170,7 +170,7 @@ native libraries: none (a single APK for every ABI; the 16 KB page size check do
 _2026/11/05_
 
 - `힌트` 개발 미리보기: AutoJs6 플러그인 센터가 플러그인을 인식할 수 있습니다. 알람, 타이머, 스톱워치, 플러그인 화면, alarms 스크립트 모듈은 아직 제공되지 않습니다
-- `힌트` AutoJs6 6.8.1 (6640) 이상이 필요합니다 (정확한 최소 버전은 호스트 쪽 변경이 반영된 뒤 기입됩니다)
+- `힌트` AutoJs6 6.8.1 (6641) 이상이 필요합니다 (정확한 최소 버전은 호스트 쪽 변경이 반영된 뒤 기입됩니다)
 - `힌트` 현재 아이콘은 후보 디자인이며 이후 바뀔 수 있습니다
 - `기능` 플러그인 골격: Wake 활성화 프로토콜, 플러그인 센터 식별 서비스, 알람 기능 서비스
 - `기능` 네이티브 라이브러리가 없어 모든 기기에 쓰는 APK 하나만 제공됩니다

@@ -9,7 +9,7 @@
 ###### 2026/11/05
 
 * `Hint` Development preview: the AutoJs6 Plugin Center can discover the plugin; alarms, timers, the stopwatch, the plugin screens and the alarms script module are not delivered yet
-* `Hint` Requires AutoJs6 6.8.1 (6640) or later (the exact minimum build will be filled in once the host changes land)
+* `Hint` Requires AutoJs6 6.8.1 (6641) or later (the exact minimum build will be filled in once the host changes land)
 * `Hint` The current icon is a candidate design and may still change
 * `Feature` Plugin skeleton: Wake activation protocol, Plugin Center identity service and alarm capability service
 * `Feature` No native libraries: a single APK for every device

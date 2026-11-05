@@ -13,12 +13,12 @@ plugins {
 
 val globalApplicationId = "io.github.supermonster003.autojs6.plugin.three.chime.alarm"
 
-// Minimum host build (roadmap 4.5): the baseline 6640 (host e195d5c7f8, whose VERSION_BUILD is the versionCode) until roadmap
-// P1.3 writes the temporary value that contains the host contract and P6.4 the final one. Keep it in sync with
+// Minimum host build (roadmap 4.5, T33): the temporary 6641, the first host build that contains the alarm contract of roadmap
+// P1.1 - P1.3 (6640 is the baseline e195d5c7f8 without it); roadmap P6.4 writes the final value. Keep it in sync with
 // ThreeChimeAlarmContract.REQUIRED_HOST_VERSION and .readme/common.json.
-// zh-CN: 最低宿主构建号 (路线图 4.5): 基线 6640 (宿主 e195d5c7f8, 其 VERSION_BUILD 即 versionCode), 路线图 P1.3 写入含宿主契约的临时值,
-// P6.4 回填最终值. 与 ThreeChimeAlarmContract.REQUIRED_HOST_VERSION 及 .readme/common.json 保持一致.
-val requiredHostVersion = 6640
+// zh-CN: 最低宿主构建号 (路线图 4.5, T33): 临时值 6641, 即第一个包含路线图 P1.1 - P1.3 闹钟契约的宿主构建 (6640 是不含这些提交的基线
+// e195d5c7f8); 路线图 P6.4 回填最终值. 与 ThreeChimeAlarmContract.REQUIRED_HOST_VERSION 及 .readme/common.json 保持一致.
+val requiredHostVersion = 6641
 
 val buildTypeDebug = "debug"
 val buildTypeRelease = "release"

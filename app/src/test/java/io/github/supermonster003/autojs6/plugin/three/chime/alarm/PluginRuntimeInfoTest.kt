@@ -40,8 +40,8 @@ class PluginRuntimeInfoTest {
         assertEquals("Nov 5, 2026", fields.versionDate)
         // Roadmap T20: no native code, so the APK is ABI independent and reports an empty list.
         assertEquals(emptyList<String>(), fields.supportedAbis)
-        // Roadmap 4.5: the placeholder floor is the roadmap baseline; P1.3 and P6.4 raise it.
-        assertEquals(6640L, fields.requiredHostVersion)
+        // Roadmap 4.5 / T33: the temporary floor is the first host build with the alarm contract; P6.4 writes the final one.
+        assertEquals(6641L, fields.requiredHostVersion)
         assertEquals(ThreeChimeAlarmContract.REQUIRED_HOST_VERSION, fields.requiredHostVersion)
         assertEquals(1, fields.contractVersion)
         assertEquals("the skeleton advertises no feature yet (roadmap T25)", emptyList<String>(), fields.features)

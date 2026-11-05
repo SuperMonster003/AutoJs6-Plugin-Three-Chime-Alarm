@@ -69,7 +69,7 @@
 
 1. نزّل ملف APK من [Releases](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/releases) وثبّته. توجد حزمة واحدة لجميع واجهات ABI.
 2. افتح الإضافة وامنح أذونات الإشعارات والمنبهات الدقيقة والتنبيه بملء الشاشة عند الطلب, ثم استخدمها مثل أي تطبيق ساعة عادي.
-3. لاستخدام الوحدة `alarms` في السكربتات, حدّث AutoJs6 إلى الإصدار الداخلي 6640 (6.8.1) أو أحدث وفعّل الإضافة في مركز الإضافات.
+3. لاستخدام الوحدة `alarms` في السكربتات, حدّث AutoJs6 إلى الإصدار الداخلي 6641 (6.8.1) أو أحدث وفعّل الإضافة في مركز الإضافات.
 
 > تدعم الإضافة الأجهزة التي تعمل بنظام Android 7.0 (API 24) أو أحدث. لا يحتوي ملف APK على مكتبات أصلية, لذا توجد حزمة واحدة فقط ولا ينطبق فحص حجم صفحة الذاكرة 16 KB.
 
@@ -145,7 +145,7 @@ variant: default
 info service: org.autojs.plugin.INFO (category three-chime-alarm)
 capability service: org.autojs.plugin.ALARM (category alarm)
 wake action: org.autojs.plugin.action.WAKE
-minimum host build: 6640
+minimum host build: 6641
 native libraries: none (a single APK for every ABI; the 16 KB page size check does not apply)
 ```
 
@@ -170,7 +170,7 @@ native libraries: none (a single APK for every ABI; the 16 KB page size check do
 _2026/11/05_
 
 - `تلميح` معاينة للتطوير: يستطيع مركز الإضافات في AutoJs6 اكتشاف الإضافة, ولم تُسلَّم بعد المنبهات والمؤقتات وساعة الإيقاف وشاشات الإضافة ووحدة السكربت alarms
-- `تلميح` يتطلب AutoJs6 6.8.1 (6640) أو أحدث (سيُحدَّد الحد الأدنى الدقيق للإصدار بعد اكتمال تغييرات المضيف)
+- `تلميح` يتطلب AutoJs6 6.8.1 (6641) أو أحدث (سيُحدَّد الحد الأدنى الدقيق للإصدار بعد اكتمال تغييرات المضيف)
 - `تلميح` الأيقونة الحالية تصميم مرشح وقد تتغير لاحقا
 - `ميزة` هيكل الإضافة: بروتوكول التفعيل Wake, وخدمة الهوية في مركز الإضافات, وخدمة قدرات المنبه
 - `ميزة` لا مكتبات أصلية: ملف APK واحد لجميع الأجهزة

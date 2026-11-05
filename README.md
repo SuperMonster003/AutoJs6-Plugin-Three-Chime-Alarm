@@ -69,7 +69,7 @@
 
 1. 从 [Releases](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/releases) 下载 APK 并安装. 安装包不区分 ABI, 适用于全部设备.
 2. 打开插件, 按提示授予通知, 精确闹钟与全屏提醒权限, 之后就可以像普通时钟应用一样使用.
-3. 要在脚本中使用 `alarms` 模块, 请将 AutoJs6 升级到内部版本号 6640 (6.8.1) 或更高版本, 并在插件中心启用本插件.
+3. 要在脚本中使用 `alarms` 模块, 请将 AutoJs6 升级到内部版本号 6641 (6.8.1) 或更高版本, 并在插件中心启用本插件.
 
 > 插件支持 Android 7.0 (API 24) 及以上的设备. APK 不含原生库, 因此只有一个安装包, 也不涉及 16 KB 内存页大小的校验.
 
@@ -145,7 +145,7 @@ variant: default
 info service: org.autojs.plugin.INFO (category three-chime-alarm)
 capability service: org.autojs.plugin.ALARM (category alarm)
 wake action: org.autojs.plugin.action.WAKE
-minimum host build: 6640
+minimum host build: 6641
 native libraries: none (a single APK for every ABI; the 16 KB page size check does not apply)
 ```
 
@@ -170,7 +170,7 @@ native libraries: none (a single APK for every ABI; the 16 KB page size check do
 _2026/11/05_
 
 - `提示` 开发预览: 插件可以被 AutoJs6 插件中心识别, 闹钟, 计时器, 秒表, 插件界面与 alarms 脚本模块尚未交付
-- `提示` 需要 AutoJs6 6.8.1 (6640) 或更高版本 (准确的最低版本号待宿主侧改动落地后回填)
+- `提示` 需要 AutoJs6 6.8.1 (6641) 或更高版本 (准确的最低版本号待宿主侧改动落地后回填)
 - `提示` 当前图标为候选图案, 之后可能更换
 - `新增` 插件骨架: Wake 激活协议, 插件中心身份服务与闹钟能力服务
 - `新增` 安装包不含原生库, 只有一个适用于全部设备的 APK

@@ -69,7 +69,7 @@ The plugin schedules and rings alarms itself with Android exact alarms, so alarm
 
 1. Download the APK from [Releases](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/releases) and install it. There is a single package for every ABI.
 2. Open the plugin and grant the notification, exact alarm and full screen alert permissions when asked; it then works like an ordinary clock app.
-3. To use the `alarms` module in scripts, upgrade AutoJs6 to internal build 6640 (6.8.1) or later and enable the plugin in the Plugin Center.
+3. To use the `alarms` module in scripts, upgrade AutoJs6 to internal build 6641 (6.8.1) or later and enable the plugin in the Plugin Center.
 
 > The plugin supports devices running Android 7.0 (API 24) or later. The APK contains no native libraries, so there is a single package and the 16 KB memory page size check does not apply.
 
@@ -145,7 +145,7 @@ variant: default
 info service: org.autojs.plugin.INFO (category three-chime-alarm)
 capability service: org.autojs.plugin.ALARM (category alarm)
 wake action: org.autojs.plugin.action.WAKE
-minimum host build: 6640
+minimum host build: 6641
 native libraries: none (a single APK for every ABI; the 16 KB page size check does not apply)
 ```
 
@@ -170,7 +170,7 @@ Plans, design decisions and progress are tracked as a checklist in ROADMAP.md. U
 _2026/11/05_
 
 - `Hint` Development preview: the AutoJs6 Plugin Center can discover the plugin; alarms, timers, the stopwatch, the plugin screens and the alarms script module are not delivered yet
-- `Hint` Requires AutoJs6 6.8.1 (6640) or later (the exact minimum build will be filled in once the host changes land)
+- `Hint` Requires AutoJs6 6.8.1 (6641) or later (the exact minimum build will be filled in once the host changes land)
 - `Hint` The current icon is a candidate design and may still change
 - `Feature` Plugin skeleton: Wake activation protocol, Plugin Center identity service and alarm capability service
 - `Feature` No native libraries: a single APK for every device
