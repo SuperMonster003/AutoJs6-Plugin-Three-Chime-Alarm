@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="alarm_default_label">Alarme</string>
+    <string name="notification_channel_missed_description">Alarmes qui n\'ont pas sonné parce que l\'appareil était éteint ou que le système les a retardées</string>
+    <string name="notification_channel_missed_name">Alarmes manquées</string>
     <string name="notification_channel_ring_description">Affiche les alarmes qui sonnent et leur alerte en plein écran</string>
     <string name="notification_channel_ring_name">Alarmes en cours</string>
+    <string name="notification_missed_text_late">Prévue à %1$s, elle n\'a pas sonné car le système l\'a retardée de plus de 5 minutes.</string>
+    <string name="notification_missed_text_off">Prévue à %1$s, elle n\'a pas sonné car l\'appareil était éteint.</string>
+    <string name="notification_missed_title">Alarme manquée : %1$s</string>
     <string name="plugin_description">Réveil, minuteurs et chronomètre avec règles de répétition de calendrier, saut des jours fériés et scripts déclenchés à la sonnerie</string>
 </resources>

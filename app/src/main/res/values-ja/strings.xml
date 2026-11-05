@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="alarm_default_label">アラーム</string>
+    <string name="notification_channel_missed_description">端末の電源が切れていたか, システムに遅延されたために鳴らなかったアラーム</string>
+    <string name="notification_channel_missed_name">鳴らなかったアラーム</string>
     <string name="notification_channel_ring_description">鳴動中のアラームと全画面通知を表示します</string>
     <string name="notification_channel_ring_name">鳴動中のアラーム</string>
+    <string name="notification_missed_text_late">%1$s に鳴る予定でしたが, システムに 5 分以上遅延されたため鳴りませんでした.</string>
+    <string name="notification_missed_text_off">%1$s に鳴る予定でしたが, 端末の電源が切れていたため鳴りませんでした.</string>
+    <string name="notification_missed_title">鳴らなかったアラーム: %1$s</string>
     <string name="plugin_description">カレンダー形式の繰り返しルール, 祝日スキップ, 鳴動時のスクリプト連携に対応したアラーム, タイマー, ストップウォッチ</string>
 </resources>

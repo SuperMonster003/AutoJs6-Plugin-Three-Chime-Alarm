@@ -192,9 +192,31 @@ class ManifestContractTest {
         val unprotected = exported.filter { it.androidOrNull("permission") != PLUGIN_PERMISSION }
         // The clock intents follow the AOSP clock (roadmap D21): any app holding SET_ALARM may call them.
         assertEquals(listOf(".intent.ClockIntentActivity"), unprotected.map { it.android("name") })
-        assertTrue("receivers and providers are not declared yet", application.children("receiver").isEmpty() && application.children("provider").isEmpty())
+        assertTrue("no providers are declared", application.children("provider").isEmpty())
         // Launcher aliases are the only components exported without a permission: the launcher must start them.
         application.children("activity-alias").forEach { assertNull(it.androidOrNull("permission")) }
+    }
+
+    @Test
+    fun `the scheduling receivers are private, direct boot aware and hear the T8 broadcasts`() {
+        val receivers = application.children("receiver").associateBy { it.android("name") }
+        assertEquals(listOf(".schedule.AlarmTriggerReceiver", ".schedule.AlarmRescheduleReceiver"), receivers.keys.toList())
+        receivers.values.forEach {
+            assertEquals("false", it.android("exported"))
+            assertEquals("true", it.android("directBootAware"))
+        }
+        assertTrue(receivers.getValue(".schedule.AlarmTriggerReceiver").children("intent-filter").isEmpty())
+        assertEquals(
+            listOf(
+                "android.intent.action.BOOT_COMPLETED",
+                "android.intent.action.LOCKED_BOOT_COMPLETED",
+                "android.intent.action.TIME_SET",
+                "android.intent.action.TIMEZONE_CHANGED",
+                "android.intent.action.MY_PACKAGE_REPLACED",
+                "android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED",
+            ),
+            receivers.getValue(".schedule.AlarmRescheduleReceiver").child("intent-filter").children("action").map { it.android("name") },
+        )
     }
 
     private fun activity(name: String): Element = application.children("activity").single { it.android("name") == name }

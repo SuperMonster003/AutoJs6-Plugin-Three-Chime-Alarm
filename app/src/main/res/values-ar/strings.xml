@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="alarm_default_label">منبه</string>
+    <string name="notification_channel_missed_description">المنبهات التي لم ترن لأن الجهاز كان مطفأ أو لأن النظام أخرها</string>
+    <string name="notification_channel_missed_name">المنبهات الفائتة</string>
     <string name="notification_channel_ring_description">يعرض المنبه الذي يرن وتنبيهه بملء الشاشة</string>
     <string name="notification_channel_ring_name">المنبهات التي ترن</string>
+    <string name="notification_missed_text_late">كان موعده %1$s, ولم يرن لأن النظام أخره أكثر من 5 دقائق.</string>
+    <string name="notification_missed_text_off">كان موعده %1$s, ولم يرن لأن الجهاز كان مطفأ.</string>
+    <string name="notification_missed_title">منبه فائت: %1$s</string>
     <string name="plugin_description">منبه ومؤقتات وساعة إيقاف مع قواعد تكرار تقويمية وتخطي العطلات وتشغيل نصوص برمجية عند الرنين</string>
 </resources>

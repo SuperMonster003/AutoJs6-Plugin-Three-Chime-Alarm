@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="alarm_default_label">Alarma</string>
+    <string name="notification_channel_missed_description">Alarmas que no sonaron porque el dispositivo estaba apagado o el sistema las retrasó</string>
+    <string name="notification_channel_missed_name">Alarmas perdidas</string>
     <string name="notification_channel_ring_description">Muestra la alarma que suena y su aviso a pantalla completa</string>
     <string name="notification_channel_ring_name">Alarmas sonando</string>
+    <string name="notification_missed_text_late">Debía sonar a las %1$s, pero no sonó porque el sistema la retrasó más de 5 minutos.</string>
+    <string name="notification_missed_text_off">Debía sonar a las %1$s, pero no sonó porque el dispositivo estaba apagado.</string>
+    <string name="notification_missed_title">Alarma perdida: %1$s</string>
     <string name="plugin_description">Alarma, temporizadores y cronómetro con reglas de repetición de calendario, omisión de festivos y scripts al sonar la alarma</string>
 </resources>

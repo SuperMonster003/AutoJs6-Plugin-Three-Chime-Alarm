@@ -168,6 +168,28 @@
             android:foregroundServiceType="systemExempted"
             tools:targetApi="34" />
 
+        <!--
+            Scheduling (roadmap T3 / T7 / T8, P2.3): the trigger receiver gets the alarm clock and skip wake-ups of the
+            plugin's own pending intents; the reschedule receiver gets protected system broadcasts only (boot, clock and
+            time zone changes, the plugin update, the exact alarm permission). Both run before the first unlock.
+        -->
+        <receiver
+            android:name=".schedule.AlarmTriggerReceiver"
+            android:directBootAware="true"
+            android:exported="false" />
+        <receiver
+            android:name=".schedule.AlarmRescheduleReceiver"
+            android:directBootAware="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
+            </intent-filter>
+        </receiver>
         <!-- Plugin Center identity (roadmap 4.5, category three-chime-alarm, engine alarm). -->
         <service
             android:name=".service.ThreeChimeAlarmInfoService"

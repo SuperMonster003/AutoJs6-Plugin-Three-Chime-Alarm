@@ -1,6 +1,7 @@
 package io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm
 
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.NextOccurrence
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.schedule.AlarmPlanner
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.TimeZonePolicy
 import org.autojs.plugin.alarm.api.AlarmContract
 import org.autojs.plugin.alarm.api.AlarmErrorCodes
@@ -37,15 +38,18 @@ data class AlarmChange(
  * moves to the next day the time is reached.
  *
  * [planner] computes the plugin state (`nextTrigger` and the rest) of a record after each change; the scheduler of
- * roadmap P2.3 plugs in there and listens to the changes. [updateState] changes only the state (rings, skips, snoozes)
- * and sends no change.
+ * roadmap P2.3 plugs in there and listens to the changes. [updateState] and [settle] change only the state (rings,
+ * skips, snoozes) and send no change; [settle] may also retire a one-shot alarm (T57). When [schedulingAllowed] is
+ * false (the exact alarm permission is missing on API 31 - 32), a change that leaves an alarm enabled throws
+ * `PERMISSION_REQUIRED` and nothing changes.
  *
  * zh-CN: 插件的闹钟列表 (路线图 P2.1): 所有调用方 (Binder 服务, 插件工具, 系统时钟 Intent, 插件自己的界面) 都经过它, 因此上限 (300 条, 其中启用
  * 200 条, `LIMIT_EXCEEDED`), 变更通知与来源记录 (T18) 对所有调用方都成立. 每次变更先保存再生效; 保存失败时报 `IO_FAILED`, 列表不变.
  * 没有 `date` 的 `time` 闹钟会补上日期 (附录 A 第 4.2 节, T48): 重复闹钟取今天, 一次性闹钟取下一个到达该时刻的日子 (按闹钟的 `timeZone`, 否则按设备时区).
  * 这种隐式日期随之后对时刻, 规则或时区的修改而更新; 一次性 `time` 闹钟在时刻已过后再次启用时, 改到下一个到达该时刻的日子.
- * [planner] 在每次变更后计算记录的插件状态 (`nextTrigger` 等), 路线图 P2.3 的调度器接在这里并监听变更. [updateState] 只改状态 (响铃, 跳过, 贪睡),
- * 不发变更通知.
+ * [planner] 在每次变更后计算记录的插件状态 (`nextTrigger` 等), 路线图 P2.3 的调度器接在这里并监听变更. [updateState] 与 [settle] 只改状态 (响铃, 跳过,
+ * 贪睡), 不发变更通知; [settle] 还可以让一次性闹钟退役 (T57). [schedulingAllowed] 为 false (API 31 - 32 缺精确闹钟权限) 时, 让闹钟保持启用的变更报
+ * `PERMISSION_REQUIRED`, 什么都不变.
  */
 class AlarmRepository(
     private val store: AlarmStore,
@@ -54,6 +58,7 @@ class AlarmRepository(
     private val deviceZone: () -> ZoneId = ZoneId::systemDefault,
     private val idGenerator: () -> String = ::randomId,
     private val planner: (AlarmRecord) -> AlarmRuntimeState = AlarmRecord::state,
+    private val schedulingAllowed: () -> Boolean = { true },
 ) {
 
     private val lock = Any()
@@ -90,6 +95,7 @@ class AlarmRepository(
             if (all.size >= AlarmLimits.MAX_ALARMS) throw AlarmException.limitExceeded("at most ${AlarmLimits.MAX_ALARMS} alarms")
             val enabled = spec.enabled != false
             if (enabled) checkEnabledLimit(all)
+            if (enabled) checkScheduling()
             val now = clock()
             var id = idGenerator()
             var attempts = 0
@@ -118,6 +124,7 @@ class AlarmRepository(
             val spec = merged.copy(enabled = merged.enabled != false)
             val enabling = !current.enabled && spec.enabled == true
             if (enabling) checkEnabledLimit(all)
+            if (spec.enabled == true) checkScheduling()
             val now = clock()
             val reenable = enabling && !patch.containsKey(AlarmOptionKeys.DATE) && passed(spec, now)
             val (resolved, resolvedNow) = resolveDate(spec, now, force = reenable)
@@ -139,11 +146,53 @@ class AlarmRepository(
             val current = all[id] ?: throw AlarmException.notFound("no alarm with id '$id'")
             if (current.enabled == enabled) return current
             if (enabled) checkEnabledLimit(all)
+            if (enabled) checkScheduling()
             val now = clock()
             val spec = current.spec.copy(enabled = enabled)
             val (resolved, resolvedNow) = resolveDate(spec, now, force = enabled && passed(spec, now))
             val state = stateFor(current.state, enabled).let { if (resolvedNow) it.copy(dateImplicit = true) else it }
             val record = plan(current.copy(updatedBy = by, updatedAt = now, spec = resolved, state = state))
+            commit(all, record)
+            AlarmChange(AlarmContract.CHANGE_UPDATE, id, by, current, record)
+        }
+        notify(change)
+        return change.after!!
+    }
+
+    /**
+     * Skips the next planned ring of a repeating alarm (appendix A section 4.1); a one-shot alarm is disabled instead.
+     * A disabled alarm, one already skipping or one that will not ring again answers the record as it is, without a
+     * change. The skipped instance comes back with [cancelSkip] and gives a `skip` event when its time comes (T55).
+     * zh-CN: 跳过重复闹钟的下一次计划响铃 (附录 A 第 4.1 节); 一次性闹钟改为禁用. 已禁用, 已在跳过或不再响的闹钟原样返回, 不发变更.
+     * 被跳过的那次可用 [cancelSkip] 撤销, 到时发 `skip` 事件 (T55).
+     */
+    fun skipNext(id: String, by: String): AlarmRecord {
+        requireSource(by)
+        val oneShot = synchronized(lock) { (loaded()[id] ?: throw AlarmException.notFound("no alarm with id '$id'")).spec.repeat == null }
+        if (oneShot) return setEnabled(id, false, by)
+        val change = synchronized(lock) {
+            val all = loaded()
+            val current = all[id] ?: throw AlarmException.notFound("no alarm with id '$id'")
+            if (!current.enabled || current.state.skipAt != null) return current
+            val now = clock()
+            val target = AlarmPlanner.skipTarget(current, now, deviceZone()) ?: return current
+            val record = plan(current.copy(updatedBy = by, updatedAt = now, state = current.state.copy(skipAt = target)))
+            commit(all, record)
+            AlarmChange(AlarmContract.CHANGE_UPDATE, id, by, current, record)
+        }
+        notify(change)
+        return change.after!!
+    }
+
+    /** Takes back [skipNext]; an alarm that is not skipping answers as it is. zh-CN: 撤销 [skipNext]; 未在跳过的闹钟原样返回. */
+    fun cancelSkip(id: String, by: String): AlarmRecord {
+        requireSource(by)
+        val change = synchronized(lock) {
+            val all = loaded()
+            val current = all[id] ?: throw AlarmException.notFound("no alarm with id '$id'")
+            if (current.state.skipAt == null) return current
+            val now = clock()
+            val record = plan(current.copy(updatedBy = by, updatedAt = now, state = current.state.copy(skipAt = null)))
             commit(all, record)
             AlarmChange(AlarmContract.CHANGE_UPDATE, id, by, current, record)
         }
@@ -198,6 +247,45 @@ class AlarmRepository(
         next.values.toList()
     }
 
+    /**
+     * One decision of [settle]: the new [state], whether the alarm is retired and a [value] handed back with the record.
+     * zh-CN: [settle] 的一个决定: 新的 [state], 是否退役, 以及随记录返回的 [value].
+     */
+    data class Settlement<T>(val state: AlarmRuntimeState, val retire: Boolean, val value: T)
+
+    /**
+     * Applies [decide] to the alarms [ids] (every alarm when null; unknown ids are left out) with one save, for the
+     * scheduler (roadmap P2.3). A retired alarm (a one-shot alarm with nothing left, T57) is disabled without a change:
+     * `updatedBy` / `updatedAt` stay and no listener hears of it. Answers the records after the decision with the values.
+     * zh-CN: 以一次保存对 [ids] 中的闹钟 (null 为全部; 未知 id 忽略) 执行 [decide], 供调度器使用 (路线图 P2.3). 退役的闹钟 (没有剩余响铃的一次性闹钟, T57)
+     * 被禁用但不算变更: `updatedBy` / `updatedAt` 不变, 不通知监听器. 返回决定后的记录与对应值.
+     */
+    fun <T> settle(ids: Collection<String>?, decide: (AlarmRecord) -> Settlement<T>): List<Pair<AlarmRecord, T>> = synchronized(lock) {
+        val all = loaded()
+        val next = LinkedHashMap(all)
+        val results = ArrayList<Pair<AlarmRecord, T>>()
+        var changed = false
+        for (id in ids ?: all.keys.toList()) {
+            val current = all[id] ?: continue
+            val settlement = decide(current)
+            val record = if (settlement.retire && current.enabled) {
+                current.copy(spec = current.spec.copy(enabled = false), state = stateFor(settlement.state, false))
+            } else {
+                current.copy(state = settlement.state)
+            }
+            if (record != current) {
+                next[id] = record
+                changed = true
+            }
+            results += record to settlement.value
+        }
+        if (changed) {
+            store.save(next.values.toList())
+            records = next
+        }
+        results
+    }
+
     // ------------------------------------------------------------------ internals
 
     private fun loaded(): LinkedHashMap<String, AlarmRecord> {
@@ -218,13 +306,17 @@ class AlarmRepository(
 
     private fun plan(record: AlarmRecord): AlarmRecord = record.copy(state = planner(record))
 
+    private fun checkScheduling() {
+        if (!schedulingAllowed()) throw AlarmException.permissionRequired("the exact alarm permission is not granted, so the alarm cannot be scheduled")
+    }
+
     private fun checkEnabledLimit(all: Map<String, AlarmRecord>) {
         if (all.values.count(AlarmRecord::enabled) >= AlarmLimits.MAX_ENABLED_ALARMS) {
             throw AlarmException.limitExceeded("at most ${AlarmLimits.MAX_ENABLED_ALARMS} enabled alarms")
         }
     }
 
-    /** Disabling drops the skip and the snooze of the alarm. zh-CN: 禁用时清除跳过与贪睡. */
+    /** Disabling drops the planned ring, the skip and the snooze of the alarm. zh-CN: 禁用时清除计划响铃, 跳过与贪睡. */
     private fun stateFor(state: AlarmRuntimeState, enabled: Boolean): AlarmRuntimeState =
         if (enabled) state else state.copy(nextTrigger = null, skipAt = null, snoozeUntil = null, snoozeCount = 0)
 

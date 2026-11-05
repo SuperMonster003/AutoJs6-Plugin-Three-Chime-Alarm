@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="alarm_default_label">알람</string>
+    <string name="notification_channel_missed_description">기기가 꺼져 있었거나 시스템이 지연시켜 울리지 않은 알람</string>
+    <string name="notification_channel_missed_name">놓친 알람</string>
     <string name="notification_channel_ring_description">울리는 알람과 전체 화면 알림을 표시합니다</string>
     <string name="notification_channel_ring_name">울리는 알람</string>
+    <string name="notification_missed_text_late">%1$s에 울릴 예정이었지만 시스템이 5분 넘게 지연시켜 울리지 않았습니다.</string>
+    <string name="notification_missed_text_off">%1$s에 울릴 예정이었지만 기기가 꺼져 있어 울리지 않았습니다.</string>
+    <string name="notification_missed_title">놓친 알람: %1$s</string>
     <string name="plugin_description">달력 반복 규칙, 공휴일 건너뛰기, 알람이 울릴 때 스크립트 연동을 지원하는 알람, 타이머 및 스톱워치</string>
 </resources>

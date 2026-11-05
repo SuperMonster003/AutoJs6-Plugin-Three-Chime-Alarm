@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="alarm_default_label">Alarm</string>
+    <string name="notification_channel_missed_description">Alarms that did not ring because the device was off or the system held them back</string>
+    <string name="notification_channel_missed_name">Missed alarms</string>
     <string name="notification_channel_ring_description">Shows the ringing alarm and its full screen alert</string>
     <string name="notification_channel_ring_name">Ringing alarms</string>
+    <string name="notification_missed_text_late">Due at %1$s, it did not ring because the system held it back by more than 5 minutes.</string>
+    <string name="notification_missed_text_off">Due at %1$s, it did not ring because the device was off.</string>
+    <string name="notification_missed_title">Missed: %1$s</string>
     <string name="plugin_description">Alarm clock, timers and stopwatch with calendar recurrence rules, holiday skipping and script hooks when an alarm rings</string>
 </resources>

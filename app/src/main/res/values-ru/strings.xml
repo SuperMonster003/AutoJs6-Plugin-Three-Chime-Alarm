@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="alarm_default_label">Будильник</string>
+    <string name="notification_channel_missed_description">Будильники, которые не прозвонили, потому что устройство было выключено или система их задержала</string>
+    <string name="notification_channel_missed_name">Пропущенные будильники</string>
     <string name="notification_channel_ring_description">Показывает звонящий будильник и полноэкранное оповещение</string>
     <string name="notification_channel_ring_name">Звонящие будильники</string>
+    <string name="notification_missed_text_late">Должен был прозвонить в %1$s, но система задержала его более чем на 5 минут.</string>
+    <string name="notification_missed_text_off">Должен был прозвонить в %1$s, но устройство было выключено.</string>
+    <string name="notification_missed_title">Пропущен: %1$s</string>
     <string name="plugin_description">Будильник, таймеры и секундомер с календарными правилами повтора, пропуском праздников и запуском скриптов при звонке</string>
 </resources>

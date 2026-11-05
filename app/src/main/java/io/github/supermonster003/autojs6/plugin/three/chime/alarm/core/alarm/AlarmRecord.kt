@@ -35,7 +35,7 @@ data class AlarmRecord(
         createdAt = createdAt,
         updatedAt = updatedAt,
         repeatText = repeatText,
-        nextTrigger = state.nextTrigger.takeIf { enabled },
+        nextTrigger = state.wakeAt.takeIf { enabled },
         skipping = enabled && state.skipping,
         hasBindings = hasBindings,
         spec = spec,
@@ -98,7 +98,7 @@ data class AlarmRecord(
 /**
  * The plugin's own state of an alarm, never part of the options (roadmap P2.1):
  *
- * - [nextTrigger]: epoch milliseconds of the next ring as planned by the scheduler (skips, exclusions applied), or
+ * - [nextTrigger]: epoch milliseconds of the next planned ring (skips, exclusions applied, a snooze not counted), or
  *   null when the alarm will not ring again.
  * - [skipAt]: the occurrence `skipNext` covers; `skipping` is true while it is set.
  * - [handledThrough]: the latest occurrence that rang, was skipped or was missed; the next one is computed after it.
@@ -108,7 +108,7 @@ data class AlarmRecord(
  *
  * Unknown or mistyped fields read as their defaults: the state can always be recomputed.
  *
- * zh-CN: 插件自己的闹钟状态, 不属于选项 (路线图 P2.1): [nextTrigger] 为调度器计划的下一次响铃 (已计入跳过与排除), 不再响时为 null;
+ * zh-CN: 插件自己的闹钟状态, 不属于选项 (路线图 P2.1): [nextTrigger] 为调度器计划的下一次响铃 (已计入跳过与排除, 不计贪睡), 不再响时为 null;
  * [skipAt] 为 `skipNext` 跳过的那一次, 设置期间 `skipping` 为 true; [handledThrough] 为最近一次已响, 已跳过或已错过的时刻, 下一次在其之后计算;
  * [occurrence] 为本轮响铃的 id (附录 A 第 5.1 节, T31), 至多 128 个字符; [snoozeUntil] / [snoozeCount] 为本轮正在进行的贪睡;
  * [dateImplicit] 表示 `date` 由插件补上 (路线图 T48) 而非调用方给出. 未知或类型不符的字段读为默认值, 状态总能重新计算.
@@ -124,6 +124,13 @@ data class AlarmRuntimeState(
 ) {
 
     val skipping: Boolean get() = skipAt != null
+
+    /**
+     * The next wake-up: the end of a running snooze when it comes before the planned ring (roadmap P2.3); the snapshot
+     * shows it as `nextTrigger`.
+     * zh-CN: 下一次唤醒: 正在进行的贪睡先于计划响铃结束时取贪睡结束时刻 (路线图 P2.3); 快照中作为 `nextTrigger` 显示.
+     */
+    val wakeAt: Long? get() = listOfNotNull(nextTrigger, snoozeUntil).minOrNull()
 
     fun toValues(): Map<String, Any?> = LinkedHashMap<String, Any?>().apply {
         putIfPresent(KEY_NEXT_TRIGGER, nextTrigger)

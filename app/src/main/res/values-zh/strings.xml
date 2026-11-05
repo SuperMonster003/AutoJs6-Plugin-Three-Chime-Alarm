@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="alarm_default_label">闹钟</string>
+    <string name="notification_channel_missed_description">因设备关机或被系统推迟而没有响的闹钟</string>
+    <string name="notification_channel_missed_name">错过的闹钟</string>
     <string name="notification_channel_ring_description">显示正在响铃的闹钟及其全屏提醒</string>
     <string name="notification_channel_ring_name">响铃中的闹钟</string>
+    <string name="notification_missed_text_late">应于 %1$s 响铃, 被系统推迟超过 5 分钟, 没有响.</string>
+    <string name="notification_missed_text_off">应于 %1$s 响铃, 当时设备关机, 没有响.</string>
+    <string name="notification_missed_title">错过: %1$s</string>
     <string name="plugin_description">闹钟, 计时器与秒表, 支持日历重复规则, 节假日跳过与响铃时联动脚本</string>
 </resources>

@@ -15,6 +15,9 @@ class ThreeChimeAlarmApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannels()
+        // Every process start reconciles the alarms once: a force stop clears the wake-ups and no broadcast says so.
+        // zh-CN: 每次进程启动都对账一次: 强行停止会清掉唤醒, 且没有广播通知.
+        AlarmRuntime.get(this)
     }
 
     private fun createNotificationChannels() {
@@ -27,11 +30,16 @@ class ThreeChimeAlarmApplication : Application() {
             setSound(null, null)
             enableVibration(false)
         }
-        getSystemService(NotificationManager::class.java).createNotificationChannel(ring)
+        // One notification per missed ring (roadmap T16). zh-CN: 每次错过的响铃一条通知 (路线图 T16).
+        val missed = NotificationChannel(CHANNEL_MISSED, getString(R.string.notification_channel_missed_name), NotificationManager.IMPORTANCE_DEFAULT).apply {
+            description = getString(R.string.notification_channel_missed_description)
+        }
+        getSystemService(NotificationManager::class.java).createNotificationChannels(listOf(ring, missed))
     }
 
     internal companion object {
         const val CHANNEL_RING = "ring"
+        const val CHANNEL_MISSED = "missed"
     }
 
 }

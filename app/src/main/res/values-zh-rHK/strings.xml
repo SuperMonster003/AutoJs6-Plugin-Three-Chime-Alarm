@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="alarm_default_label">鬧鐘</string>
+    <string name="notification_channel_missed_description">因裝置關機或被系統延後而沒有響的鬧鐘</string>
+    <string name="notification_channel_missed_name">錯過的鬧鐘</string>
     <string name="notification_channel_ring_description">顯示正在響鈴的鬧鐘及其全屏提醒</string>
     <string name="notification_channel_ring_name">響鈴中的鬧鐘</string>
+    <string name="notification_missed_text_late">應於 %1$s 響鈴, 被系統延後超過 5 分鐘, 沒有響.</string>
+    <string name="notification_missed_text_off">應於 %1$s 響鈴, 當時裝置關機, 沒有響.</string>
+    <string name="notification_missed_title">錯過: %1$s</string>
     <string name="plugin_description">鬧鐘, 計時器與秒錶, 支援日曆重複規則, 假期略過與響鈴時聯動腳本</string>
 </resources>
