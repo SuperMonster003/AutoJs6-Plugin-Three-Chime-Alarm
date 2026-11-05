@@ -1,16 +1,15 @@
 package io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm
 
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.NextOccurrence
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.TimeZonePolicy
 import org.autojs.plugin.alarm.api.AlarmContract
 import org.autojs.plugin.alarm.api.AlarmErrorCodes
 import org.autojs.plugin.alarm.api.AlarmLimits
 import org.autojs.plugin.alarm.api.AlarmOptionKeys
 import org.autojs.plugin.alarm.api.AlarmSpec
 import java.security.SecureRandom
-import java.time.Instant
 import java.time.LocalDate
-import java.time.LocalTime
 import java.time.ZoneId
-import java.time.ZonedDateTime
 import java.util.concurrent.CopyOnWriteArrayList
 
 /**
@@ -229,32 +228,22 @@ class AlarmRepository(
     private fun stateFor(state: AlarmRuntimeState, enabled: Boolean): AlarmRuntimeState =
         if (enabled) state else state.copy(nextTrigger = null, skipAt = null, snoozeUntil = null, snoozeCount = 0)
 
-    private fun zoneOf(spec: AlarmSpec): ZoneId = spec.timeZone?.let(ZoneId::of) ?: deviceZone()
+    private fun zoneOf(spec: AlarmSpec): ZoneId = TimeZonePolicy.zoneOf(spec, deviceZone())
 
     /** A one-shot `time` alarm whose date and time are not after [now]. zh-CN: 日期与时刻不晚于 [now] 的一次性 `time` 闹钟. */
     private fun passed(spec: AlarmSpec, now: Long): Boolean {
         val time = spec.time ?: return false
         if (spec.repeat != null) return false
         val date = spec.date?.let(LocalDate::parse) ?: return false
-        return momentOf(date, time.hour, time.minute, time.second, zoneOf(spec)) <= now
+        return TimeZonePolicy.millisOf(date.atTime(time.hour, time.minute, time.second), zoneOf(spec)) <= now
     }
 
     /** Fills in the implicit date (T48); the second value is true when it did. zh-CN: 补上隐式日期 (T48); 第二个值表示是否补了. */
     private fun resolveDate(spec: AlarmSpec, now: Long, force: Boolean): Pair<AlarmSpec, Boolean> {
-        val time = spec.time ?: return spec to false
+        if (spec.time == null) return spec to false
         if (spec.date != null && !force) return spec to false
-        val zone = zoneOf(spec)
-        val today = Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
-        val date = when {
-            spec.repeat != null -> today
-            momentOf(today, time.hour, time.minute, time.second, zone) > now -> today
-            else -> today.plusDays(1)
-        }
-        return spec.copy(date = date.toString()) to true
+        return spec.copy(date = NextOccurrence.implicitDate(spec, now, zoneOf(spec)).toString()) to true
     }
-
-    private fun momentOf(date: LocalDate, hour: Int, minute: Int, second: Int, zone: ZoneId): Long =
-        ZonedDateTime.of(date, LocalTime.of(hour, minute, second), zone).toInstant().toEpochMilli()
 
     private fun notify(change: AlarmChange) {
         for (listener in listeners) {

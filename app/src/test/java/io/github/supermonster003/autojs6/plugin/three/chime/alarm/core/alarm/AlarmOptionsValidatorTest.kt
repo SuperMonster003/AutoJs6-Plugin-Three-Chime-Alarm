@@ -149,13 +149,13 @@ class AlarmOptionsValidatorTest {
 
     @Test
     fun `the rule normalizer runs and its error passes through`() {
-        val normalizing = AlarmOptionsValidator(normalizeRule = { rule ->
-            if (rule.contains("HOURLY")) throw AlarmException.invalidRule("HOURLY is not supported")
-            rule.removePrefix("RRULE:")
-        })
-        assertEquals("FREQ=DAILY", normalizing.options(optionsOf(7, 30, "repeat" to "RRULE:FREQ=DAILY")).repeat)
-        assertAlarmError(INVALID_RULE, "HOURLY") { normalizing.options(optionsOf(7, 30, "repeat" to "FREQ=HOURLY")) }
+        // The default normalizer is the one of the rule engine (roadmap P2.2).
+        // zh-CN: 默认的规范化函数来自规则引擎 (路线图 P2.2).
+        assertEquals("FREQ=DAILY", validator.options(optionsOf(7, 30, "repeat" to "RRULE:freq=daily;interval=1")).repeat)
+        assertAlarmError(INVALID_RULE, "HOURLY") { validator.options(optionsOf(7, 30, "repeat" to "FREQ=HOURLY")) }
         assertAlarmError(INVALID_RULE, "repeat") { validator.options(optionsOf(7, 30, "repeat" to " ")) }
+        val custom = AlarmOptionsValidator(normalizeRule = { throw AlarmException.invalidRule("custom") })
+        assertAlarmError(INVALID_RULE, "custom") { custom.options(optionsOf(7, 30, "repeat" to "FREQ=DAILY")) }
     }
 
     @Test

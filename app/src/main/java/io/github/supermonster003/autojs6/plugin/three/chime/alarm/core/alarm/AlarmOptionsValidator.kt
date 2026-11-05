@@ -1,5 +1,6 @@
 package io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm
 
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.RecurrenceRule
 import org.autojs.plugin.alarm.api.AlarmContract
 import org.autojs.plugin.alarm.api.AlarmDismiss
 import org.autojs.plugin.alarm.api.AlarmFeatures
@@ -37,7 +38,7 @@ import java.time.ZoneId
  */
 class AlarmOptionsValidator(
     private val features: Set<String> = setOf(AlarmFeatures.ALARMS),
-    private val normalizeRule: (String) -> String = { it },
+    private val normalizeRule: (String) -> String = RecurrenceRule::fromString,
 ) {
 
     fun options(values: Map<String, Any?>): AlarmSpec {
