@@ -1,6 +1,6 @@
 """Skeleton smoke run of 3-Chime Alarm on one device (roadmap P0.4; roadmap P4.1 and P5 extend it to the 1.0.0 checks).
 
-    py .python/device_smoke.py <serial> [--apk <file>] [--no-install] [--screenshot <dir>]
+    py .python/device_smoke.py <serial> [--apk <file>] [--no-install] [--screenshot <dir>] [--contract [--incompatible-apk <file>]]
 
 1. host: the AutoJs6 versionCode, compared with requiresHostVersion (reported only: the INFO service answers any host,
    the `alarms` module of roadmap P1.4 needs the required build).
@@ -18,6 +18,10 @@
    plugin-center-<serial>-system-<light|dark>.png. The name records the system night mode, which picks the launcher
    icon variant; the Plugin Center itself follows the AutoJs6 theme setting, so check the picture for its theme. The
    launcher differs per vendor, so its screenshot stays manual.
+6. --contract (roadmap P2.7, see device_contract.py): before the install, while the plugin is not installed, the
+   `alarms` module answers PLUGIN_UNAVAILABLE; after the smoke, the appendix A section 12 examples, the error codes,
+   a ring with listeners and a bound script, PLUGIN_DISABLED, PERMISSION_REQUIRED (API 31 - 32) and, with
+   --incompatible-apk, PLUGIN_INCOMPATIBLE run through the AutoJs6 `alarms` module (host versionCode 6641 or later).
 
 Output: PASS / FAIL per step and the key values; no description text, token or tool list is printed.
 A secure lock screen keeps activities from starting: unlock the device first. Nothing here answers a system dialog.
@@ -256,6 +260,11 @@ def run(serial, args):
         print(f"{name}: SMOKE FAIL (AutoJs6 is not installed)")
         return False
     apk = pick_apk(args.apk)
+    contract_report = None
+    if args.contract:
+        import device_contract as contract
+        contract_report = contract.Report()
+        ok = contract.before_install(serial, contract_report) and ok
     if args.no_install:
         print(f"    install: SKIPPED (--no-install), installed versionCode {installed_version(serial, PLUGIN)}")
     else:
@@ -310,6 +319,9 @@ def run(serial, args):
         with open(target, "wb") as stream:
             subprocess.run(["adb", "-s", serial, "exec-out", "screencap", "-p"], stdout=stream, check=False, timeout=60)
         report("screenshot", not center.get("error") and target.stat().st_size > 0, f"{target.name} ({target.stat().st_size} bytes, system {mode}) {center.get('error') or ''}".rstrip())
+    if contract_report is not None:
+        ok = contract.after_smoke(serial, args, contract_report, apk) and ok
+        print(f"    contract: {contract_report.passed} passed, {contract_report.failed} failed")
     print(f"{name}: SMOKE {'PASS' if ok else 'FAIL'} ({apk.name})")
     return ok
 
@@ -320,6 +332,8 @@ def main(argv=None):
     parser.add_argument("--apk", help="APK to install (default: the newest debug APK, else the newest release)")
     parser.add_argument("--no-install", action="store_true", help="keep the installed build")
     parser.add_argument("--screenshot", metavar="DIR", help="open the Plugin Center afterwards and save the screen into DIR")
+    parser.add_argument("--contract", action="store_true", help="run the roadmap P2.7 contract checks through the AutoJs6 alarms module")
+    parser.add_argument("--incompatible-apk", metavar="FILE", help="with --contract: a build whose requiresHostVersion is above the host's")
     arguments = parser.parse_args(argv)
     return 0 if run(arguments.serial, arguments) else 1
 

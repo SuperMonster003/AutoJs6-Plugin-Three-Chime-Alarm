@@ -830,7 +830,7 @@ interface Binding {
 - 每个 `(occurrence, 事件, 脚本)` 只启动一次. 同一闹钟可绑定多个脚本.
 - 被启动的脚本里: `engines.myEngine().execArgv.alarm` 是事件的纯 JSON (同 `execArgv.mail`), `alarms.currentEvent()` 返回带方法的事件对象.
 - 绑定存在宿主 (T12). 删除闹钟时宿主同步删除其绑定; 脚本文件不存在时跳过并在日志里记一条.
-- 宿主在设备首次解锁前不能运行脚本: 此时照常响铃, 事件里 `scriptSkipped: 'locked'`.
+- 宿主在设备首次解锁前不能运行脚本: 此时照常响铃, 绑定脚本不启动, 解锁后也不补启动; 原因只记在插件日志 (`adb logcat -s ChimeTrigger`, `locked` / `unavailable`), 事件不带 `scriptSkipped` (T76).
 
 #### 5.4 `beforeRing` (1.2.0)
 
@@ -1014,12 +1014,12 @@ declare namespace alarms.system {
 | code | 含义 |
 |---|---|
 | `PLUGIN_UNAVAILABLE` / `PLUGIN_DISABLED` / `PLUGIN_INCOMPATIBLE` | 同 speech 的退化语义, 文案提示安装 / 启用 3-Chime Alarm |
-| `PERMISSION_REQUIRED` | 插件缺精确闹钟 / 通知 / 全屏权限; `hint` 给出 `alarms.openPlugin('permissions')` |
+| `PERMISSION_REQUIRED` | Android 12 - 12L 缺精确闹钟权限, 且 `add` / `update` / `setEnabled` 会留下启用的闹钟 (T60, T69); 缺通知 / 全屏权限不让调用失败, 闹钟照常响; `hint` 给出 `alarms.openPlugin('permissions')` |
 | `INVALID_OPTIONS` / `INVALID_RULE` | 参数或 RRULE 不合法 (宿主侧先判) |
 | `NOT_FOUND` | id 不存在 |
 | `LIMIT_EXCEEDED` | 超出下表限制 |
-| `NO_HANDLER` / `UNSUPPORTED` | 系统时钟层 |
-| `IO_FAILED` | 铃声文件读不到或格式不支持 |
+| `NO_HANDLER` / `UNSUPPORTED` | 系统时钟层; `UNSUPPORTED` 也表示插件未实现该功能 (插件缺某功能时, 宿主对该功能的方法与选项 (如 1.0.0 的 `holidays`) 先报 `PLUGIN_INCOMPATIBLE`) |
+| `IO_FAILED` | 铃声文件不存在, 读不到, 为空或没有可解码的音轨 (超过 20 MiB 是 `LIMIT_EXCEEDED`, T72), 或插件存不下数据 |
 | `HOLIDAY_DATA_MISSING` | 请求的地区没有数据 |
 | `TIMEOUT` / `SESSION_CLOSED` / `INTERNAL` | 宿主侧 |
 
