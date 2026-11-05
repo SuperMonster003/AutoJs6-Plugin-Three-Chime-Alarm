@@ -18,7 +18,8 @@
         "10개 언어의 README, 플러그인 센터 안내, 변경 기록을 JSON 원본에서 일괄 생성"
       ],
       "dependency": [
-        "AndroidX Core KTX 1.15.0 추가"
+        "AndroidX Core KTX 1.15.0 추가",
+        "lib-recur 0.17.1 추가 (알람 반복 규칙 계산)"
       ]
     }
   }

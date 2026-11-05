@@ -18,7 +18,8 @@
         "10 言語の README, プラグインセンターの説明, 変更履歴を JSON ソースから一括生成"
       ],
       "dependency": [
-        "AndroidX Core KTX 1.15.0 を追加"
+        "AndroidX Core KTX 1.15.0 を追加",
+        "lib-recur 0.17.1 を追加 (アラームの繰り返しルールを計算)"
       ]
     }
   }

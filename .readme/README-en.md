@@ -176,6 +176,7 @@ _2026/11/05_
 - `Feature` No native libraries: a single APK for every device
 - `Feature` README, Plugin Center instructions and changelogs in 10 languages, generated from JSON sources
 - `Dependency` Attach AndroidX Core KTX 1.15.0
+- `Dependency` Attach lib-recur 0.17.1 (calculates the repeat rules of alarms)
 
 ##### For more release history, refer to
 

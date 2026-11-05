@@ -176,6 +176,7 @@ _2026/11/05_
 - `Función` Sin bibliotecas nativas: un único APK para todos los dispositivos
 - `Función` README, instrucciones del centro de complementos y registros de cambios en 10 idiomas, generados a partir de fuentes JSON
 - `Dependencia` Se agrega AndroidX Core KTX 1.15.0
+- `Dependencia` Se agrega lib-recur 0.17.1 (calcula las reglas de repetición de las alarmas)
 
 ##### Para más historial de versiones
 

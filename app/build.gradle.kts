@@ -187,6 +187,7 @@ dependencies {
     implementation(files(hostApiAars))
 
     implementation(libs.core.ktx)
+    implementation(libs.lib.recur)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.test.ext.junit)

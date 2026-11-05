@@ -18,7 +18,8 @@
         "10 种语言的 README, 插件中心说明与更新日志, 由 JSON 源文件统一生成"
       ],
       "dependency": [
-        "附加 AndroidX Core KTX 版本 1.15.0"
+        "附加 AndroidX Core KTX 版本 1.15.0",
+        "附加 lib-recur 版本 0.17.1 (计算闹钟的重复规则)"
       ]
     }
   }

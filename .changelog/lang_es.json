@@ -18,7 +18,8 @@
         "README, instrucciones del centro de complementos y registros de cambios en 10 idiomas, generados a partir de fuentes JSON"
       ],
       "dependency": [
-        "Se agrega AndroidX Core KTX 1.15.0"
+        "Se agrega AndroidX Core KTX 1.15.0",
+        "Se agrega lib-recur 0.17.1 (calcula las reglas de repetición de las alarmas)"
       ]
     }
   }

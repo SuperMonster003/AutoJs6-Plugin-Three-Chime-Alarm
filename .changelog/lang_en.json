@@ -18,7 +18,8 @@
         "README, Plugin Center instructions and changelogs in 10 languages, generated from JSON sources"
       ],
       "dependency": [
-        "Attach AndroidX Core KTX 1.15.0"
+        "Attach AndroidX Core KTX 1.15.0",
+        "Attach lib-recur 0.17.1 (calculates the repeat rules of alarms)"
       ]
     }
   }

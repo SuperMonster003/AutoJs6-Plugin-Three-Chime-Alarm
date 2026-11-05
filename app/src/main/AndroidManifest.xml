@@ -160,7 +160,7 @@
             android:turnScreenOn="true"
             tools:targetApi="27" />
 
-        <!-- Ringing foreground service (roadmap T6 measured in P0.2, T7): not exported, available before the first unlock. -->
+        <!-- Ringing foreground service (roadmap T6 fixed by the P0.2 measurement, T7): not exported, available before the first unlock. -->
         <service
             android:name=".ring.RingService"
             android:directBootAware="true"
