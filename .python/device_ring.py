@@ -8,8 +8,10 @@ run: installs the debug APK (its debug-only RingDebugReceiver is the hook: `am i
     nonotify (API 33+ without the notification permission, roadmap T69): the ring sounds with no notification and no
         ringing screen;
     lock: a one-shot probe with `sound.volume` 0.3 and a 1 minute snooze rings with the screen off: the screen turns
-        on, the ringing screen is resumed over the lock screen, an alarm player is active, the device vibrates, the
-        wake lock is held and the alarm stream is at the probe's volume (the user's volume saved); the notification
+        on, the ringing screen is resumed over the lock screen, an alarm player is active, the device vibrates (a
+        device without a vibrator, such as the Xiaomi Pad, logs the skip instead), the wake lock is held (read from the
+        live "Wake Locks" section: API 34+ also prints a history of the tag) and the alarm stream is at the probe's
+        volume (the user's volume saved); the notification
         snooze action snoozes it (the volume comes back, the screen closes, the service stops); the snooze round rings
         again on the lock screen and the dismiss action ends it (the one-shot alarm retires);
     degraded (API 34+): the full screen intent permission is denied with `appops`: the ring sounds with a notification
@@ -120,7 +122,23 @@ class Device:
         return any("RingActivity" in line for line in lines)
 
     def wake_lock_held(self):
-        return "ThreeChimeAlarm:ring" in shell(self.serial, "dumpsys", "power", check=False)
+        """Reads the live "Wake Locks: size=N" section only: API 34+ also prints a "Wake Lock Log" history of the tag."""
+        lines = shell(self.serial, "dumpsys", "power", check=False).splitlines()
+        start = next((i for i, line in enumerate(lines) if line.strip().startswith("Wake Locks: size=")), None)
+        if start is None:
+            return False
+        for line in lines[start + 1:]:
+            if not line.strip():
+                break
+            if "ThreeChimeAlarm:ring" in line:
+                return True
+        return False
+
+    def has_vibrator(self):
+        if self.sdk < 31:
+            return True
+        text = shell(self.serial, "cmd", "vibrator_manager", "list", check=False)
+        return bool(text.strip()) and "No vibrator found" not in text
 
     def service_running(self):
         text = shell(self.serial, "dumpsys", "activity", "services", PLUGIN, check=False)
@@ -241,7 +259,11 @@ def case_lock(device, report, saved):
     report.check("ringing screen over the lock screen", device.resumed_ring_screen() and state.get("keyguard") == "true", f"resumed={device.resumed_ring_screen()} keyguard={state.get('keyguard')}")
     report.check("alarm player active", playing(state), f"alarmPlayers={state.get('alarmPlayers')} {session.split(' player=')[-1].split(' ')[0]}")
     report.check("independent volume", state.get("volume") == str(target) and state.get("saved") == str(user_volume), f"volume={state.get('volume')} (want {target} of {low} - {high}) saved={state.get('saved')} (user {user_volume})")
-    report.check("vibrating", device.vibrating())
+    if device.has_vibrator():
+        report.check("vibrating", device.vibrating())
+    else:
+        skipped = wait_log(device, lambda tag, m: tag == "ChimeRing" and m == "vibration skipped: no vibrator", 5)
+        report.check("no vibrator: the vibration is skipped", skipped is not None, "cmd vibrator_manager list: no vibrator")
     report.check("wake lock held", device.wake_lock_held())
 
     state = end(device, report, "lock", alarm_id, "snooze")
