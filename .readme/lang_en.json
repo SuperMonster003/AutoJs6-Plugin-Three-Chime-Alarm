@@ -1,0 +1,73 @@
+{
+  "$name": "English",
+  "text_current_lowercase": "current",
+  "text_plugin_synopsis": "Alarm clock, timers and stopwatch with calendar recurrence rules, holiday skipping and script hooks when an alarm rings",
+  "h3_languages_with_ascii": "Languages",
+  "p_languages_all_supported_for_readme": "The README.md file is currently available in the following languages",
+  "h3_introduction": "Introduction",
+  "h3_features": "Features",
+  "h3_usage": "Usage",
+  "h3_script_api": "Script API",
+  "h3_faq": "FAQ",
+  "h3_security": "Permissions and security",
+  "h3_plugin_interface": "Plugin interface",
+  "p_plugin_interface": "The following information targets AutoJs6 host and plugin developers; the host uses these identifiers to discover the plugin and negotiate capabilities",
+  "h3_roadmap": "Roadmap",
+  "text_link_roadmap": "View ROADMAP.md",
+  "h3_release_history": "Release history",
+  "h5_for_more_release_history": "For more release history, refer to",
+  "h3_build": "Build",
+  "p_build_intro": "This section targets developers who want to build the plugin from source.",
+  "h3_license": "License",
+  "h3_links": "Related links",
+  "text_link_autojs6": "AutoJs6 project",
+  "p_roadmap": "Plans, design decisions and progress are tracked as a checklist in ROADMAP.md. Unchecked items are plans, not features of the current version.",
+  "p_introduction_what": "3-Chime Alarm is the alarm plugin of AutoJs6 and also a complete clock app that works without AutoJs6: alarms, several parallel countdown timers and a stopwatch. Alarms repeat by RFC 5545 calendar rules (for example the last Friday of every month, or every 3 days from a given date), can skip public holidays, and can start a script or notify a running script when they ring.",
+  "p_introduction_how": "The plugin schedules and rings alarms itself with Android exact alarms, so alarms ring on time even when AutoJs6 is not running. AutoJs6 scripts query, create, change and listen to the alarms of the plugin through the global module `alarms`; the sub-namespace `alarms.system` talks to the system clock app directly and works without the plugin. The plugin also accepts set-alarm requests from other apps.",
+  "p_status_note": "This is a development preview: the AutoJs6 Plugin Center can discover the plugin, but alarms, timers, the stopwatch, the plugin screens and the `alarms` script module are not delivered yet, and the icon is a candidate design that may still change. The text below describes the design goals of each version; see the roadmap for progress.",
+  "features": [
+    "Alarms: one-time or repeating alarms. Repeat rules cover weekdays, the nth weekday of a month, the last day of a month, intervals in days, end dates and occurrence counts, and just the next occurrence can be skipped.",
+    "Ringing: system ringtones or local audio, spoken text, its own volume with a gradual increase, custom vibration patterns, a full screen alert on the lock screen, and snooze.",
+    "Script hooks: an alarm can register a script file that AutoJs6 starts when the alarm rings, so the script does not have to keep running; a running script can also listen to ring, snooze and dismiss events in real time.",
+    "Timers and stopwatch (1.1.0): several timers in parallel that can be paused, resumed and extended and that survive a reboot; the stopwatch records laps.",
+    "Holidays (1.2.0): built-in open holiday data for many regions to skip public holidays and still ring on make-up workdays; a `beforeRing` script hook can also decide whether an alarm rings.",
+    "Dismiss challenges (1.3.0): arithmetic, shaking, retyping a sentence or a script condition, each with a safety valve so that an alarm can always be stopped."
+  ],
+  "usage_steps": [
+    "Download the APK from [Releases]({{ repo_url }}/releases) and install it. There is a single package for every ABI.",
+    "Open the plugin and grant the notification, exact alarm and full screen alert permissions when asked; it then works like an ordinary clock app.",
+    "To use the `alarms` module in scripts, upgrade AutoJs6 to internal build {{ required_host_version_code }} ({{ required_host_version_name }}) or later and enable the plugin in the Plugin Center."
+  ],
+  "p_usage_note": "The plugin supports devices running Android {{ min_android_version }} (API {{ android_min_sdk }}) or later. The APK contains no native libraries, so there is a single package and the 16 KB memory page size check does not apply.",
+  "p_script_api_intro": "Scripts use these features through the global module `alarms` (also available as `$alarms`) (1.0.0 design draft; the documentation of the released version is authoritative)",
+  "api_points": [
+    "`alarms.add(options)` creates an alarm and returns an alarm object; `alarms.list`, `get`, `update`, `remove`, `setEnabled` and `skipNext` manage every alarm of the plugin, including those created on the plugin screens.",
+    "`repeat` accepts an RRULE string (such as `FREQ=MONTHLY;BYDAY=-1FR`) or a structured object; `alarms.preview(options)` lists the upcoming ring times so that a rule can be checked.",
+    "`alarm.bind(script, { events })` registers a script that AutoJs6 starts when the alarm rings, with the event in `alarms.currentEvent()`; `alarms.on('ring', listener)` listens while the script runs.",
+    "`alarms.system` calls the system clock app directly (`setAlarm`, `setTimer`, `showAlarms`, `next` and more) and works without the plugin."
+  ],
+  "faq": [
+    {
+      "q": "Can I use it without AutoJs6?",
+      "a": "Yes. The plugin has complete clock screens and works on its own as an alarm clock, timer and stopwatch. AutoJs6 is only needed when scripts manage alarms or react to them."
+    },
+    {
+      "q": "Do alarms ring when AutoJs6 is not running?",
+      "a": "Yes. The plugin schedules and rings alarms with Android exact alarms and does not depend on the AutoJs6 process. When a script is registered, the plugin wakes AutoJs6 to start it at ring time."
+    },
+    {
+      "q": "Why does the plugin need the exact alarm and full screen alert permissions?",
+      "a": "Exact alarms keep ring times accurate (alarm clock apps receive this permission at install time), the full screen alert shows the ringing screen on the lock screen, and notifications show the ringing alarm. If the system revokes one of them, the permission page of the plugin explains how to turn it back on."
+    }
+  ],
+  "p_security_intro": "The plugin keeps its permission surface as small as possible:",
+  "security_points": [
+    "Protected entry points: the capability service and the activation entry are protected by the AutoJs6 plugin permission (`org.autojs.permission.PLUGIN`), so other apps cannot call them directly; the entry that accepts system clock requests requires the caller to hold `com.android.alarm.permission.SET_ALARM`.",
+    "Network: version 1.0.0 requests no network permission; alarms, timers and the stopwatch work entirely on the device.",
+    "Storage: alarms are stored in the private directory of the plugin and are excluded from cloud backup; local ringtones are imported through the system file picker without a storage permission.",
+    "Script access: through the `alarms` module, scripts can read and change every alarm of the plugin, including those created on its screens; registered scripts are stored in AutoJs6, and the plugin screens only mark an alarm as having a script binding and can remove it."
+  ],
+  "p_license": "The project code is licensed under the [Mozilla Public License 2.0]({{ license_url }}). Third-party components and data are listed in the third-party notices.",
+  "text_link_third_party": "Third-party notices (THIRD_PARTY_NOTICES.md)",
+  "p_instruction_docs": "Progress and design are available on the [project page]({{ repo_url }})."
+}

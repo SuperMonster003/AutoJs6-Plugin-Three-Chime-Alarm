@@ -1,0 +1,201 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="org.autojs.permission.PLUGIN" />
+
+    <!--
+        Roadmap T4: the plugin is an alarm clock. USE_EXACT_ALARM is granted at install on API 33+, SCHEDULE_EXACT_ALARM
+        covers API 31 - 32 (on API 24 - 30 exact alarms need no permission). The full screen intent, notifications,
+        vibration, the wake lock and the boot broadcast serve ringing and rescheduling (roadmap T5 / T8). The ringing
+        foreground service type is the one roadmap P0.2 measured (T6).
+    -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission
+        android:name="android.permission.SCHEDULE_EXACT_ALARM"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SYSTEM_EXEMPTED" />
+
+    <!-- The host (alarm events and bindings, roadmap P1) and the text-to-speech engines of the ringing voice (roadmap P2.3). -->
+    <queries>
+        <package android:name="org.autojs.autojs6" />
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+    </queries>
+
+    <application
+        android:name=".ThreeChimeAlarmApplication"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="false"
+        android:label="@string/app_name"
+        android:enableOnBackInvokedCallback="true"
+        android:supportsRtl="true"
+        android:icon="@mipmap/ic_icon_studio_application"
+        android:roundIcon="@mipmap/ic_icon_studio_application"
+        android:theme="@style/Theme.ThreeChimeAlarm"
+        tools:targetApi="33">
+
+        <meta-data
+            android:name="org.autojs.plugin.WAKE_ACTIVITY"
+            android:value=".WakeActivity" />
+
+        <meta-data
+            android:name="org.autojs.plugin.info.AUTHOR"
+            android:value="@string/plugin_author" />
+
+        <activity
+            android:name=".WakeActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:finishOnTaskLaunch="true"
+            android:permission="org.autojs.permission.PLUGIN"
+            android:theme="@android:style/Theme.NoDisplay">
+            <intent-filter>
+                <category android:name="android.intent.category.DEFAULT" />
+                <action android:name="org.autojs.plugin.action.WAKE" />
+            </intent-filter>
+        </activity>
+
+        <!--
+            The plugin's screens (roadmap D7, P3). The home screen is the launcher target: the launcher entry is one of four
+            fixed aliases that persist the icon choice as component state (icon specification section 4); only the
+            automatic alias is enabled by default, and the settings screen of roadmap P3 offers the choice.
+        -->
+        <activity
+            android:name=".ui.home.HomeActivity"
+            android:exported="false"
+            android:launchMode="singleTask" />
+        <activity-alias
+            android:name=".launcher.AdaptiveLightIconAlias"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_system_light"
+            android:roundIcon="@mipmap/ic_launcher_system_light"
+            android:targetActivity=".ui.home.HomeActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".launcher.AdaptiveDarkIconAlias"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_system"
+            android:roundIcon="@mipmap/ic_launcher_system"
+            android:targetActivity=".ui.home.HomeActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".launcher.AdaptiveAutoIconAlias"
+            android:enabled="true"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_system_auto"
+            android:roundIcon="@mipmap/ic_launcher_system_auto"
+            android:targetActivity=".ui.home.HomeActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".launcher.TransparentIconAlias"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher"
+            android:targetActivity=".ui.home.HomeActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <!--
+            The system clock intents (roadmap D21; SET_TIMER, SHOW_TIMERS and DISMISS_TIMER join in 1.1.0). Callers hold
+            com.android.alarm.permission.SET_ALARM, as for the AOSP clock; roadmap P2 implements the actions.
+        -->
+        <activity
+            android:name=".intent.ClockIntentActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:permission="com.android.alarm.permission.SET_ALARM"
+            android:theme="@android:style/Theme.NoDisplay">
+            <intent-filter>
+                <action android:name="android.intent.action.SET_ALARM" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SHOW_ALARMS" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.DISMISS_ALARM" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SNOOZE_ALARM" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- Ringing (roadmap T5 / T7, P2.3): shown over the lock screen, available before the first unlock. -->
+        <activity
+            android:name=".ring.RingActivity"
+            android:directBootAware="true"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleInstance"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            tools:targetApi="27" />
+
+        <!-- Ringing foreground service (roadmap T6 measured in P0.2, T7): not exported, available before the first unlock. -->
+        <service
+            android:name=".ring.RingService"
+            android:directBootAware="true"
+            android:exported="false"
+            android:foregroundServiceType="systemExempted"
+            tools:targetApi="34" />
+
+        <!-- Plugin Center identity (roadmap 4.5, category three-chime-alarm, engine alarm). -->
+        <service
+            android:name=".service.ThreeChimeAlarmInfoService"
+            android:exported="true"
+            android:permission="org.autojs.permission.PLUGIN">
+            <meta-data
+                android:name="requiresHostVersion"
+                android:value="@string/plugin_requires_host_version" />
+            <intent-filter>
+                <action android:name="org.autojs.plugin.INFO" />
+                <category android:name="three-chime-alarm" />
+            </intent-filter>
+        </service>
+
+        <!-- Alarm capability service (roadmap 4.5): a placeholder Binder until the host contract of roadmap P1.1 exists. -->
+        <service
+            android:name=".service.ThreeChimeAlarmService"
+            android:exported="true"
+            android:permission="org.autojs.permission.PLUGIN">
+            <meta-data
+                android:name="requiresHostVersion"
+                android:value="@string/plugin_requires_host_version" />
+            <intent-filter>
+                <action android:name="org.autojs.plugin.ALARM" />
+                <category android:name="alarm" />
+            </intent-filter>
+        </service>
+
+    </application>
+
+</manifest>

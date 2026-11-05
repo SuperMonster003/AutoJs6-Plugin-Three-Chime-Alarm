@@ -1,0 +1,25 @@
+{
+  "changelog_label_hint": "Aviso",
+  "changelog_label_feature": "Función",
+  "changelog_label_fix": "Corrección",
+  "changelog_label_improvement": "Mejora",
+  "changelog_label_dependency": "Dependencia",
+  "$data": {
+    "v1.0.0": {
+      "released_date": "2026/11/05",
+      "hint": [
+        "Versión preliminar de desarrollo: el centro de complementos de AutoJs6 puede detectar el complemento; las alarmas, los temporizadores, el cronómetro, las pantallas del complemento y el módulo de script alarms aún no están disponibles",
+        "Requiere AutoJs6 {{ required_host_version_name }} ({{ required_host_version_code }}) o posterior (la versión mínima exacta se indicará cuando se integren los cambios del anfitrión)",
+        "El icono actual es un diseño candidato y aún puede cambiar"
+      ],
+      "feature": [
+        "Esqueleto del complemento: protocolo de activación Wake, servicio de identidad del centro de complementos y servicio de capacidad de alarmas",
+        "Sin bibliotecas nativas: un único APK para todos los dispositivos",
+        "README, instrucciones del centro de complementos y registros de cambios en 10 idiomas, generados a partir de fuentes JSON"
+      ],
+      "dependency": [
+        "Se agrega AndroidX Core KTX 1.15.0"
+      ]
+    }
+  }
+}

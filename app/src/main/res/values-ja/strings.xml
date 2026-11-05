@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notification_channel_ring_description">鳴動中のアラームと全画面通知を表示します</string>
+    <string name="notification_channel_ring_name">鳴動中のアラーム</string>
+    <string name="plugin_description">カレンダー形式の繰り返しルール, 祝日スキップ, 鳴動時のスクリプト連携に対応したアラーム, タイマー, ストップウォッチ</string>
+</resources>

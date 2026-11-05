@@ -1,0 +1,7 @@
+# Host API release AARs (roadmap 4.5; alarm-api joins in roadmap P2, built from the host contract module of P1.1).
+# common-plugin-api: byte-identical to the artifact 3-Stamp Mail staged on 2026-10-21 (a release build of the host 6.8.0,
+#   build 5697). The module last changed at host commit 1a564ee85d (2026-10-16), so it matches the current host. When
+#   alarm-api is staged, restage both from the same host commit. See libs/README.md.
+format=1
+common-plugin-api.file=common-plugin-api.aar
+common-plugin-api.sha256=9eaba785db6128f9a0ded272ab976f37835e9fa17a49cc250a6a75ddf76cf769

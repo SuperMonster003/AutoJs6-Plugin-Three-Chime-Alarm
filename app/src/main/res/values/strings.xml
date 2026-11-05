@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notification_channel_ring_description">Shows the ringing alarm and its full screen alert</string>
+    <string name="notification_channel_ring_name">Ringing alarms</string>
+    <string name="plugin_description">Alarm clock, timers and stopwatch with calendar recurrence rules, holiday skipping and script hooks when an alarm rings</string>
+</resources>

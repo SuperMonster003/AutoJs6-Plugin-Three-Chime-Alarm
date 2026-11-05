@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notification_channel_ring_description">يعرض المنبه الذي يرن وتنبيهه بملء الشاشة</string>
+    <string name="notification_channel_ring_name">المنبهات التي ترن</string>
+    <string name="plugin_description">منبه ومؤقتات وساعة إيقاف مع قواعد تكرار تقويمية وتخطي العطلات وتشغيل نصوص برمجية عند الرنين</string>
+</resources>

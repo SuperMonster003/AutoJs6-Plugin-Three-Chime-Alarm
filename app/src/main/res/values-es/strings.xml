@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notification_channel_ring_description">Muestra la alarma que suena y su aviso a pantalla completa</string>
+    <string name="notification_channel_ring_name">Alarmas sonando</string>
+    <string name="plugin_description">Alarma, temporizadores y cronómetro con reglas de repetición de calendario, omisión de festivos y scripts al sonar la alarma</string>
+</resources>

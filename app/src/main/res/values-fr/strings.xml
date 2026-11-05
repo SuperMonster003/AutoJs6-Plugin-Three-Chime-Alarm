@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notification_channel_ring_description">Affiche les alarmes qui sonnent et leur alerte en plein écran</string>
+    <string name="notification_channel_ring_name">Alarmes en cours</string>
+    <string name="plugin_description">Réveil, minuteurs et chronomètre avec règles de répétition de calendrier, saut des jours fériés et scripts déclenchés à la sonnerie</string>
+</resources>

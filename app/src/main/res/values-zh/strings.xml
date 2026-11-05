@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notification_channel_ring_description">显示正在响铃的闹钟及其全屏提醒</string>
+    <string name="notification_channel_ring_name">响铃中的闹钟</string>
+    <string name="plugin_description">闹钟, 计时器与秒表, 支持日历重复规则, 节假日跳过与响铃时联动脚本</string>
+</resources>

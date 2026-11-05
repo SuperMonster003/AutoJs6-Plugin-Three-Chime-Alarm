@@ -1,0 +1,73 @@
+{
+  "$name": "Español",
+  "text_current_lowercase": "actual",
+  "text_plugin_synopsis": "Alarma, temporizadores y cronómetro con reglas de repetición de calendario, omisión de festivos y scripts al sonar la alarma",
+  "h3_languages_with_ascii": "Idiomas (Languages)",
+  "p_languages_all_supported_for_readme": "El README.md actual admite los siguientes idiomas",
+  "h3_introduction": "Introducción",
+  "h3_features": "Funciones Destacadas",
+  "h3_usage": "Uso",
+  "h3_script_api": "API De Script",
+  "h3_faq": "Preguntas Frecuentes",
+  "h3_security": "Permisos Y Seguridad",
+  "h3_plugin_interface": "Interfaz Del Plugin",
+  "p_plugin_interface": "La siguiente información está dirigida a los desarrolladores del host AutoJs6 y de plugins; el host usa estos identificadores para descubrir el plugin y negociar capacidades",
+  "h3_roadmap": "Hoja De Ruta",
+  "text_link_roadmap": "Ver ROADMAP.md",
+  "h3_release_history": "Historial De Versiones",
+  "h5_for_more_release_history": "Para más historial de versiones",
+  "h3_build": "Compilación",
+  "p_build_intro": "Esta sección está dirigida a desarrolladores que quieran compilar el plugin desde el código fuente.",
+  "h3_license": "Licencia",
+  "h3_links": "Enlaces",
+  "text_link_autojs6": "Proyecto AutoJs6",
+  "p_roadmap": "Los planes, las decisiones de diseño y el progreso se registran como lista de verificación en ROADMAP.md. Los elementos sin marcar son planes, no funciones de la versión actual.",
+  "p_introduction_what": "3-Chime Alarm es el complemento de alarmas de AutoJs6 y también una aplicación de reloj completa que funciona sin AutoJs6: alarmas, varios temporizadores de cuenta atrás en paralelo y un cronómetro. Las alarmas se repiten según reglas de calendario RFC 5545 (por ejemplo, el último viernes de cada mes, o cada 3 días a partir de una fecha), pueden omitir los días festivos y pueden iniciar un script o avisar a un script en ejecución cuando suenan.",
+  "p_introduction_how": "El complemento programa y hace sonar las alarmas por sí mismo con las alarmas exactas de Android, así que las alarmas suenan a tiempo aunque AutoJs6 no esté en ejecución. Los scripts de AutoJs6 consultan, crean, modifican y escuchan las alarmas del complemento mediante el módulo global `alarms`; el subespacio de nombres `alarms.system` se comunica directamente con la aplicación de reloj del sistema y funciona sin el complemento. El complemento también acepta solicitudes para configurar alarmas enviadas por otras aplicaciones.",
+  "p_status_note": "Esta es una versión preliminar de desarrollo: el centro de complementos de AutoJs6 puede detectar el complemento, pero las alarmas, los temporizadores, el cronómetro, las pantallas del complemento y el módulo de script `alarms` aún no están disponibles, y el icono es un diseño candidato que aún puede cambiar. El texto siguiente describe los objetivos de diseño de cada versión; consulte la hoja de ruta para ver el progreso.",
+  "features": [
+    "Alarmas: alarmas únicas o repetidas. Las reglas de repetición cubren días laborables, el enésimo día de la semana del mes, el último día del mes, intervalos en días, fecha de fin y número de repeticiones, y se puede omitir solo la próxima vez.",
+    "Sonido: tonos del sistema o audio local, texto leído en voz alta, volumen propio con aumento gradual, patrones de vibración personalizados, alerta a pantalla completa en la pantalla de bloqueo y posponer.",
+    "Integración con scripts: una alarma puede registrar un archivo de script que AutoJs6 inicia cuando suena, de modo que el script no tiene que seguir en ejecución; un script en ejecución también puede escuchar en tiempo real los eventos de sonar, posponer y descartar.",
+    "Temporizadores y cronómetro (1.1.0): varios temporizadores en paralelo que se pueden pausar, reanudar y ampliar, y que se restauran tras reiniciar; el cronómetro registra vueltas.",
+    "Días festivos (1.2.0): datos abiertos de festivos integrados para muchas regiones, para omitir los festivos y sonar igualmente en los días laborables de recuperación; un gancho de script `beforeRing` también puede decidir si suena una alarma.",
+    "Retos para apagar (1.3.0): cálculos, agitar el dispositivo, volver a escribir una frase o una condición de script, cada uno con una válvula de seguridad para que la alarma siempre se pueda apagar."
+  ],
+  "usage_steps": [
+    "Descargue el APK desde [Releases]({{ repo_url }}/releases) e instálelo. Hay un único paquete para todas las ABI.",
+    "Abra el complemento y conceda los permisos de notificaciones, alarmas exactas y alertas a pantalla completa cuando se soliciten; después funciona como una aplicación de reloj normal.",
+    "Para usar el módulo `alarms` en scripts, actualice AutoJs6 a la compilación interna {{ required_host_version_code }} ({{ required_host_version_name }}) o posterior y active el complemento en el centro de complementos."
+  ],
+  "p_usage_note": "El complemento es compatible con dispositivos con Android {{ min_android_version }} (API {{ android_min_sdk }}) o posterior. El APK no contiene bibliotecas nativas, por lo que hay un único paquete y la comprobación del tamaño de página de memoria de 16 KB no se aplica.",
+  "p_script_api_intro": "Los scripts usan estas funciones mediante el módulo global `alarms` (también disponible como `$alarms`) (borrador de diseño de la 1.0.0; prevalece la documentación de la versión publicada)",
+  "api_points": [
+    "`alarms.add(options)` crea una alarma y devuelve un objeto de alarma; `alarms.list`, `get`, `update`, `remove`, `setEnabled` y `skipNext` gestionan todas las alarmas del complemento, incluidas las creadas en sus pantallas.",
+    "`repeat` acepta una cadena RRULE (como `FREQ=MONTHLY;BYDAY=-1FR`) o un objeto estructurado; `alarms.preview(options)` enumera las próximas horas de sonido para comprobar una regla.",
+    "`alarm.bind(script, { events })` registra un script que AutoJs6 inicia cuando suena la alarma, con el evento disponible en `alarms.currentEvent()`; `alarms.on('ring', listener)` escucha mientras el script se ejecuta.",
+    "`alarms.system` llama directamente a la aplicación de reloj del sistema (`setAlarm`, `setTimer`, `showAlarms`, `next` y otras) y funciona sin el complemento."
+  ],
+  "faq": [
+    {
+      "q": "Puedo usarlo sin AutoJs6?",
+      "a": "Sí. El complemento tiene pantallas de reloj completas y funciona por sí solo como despertador, temporizador y cronómetro. AutoJs6 solo es necesario cuando los scripts gestionan las alarmas o reaccionan a ellas."
+    },
+    {
+      "q": "Suenan las alarmas cuando AutoJs6 no está en ejecución?",
+      "a": "Sí. El complemento programa y hace sonar las alarmas con las alarmas exactas de Android y no depende del proceso de AutoJs6. Cuando hay un script registrado, el complemento despierta AutoJs6 para iniciarlo a la hora de sonar."
+    },
+    {
+      "q": "Por qué necesita el complemento los permisos de alarmas exactas y alertas a pantalla completa?",
+      "a": "Las alarmas exactas mantienen la precisión de las horas de sonido (las aplicaciones de despertador reciben este permiso al instalarse), la alerta a pantalla completa muestra la pantalla de alarma en la pantalla de bloqueo y las notificaciones muestran la alarma que está sonando. Si el sistema revoca alguno, la página de permisos del complemento explica cómo volver a activarlo."
+    }
+  ],
+  "p_security_intro": "El complemento reduce al máximo sus permisos:",
+  "security_points": [
+    "Entradas protegidas: el servicio de capacidad y la entrada de activación exigen el permiso de complemento de AutoJs6 (`org.autojs.permission.PLUGIN`), así que otras aplicaciones no pueden llamarlos directamente; la entrada que recibe solicitudes del reloj del sistema exige que quien llama tenga `com.android.alarm.permission.SET_ALARM`.",
+    "Red: la versión 1.0.0 no solicita permiso de red; las alarmas, los temporizadores y el cronómetro funcionan por completo en el dispositivo.",
+    "Almacenamiento: las alarmas se guardan en el directorio privado del complemento y se excluyen de la copia de seguridad en la nube; los tonos locales se importan con el selector de archivos del sistema, sin permiso de almacenamiento.",
+    "Acceso de scripts: mediante el módulo `alarms`, los scripts pueden leer y modificar todas las alarmas del complemento, incluidas las creadas en sus pantallas; los scripts registrados se guardan en AutoJs6, y las pantallas del complemento solo indican que una alarma tiene un script vinculado y permiten quitar ese vínculo."
+  ],
+  "p_license": "El código del proyecto se distribuye bajo la [Mozilla Public License 2.0]({{ license_url }}). Los componentes y datos de terceros se enumeran en los avisos de terceros.",
+  "text_link_third_party": "Avisos de terceros (THIRD_PARTY_NOTICES.md)",
+  "p_instruction_docs": "El progreso y el diseño están disponibles en la [página del proyecto]({{ repo_url }})."
+}

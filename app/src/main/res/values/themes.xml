@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Platform theme of the skeleton screens; roadmap P3.1 moves the screens to Compose and Material 3 (T22). -->
+    <style name="Theme.ThreeChimeAlarm" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>

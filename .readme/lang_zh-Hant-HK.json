@@ -1,0 +1,73 @@
+{
+  "$name": "繁體中文 (香港)",
+  "text_current_lowercase": "目前",
+  "text_plugin_synopsis": "鬧鐘, 計時器與秒錶, 支援日曆重複規則, 假期略過與響鈴時聯動腳本",
+  "h3_languages_with_ascii": "語言 (Languages)",
+  "p_languages_all_supported_for_readme": "目前 README.md 支援以下語言",
+  "h3_introduction": "簡介",
+  "h3_features": "功能亮點",
+  "h3_usage": "使用方法",
+  "h3_script_api": "腳本 API",
+  "h3_faq": "常見問題",
+  "h3_security": "權限與安全",
+  "h3_plugin_interface": "外掛接口",
+  "p_plugin_interface": "以下資訊面向 AutoJs6 宿主與外掛開發者, 宿主透過這些標識發現外掛並完成能力協商",
+  "h3_roadmap": "開發路線圖",
+  "text_link_roadmap": "查看 ROADMAP.md",
+  "h3_release_history": "發行歷史",
+  "h5_for_more_release_history": "更多發行歷史可參閱",
+  "h3_build": "構建",
+  "p_build_intro": "本節面向希望從源碼構建外掛的開發者.",
+  "h3_license": "許可",
+  "h3_links": "相關連結",
+  "text_link_autojs6": "AutoJs6 項目",
+  "p_roadmap": "功能規劃, 設計決策與完成情況以可勾選清單維護在 ROADMAP.md 中. 未勾選條目表示規劃意向, 不代表目前版本能力.",
+  "p_introduction_what": "3-Chime Alarm 是 AutoJs6 的鬧鐘插件, 也是不安裝 AutoJs6 亦可單獨使用的完整時鐘應用程式: 鬧鐘, 多個並行的倒數計時器與秒錶. 鬧鐘按 RFC 5545 日曆規則重複 (例如每月最後一個星期五, 或由某天起每隔 3 天), 可以略過公眾假期, 響鈴時可以啟動腳本或通知正在執行的腳本.",
+  "p_introduction_how": "插件使用 Android 精確鬧鐘自行排程並響鈴, 因此 AutoJs6 沒有執行時鬧鐘亦會準時響. AutoJs6 腳本透過全域模組 `alarms` 查詢, 新增, 修改與監聽插件中的鬧鐘; 子命名空間 `alarms.system` 直接調用系統時鐘應用程式, 未安裝插件時亦可使用. 插件亦可以接收其他應用程式發出的設定鬧鐘請求.",
+  "p_status_note": "目前為開發預覽版: 插件可以被 AutoJs6 插件中心識別, 但鬧鐘, 計時器, 秒錶, 插件介面與 `alarms` 腳本模組尚未交付, 圖標亦是候選圖案, 之後可能更換. 下文描述的是各版本的設計目標, 進度見開發路線圖.",
+  "features": [
+    "鬧鐘: 單次或重複鬧鐘. 重複規則支援工作日, 每月第幾個星期幾, 月底, 間隔天數, 截止日期與次數, 亦可以只略過下一次響鈴.",
+    "響鈴: 系統鈴聲或本機音訊, 朗讀文字, 獨立音量與漸強, 自訂震動, 鎖定畫面時顯示全屏響鈴介面, 支援貪睡.",
+    "腳本聯動: 鬧鐘可以登記一個腳本檔案, 響鈴時由 AutoJs6 啟動, 腳本毋須常駐; 正在執行的腳本亦可以即時監聽響鈴, 貪睡與關閉事件.",
+    "計時器與秒錶 (1.1.0): 多個計時器並行, 可以暫停, 繼續與加時, 裝置重新啟動後恢復; 秒錶支援分段計時.",
+    "假期 (1.2.0): 內置多地區開源假期數據, 公眾假期略過響鈴, 調休補班日照常響鈴; 亦可以用 `beforeRing` 腳本鈎子決定是否響鈴.",
+    "關閉挑戰 (1.3.0): 算術題, 搖一搖, 照打一句話或腳本條件, 都設有安全閥, 確保鬧鐘總能被關閉."
+  ],
+  "usage_steps": [
+    "從 [Releases]({{ repo_url }}/releases) 下載 APK 並安裝. 安裝包不區分 ABI, 適用於全部裝置.",
+    "開啟插件, 按提示授予通知, 精確鬧鐘與全屏提醒權限, 之後就可以像普通時鐘應用程式一樣使用.",
+    "如要在腳本中使用 `alarms` 模組, 請將 AutoJs6 升級到內部版本號 {{ required_host_version_code }} ({{ required_host_version_name }}) 或更高版本, 並在插件中心啟用本插件."
+  ],
+  "p_usage_note": "插件支援 Android {{ min_android_version }} (API {{ android_min_sdk }}) 或以上的裝置. APK 不含原生庫, 因此只有一個安裝包, 亦不涉及 16 KB 記憶體分頁大小的校驗.",
+  "p_script_api_intro": "腳本透過全域模組 `alarms` (亦可寫作 `$alarms`) 使用這些功能 (1.0.0 設計草案, 以發佈版本的文件為準)",
+  "api_points": [
+    "`alarms.add(options)` 新增鬧鐘並返回鬧鐘物件; `alarms.list`, `get`, `update`, `remove`, `setEnabled` 與 `skipNext` 管理插件中的全部鬧鐘, 包括在插件介面建立的鬧鐘.",
+    "`repeat` 接受 RRULE 字串 (例如 `FREQ=MONTHLY;BYDAY=-1FR`) 或結構化物件; `alarms.preview(options)` 列出接下來的響鈴時間, 方便核對規則.",
+    "`alarm.bind(script, { events })` 登記響鈴時由 AutoJs6 啟動的腳本, 事件數據可透過 `alarms.currentEvent()` 讀取; `alarms.on('ring', listener)` 在腳本執行期間即時監聽.",
+    "`alarms.system` 直接調用系統時鐘應用程式 (`setAlarm`, `setTimer`, `showAlarms`, `next` 等), 未安裝插件時亦可使用."
+  ],
+  "faq": [
+    {
+      "q": "不安裝 AutoJs6 可以使用嗎?",
+      "a": "可以. 插件自帶完整的時鐘介面, 可以單獨當作鬧鐘, 計時器與秒錶使用. 只有在腳本需要管理鬧鐘或聯動腳本時才用到 AutoJs6."
+    },
+    {
+      "q": "AutoJs6 沒有執行時鬧鐘還會響嗎?",
+      "a": "會. 鬧鐘由插件透過 Android 精確鬧鐘排程並響鈴, 不依賴 AutoJs6 程序. 登記了腳本時, 插件在響鈴時喚醒 AutoJs6 啟動該腳本."
+    },
+    {
+      "q": "為甚麼需要精確鬧鐘與全屏提醒權限?",
+      "a": "精確鬧鐘確保準時響鈴 (鬧鐘類應用程式在安裝時即可獲得), 全屏提醒用於在鎖定畫面上顯示響鈴介面, 通知用於顯示正在響鈴的鬧鐘. 如果系統撤銷了其中某項權限, 插件的權限頁會說明如何重新開啟."
+    }
+  ],
+  "p_security_intro": "插件在設計上盡量收窄權限範圍:",
+  "security_points": [
+    "受保護的入口: 能力服務與啟動入口受 AutoJs6 插件權限 (`org.autojs.permission.PLUGIN`) 保護, 其他應用程式無法直接調用; 接收系統時鐘請求的入口要求調用方持有 `com.android.alarm.permission.SET_ALARM`.",
+    "網絡: 1.0.0 不申請網絡權限, 鬧鐘, 計時器與秒錶全部在本機完成.",
+    "儲存: 鬧鐘保存在插件私有目錄, 不參與雲端備份; 本機鈴聲透過系統檔案選擇器匯入, 不申請儲存權限.",
+    "腳本權限: 腳本可以透過 `alarms` 模組讀寫插件中的全部鬧鐘, 包括在插件介面建立的鬧鐘; 登記的腳本保存在 AutoJs6 中, 插件介面只標記鬧鐘有腳本綁定並可以解除."
+  ],
+  "p_license": "項目代碼使用 [Mozilla Public License 2.0]({{ license_url }}). 第三方元件與數據的授權見第三方聲明.",
+  "text_link_third_party": "第三方聲明 (THIRD_PARTY_NOTICES.md)",
+  "p_instruction_docs": "開發進度與設計見 [專案主頁]({{ repo_url }})."
+}
