@@ -177,6 +177,7 @@ _2026/11/05_
 - `Fonctionnalité` README, instructions du centre des plugins et journaux des modifications en 10 langues, générés à partir de sources JSON
 - `Dépendance` Ajout de AndroidX Core KTX 1.15.0
 - `Dépendance` Ajout de lib-recur 0.17.1 (calcule les règles de répétition des alarmes)
+- `Dépendance` Ajout de Desugar JDK Libs 2.1.5 (calculs de date et de fuseau horaire sous Android 7.x)
 
 ##### Pour plus d'historique des versions
 

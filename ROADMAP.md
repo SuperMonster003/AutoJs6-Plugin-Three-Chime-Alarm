@@ -104,6 +104,10 @@ T1 - T18 来自设计稿 (2026-11-03), T19 - T25 为立项时补充, T26 起由�
 | T44 | 带铃声文件的 `add` / `update` 先 `importRingtone` 再提交, 提交失败不回滚已导入的铃声 | 导入的铃声本身可复用, 回滚需要额外的删除接口 | 已固定 (P1.4) |
 | T45 | `bind` 只按脚本目录解析相对路径, 不检查文件是否存在 | 文件可能稍后才写入; 触发时宿主跳过不存在的文件并记 `missing` (T28) | 已固定 (P1.4) |
 | T46 | 宿主样例的工作日用星期数组 `[1, 2, 3, 4, 5]`, 1.2.0 节假日上线后补节假日样例 | 1.0.0 没有 `holidays` 功能 | 已固定 (P1.6) |
+| T47 | 核心库脱糖 (`desugar_jdk_libs` 2.1.5, 与宿主及 3-Stamp Mail 同版), 闹钟核心直接使用 `java.time` | API 24 / 25 没有 `java.time`, 自写日期运算或引入 ThreeTen 都更重; 脱糖库按 GPL-2.0 with the Classpath Exception 写进 `THIRD_PARTY_NOTICES.md` | 已固定 (P2.1) |
+| T48 | 隐式 `date`: 有 `time` 无 `date` 时插件补上日期并记 `dateImplicit` (重复闹钟取今天; 一次性闹钟取当天, 当天该时刻不晚于当前时刻时取明天; 按闹钟的 `timeZone`, 否则按设备时区), 快照显示补上的日期. 隐式日期在 patch 改了时刻 / 规则 / 时区而未给 `date` 时重新计算, patch 给了 `date` 即转为显式; 一次性 `time` 闹钟在时刻已过后再次启用 (`setAlarmEnabled`, 或 patch 带 `enabled: true` 且未给 `date`) 时改到下一个到达该时刻的日子 | 附录 A 第 4.2 节的省略规则需要落到存储上; 已响过的一次性闹钟在界面上重新打开应当再响一次 (同系统时钟) | P3.1 |
+| T49 | 存储损坏处理: 单条记录校验失败, 重复 id, 坏 id / 来源, 超过 300 条时跳过该条; 整个文档不可解析, 格式不符或无法迁移时按空列表处理; 更新版本 (降级后) 的文档丢弃不认识的顶层选项后照常读取; 启用超过 200 条时按创建顺序把多出的改为禁用. 以上情况都先把原文件复制到 `quarantine/alarms-<毫秒时间戳>.json` (保留最新 5 份), 再写回清理后的文档; 单纯的旧版本迁移不留副本 | 损坏一条不影响其他闹钟; 原文件留作日后人工恢复, 下次启动即为干净状态 | 已固定 (P2.1) |
+| T50 | 插件侧补充校验与语义 (插件为准, 宿主不必重复): `vibratePattern` 至少一项非 0 (`VibrationEffect.createWaveform` 拒绝全 0); 引擎 / 语言 / 地区 / 时区名非空且至多 128 个字符, 铃声 uri 至多 2048 个字符; patch 的 `hour` 与 `minute` 必须同时给出 (`second` 缺省为 0); 重复闹钟改用 `at` 时须在同一个 patch 中把 `repeat` 设为 `null`, 否则报 `INVALID_OPTIONS`; `setAlarmEnabled` 状态未变时原样返回, 不发 `change`; 禁用闹钟时清除 `skipNext` 与贪睡状态 | 这些组合在设备上会失败或语义不明, 由插件统一拒绝, 脚本得到写明键名的错误; P2.7 对照协议文档时补进 "Patch semantics" | 已固定 (P2.1) |
 
 ---
 
@@ -320,7 +324,7 @@ P0 (插件骨架, 含 P0.2 评估)          P1.1 - P1.3 (宿主契约, 桥接, �
 
 ### P2.1 存储与模型 (T7, T18, T21, D24)
 
-- [ ] (插件) 数据模型 (`Alarm`: id `a_` 前缀 (D24), `source` / `updatedBy` / `createdAt` / `updatedAt`, 附录 A 第 4.2 节全部选项; 内部状态: `nextTrigger`, `skipping`, 贪睡状态, 本次 `occurrence`); `AlarmStore`: JSON 文档 + fsync + 原子替换 (T21), 放设备加密存储, 启动时校验与版本迁移, 损坏条目单独跳过; 上限 300 / 启用 200 (`LIMIT_EXCEEDED`); 变更通知 (`change` 事件源, 带 `action` 与 `source`). 证据: 提交 hash; JVM 测试 (往返, 损坏恢复, 上限, 来源记录).
+- [x] (插件) 数据模型 (`Alarm`: id `a_` 前缀 (D24), `source` / `updatedBy` / `createdAt` / `updatedAt`, 附录 A 第 4.2 节全部选项; 内部状态: `nextTrigger`, `skipping`, 贪睡状态, 本次 `occurrence`); `AlarmStore`: JSON 文档 + fsync + 原子替换 (T21), 放设备加密存储, 启动时校验与版本迁移, 损坏条目单独跳过; 上限 300 / 启用 200 (`LIMIT_EXCEEDED`); 变更通知 (`change` 事件源, 带 `action` 与 `source`). 证据: 提交 hash; JVM 测试 (往返, 损坏恢复, 上限, 来源记录). 证据 (E1 + E2, 2026-11-05, chime-p2): 提交 hash 随 P2.2 的提交回填; 包 `core/alarm/` (`AlarmRecord` / `AlarmRuntimeState`, `AlarmOptionsValidator`, `AlarmStore` (`alarms.json`, 设备加密存储 `filesDir/alarms/`, 临时文件 fsync 后改名再同步目录, 隔离副本见 T49), `AlarmRepository` (上限, 来源, `change` 监听, 隐式日期 T48), `AlarmFilter`, `AlarmException`); 新派生 T47 - T50; `:app:testDebugUnitTest` 中 `AlarmOptionsValidatorTest` 11, `AlarmStoreTest` 7 (往返, 损坏条目跳过与隔离, 不可读文档, 更新版本, 加载时 300 / 200 上限, 临时文件, 隔离副本保留 5 份), `AlarmRepositoryTest` 7 (id / 来源 / 时间戳 / `change` 事件, 未知 id 与来源, 300 / 200 上限, 跨实例持久化与保存失败回滚, 状态更新, 监听器异常, 隐式日期) 共 25 例通过.
 
 ### P2.2 重复规则引擎 (D11, T9, T10, 附录 A 第 4.3 节)
 

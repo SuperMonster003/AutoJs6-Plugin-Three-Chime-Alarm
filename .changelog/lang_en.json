@@ -19,7 +19,8 @@
       ],
       "dependency": [
         "Attach AndroidX Core KTX 1.15.0",
-        "Attach lib-recur 0.17.1 (calculates the repeat rules of alarms)"
+        "Attach lib-recur 0.17.1 (calculates the repeat rules of alarms)",
+        "Attach Desugar JDK Libs 2.1.5 (date and time zone calculations on Android 7.x)"
       ]
     }
   }

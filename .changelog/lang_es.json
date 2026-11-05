@@ -19,7 +19,8 @@
       ],
       "dependency": [
         "Se agrega AndroidX Core KTX 1.15.0",
-        "Se agrega lib-recur 0.17.1 (calcula las reglas de repetición de las alarmas)"
+        "Se agrega lib-recur 0.17.1 (calcula las reglas de repetición de las alarmas)",
+        "Se agrega Desugar JDK Libs 2.1.5 (cálculos de fecha y zona horaria en Android 7.x)"
       ]
     }
   }

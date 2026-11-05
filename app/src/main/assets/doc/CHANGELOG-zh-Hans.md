@@ -16,3 +16,4 @@
 * `新增` 10 种语言的 README, 插件中心说明与更新日志, 由 JSON 源文件统一生成
 * `依赖` 附加 AndroidX Core KTX 版本 1.15.0
 * `依赖` 附加 lib-recur 版本 0.17.1 (计算闹钟的重复规则)
+* `依赖` 附加 Desugar JDK Libs 版本 2.1.5 (让 Android 7.x 也能使用日期与时区运算)

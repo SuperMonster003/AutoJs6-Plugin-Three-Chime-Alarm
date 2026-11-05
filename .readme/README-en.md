@@ -177,6 +177,7 @@ _2026/11/05_
 - `Feature` README, Plugin Center instructions and changelogs in 10 languages, generated from JSON sources
 - `Dependency` Attach AndroidX Core KTX 1.15.0
 - `Dependency` Attach lib-recur 0.17.1 (calculates the repeat rules of alarms)
+- `Dependency` Attach Desugar JDK Libs 2.1.5 (date and time zone calculations on Android 7.x)
 
 ##### For more release history, refer to
 

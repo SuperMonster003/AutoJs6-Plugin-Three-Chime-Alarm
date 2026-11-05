@@ -19,7 +19,8 @@
       ],
       "dependency": [
         "AndroidX Core KTX 1.15.0 추가",
-        "lib-recur 0.17.1 추가 (알람 반복 규칙 계산)"
+        "lib-recur 0.17.1 추가 (알람 반복 규칙 계산)",
+        "Desugar JDK Libs 2.1.5 추가 (Android 7.x에서도 날짜와 시간대 계산 지원)"
       ]
     }
   }

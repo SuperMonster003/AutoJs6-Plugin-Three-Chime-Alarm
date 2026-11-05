@@ -1,6 +1,8 @@
 [versions]
 
 core-ktx = "1.15.0"
+# Roadmap T47: core library desugaring (java.time on API 24 / 25), the release of the host and 3-Stamp Mail.
+desugar = "2.1.5"
 foojay-resolver-convention = "1.0.0"
 junit = "4.13.2"
 # Roadmap T10: RRULE evaluation (Apache-2.0, pure Java, with rfc5545-datetime 0.3 and jems2 2.23.1).
@@ -14,6 +16,7 @@ test-runner = "1.7.0"
 [libraries]
 
 core-ktx = { module = "androidx.core:core-ktx", version.ref = "core-ktx" }
+desugar = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugar" }
 junit = { module = "junit:junit", version.ref = "junit" }
 lib-recur = { module = "org.dmfs:lib-recur", version.ref = "lib-recur" }
 test-espresso-core = { module = "androidx.test.espresso:espresso-core", version.ref = "test-espresso-core" }

@@ -16,3 +16,4 @@
 * `新增` 10 種語言的 README, 外掛中心說明與更新日誌, 由 JSON 來源檔案統一產生
 * `相依性` 附加 AndroidX Core KTX 版本 1.15.0
 * `相依性` 附加 lib-recur 版本 0.17.1 (計算鬧鐘的重複規則)
+* `相依性` 附加 Desugar JDK Libs 版本 2.1.5 (讓 Android 7.x 也能使用日期與時區運算)

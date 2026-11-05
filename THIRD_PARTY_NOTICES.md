@@ -39,6 +39,12 @@ Java gems, a collection of Java utilities.
 Copyright 2017 dmfs GmbH- http://dmfs.org
 ```
 
+## Android desugared JDK libraries
+
+| Library | Version | Source | License |
+| --- | --- | --- | --- |
+| desugar_jdk_libs (`com.android.tools:desugar_jdk_libs`, `java.time` and other JDK APIs on API 24 and 25 devices) | 2.1.5 | https://github.com/google/desugar_jdk_libs | GPL-2.0 with the Classpath Exception |
+
 The full text of the Apache License 2.0 is available at https://www.apache.org/licenses/LICENSE-2.0.
 
 Libraries used only by the JVM and device tests (JUnit, AndroidX Test) are not part of the APK.

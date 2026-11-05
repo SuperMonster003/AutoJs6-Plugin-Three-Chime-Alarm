@@ -136,6 +136,11 @@ android {
         }
     }
 
+    compileOptions {
+        // java.time for the alarm core on API 24 / 25 devices (roadmap T47). zh-CN: 闹钟核心在 API 24 / 25 设备上使用 java.time (路线图 T47).
+        isCoreLibraryDesugaringEnabled = true
+    }
+
     buildFeatures {
         aidl = true
         buildConfig = true
@@ -184,6 +189,8 @@ androidComponents {
 }
 
 dependencies {
+    coreLibraryDesugaring(libs.desugar)
+
     implementation(files(hostApiAars))
 
     implementation(libs.core.ktx)

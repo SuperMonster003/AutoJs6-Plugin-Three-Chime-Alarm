@@ -19,7 +19,8 @@
       ],
       "dependency": [
         "AndroidX Core KTX 1.15.0 を追加",
-        "lib-recur 0.17.1 を追加 (アラームの繰り返しルールを計算)"
+        "lib-recur 0.17.1 を追加 (アラームの繰り返しルールを計算)",
+        "Desugar JDK Libs 2.1.5 を追加 (Android 7.x でも日付とタイムゾーンの計算を可能にする)"
       ]
     }
   }
