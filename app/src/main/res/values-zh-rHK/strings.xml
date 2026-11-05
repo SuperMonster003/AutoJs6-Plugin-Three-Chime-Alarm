@@ -9,4 +9,6 @@
     <string name="notification_missed_text_off">應於 %1$s 響鈴, 當時裝置關機, 沒有響.</string>
     <string name="notification_missed_title">錯過: %1$s</string>
     <string name="plugin_description">鬧鐘, 計時器與秒錶, 支援日曆重複規則, 假期略過與響鈴時聯動腳本</string>
+    <string name="ring_action_dismiss">關閉</string>
+    <string name="ring_action_snooze">貪睡</string>
 </resources>

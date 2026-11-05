@@ -9,4 +9,6 @@
     <string name="notification_missed_text_off">Debía sonar a las %1$s, pero no sonó porque el dispositivo estaba apagado.</string>
     <string name="notification_missed_title">Alarma perdida: %1$s</string>
     <string name="plugin_description">Alarma, temporizadores y cronómetro con reglas de repetición de calendario, omisión de festivos y scripts al sonar la alarma</string>
+    <string name="ring_action_dismiss">Descartar</string>
+    <string name="ring_action_snooze">Posponer</string>
 </resources>

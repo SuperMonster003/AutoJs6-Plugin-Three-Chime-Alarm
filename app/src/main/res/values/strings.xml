@@ -9,4 +9,6 @@
     <string name="notification_missed_text_off">Due at %1$s, it did not ring because the device was off.</string>
     <string name="notification_missed_title">Missed: %1$s</string>
     <string name="plugin_description">Alarm clock, timers and stopwatch with calendar recurrence rules, holiday skipping and script hooks when an alarm rings</string>
+    <string name="ring_action_dismiss">Dismiss</string>
+    <string name="ring_action_snooze">Snooze</string>
 </resources>

@@ -9,4 +9,6 @@
     <string name="notification_missed_text_off">Должен был прозвонить в %1$s, но устройство было выключено.</string>
     <string name="notification_missed_title">Пропущен: %1$s</string>
     <string name="plugin_description">Будильник, таймеры и секундомер с календарными правилами повтора, пропуском праздников и запуском скриптов при звонке</string>
+    <string name="ring_action_dismiss">Выключить</string>
+    <string name="ring_action_snooze">Отложить</string>
 </resources>

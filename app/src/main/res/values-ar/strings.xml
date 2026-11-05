@@ -9,4 +9,6 @@
     <string name="notification_missed_text_off">كان موعده %1$s, ولم يرن لأن الجهاز كان مطفأ.</string>
     <string name="notification_missed_title">منبه فائت: %1$s</string>
     <string name="plugin_description">منبه ومؤقتات وساعة إيقاف مع قواعد تكرار تقويمية وتخطي العطلات وتشغيل نصوص برمجية عند الرنين</string>
+    <string name="ring_action_dismiss">إيقاف</string>
+    <string name="ring_action_snooze">غفوة</string>
 </resources>

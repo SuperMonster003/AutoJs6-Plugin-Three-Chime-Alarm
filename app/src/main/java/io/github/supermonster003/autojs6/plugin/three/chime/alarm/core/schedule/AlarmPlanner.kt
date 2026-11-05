@@ -101,7 +101,7 @@ object AlarmPlanner {
      */
     fun plan(record: AlarmRecord, now: Long, zone: ZoneId): AlarmRuntimeState {
         val state = record.state
-        if (!record.enabled) return state.copy(nextTrigger = null, skipAt = null, snoozeUntil = null, snoozeCount = 0)
+        if (!record.enabled) return idle(state)
         val handled = guarded(state.handledThrough, now)
         val skipAt = state.skipAt?.takeIf { it > now && isRing(record, it, zone) }
         val next = NextOccurrence.next(record.spec, maxOf(now, handled ?: now), zone, skipAt)?.at
@@ -127,9 +127,7 @@ object AlarmPlanner {
      */
     fun reconcile(record: AlarmRecord, now: Long, zone: ZoneId, cause: Cause): Outcome {
         val state = record.state
-        if (!record.enabled) {
-            return Outcome(state.copy(nextTrigger = null, skipAt = null, snoozeUntil = null, snoozeCount = 0))
-        }
+        if (!record.enabled) return Outcome(idle(state))
         val due = now + if (cause == Cause.TRIGGER) EARLY_TOLERANCE_MILLIS else 0L
         val window = AlarmLimits.MISSED_RING_WINDOW_MILLIS
         val events = ArrayList<AlarmEvent>(2)
@@ -190,7 +188,16 @@ object AlarmPlanner {
         } catch (_: AlarmException) {
             null
         }
-        val retire = ended && record.spec.repeat == null && next == null && ring == null && snoozeUntil == null
+        // A round in the ring queue keeps its place; a new round starts the instance or continues it after a snooze.
+        // zh-CN: 响铃队列中的一轮保持不变; 新的一轮开始该次响铃, 或在贪睡后继续.
+        val ringingAt = ring?.scheduledAt ?: state.ringingAt
+        val ringSince = when {
+            ring != null && ring.snoozeCount == 0 -> now
+            ring != null -> state.ringSince ?: now
+            snoozeUntil != null || ringingAt != null -> state.ringSince
+            else -> null
+        }
+        val retire = ended && record.spec.repeat == null && next == null && ring == null && snoozeUntil == null && ringingAt == null
         val result = state.copy(
             nextTrigger = next,
             skipAt = skipAt,
@@ -198,6 +205,8 @@ object AlarmPlanner {
             occurrence = occurrence,
             snoozeUntil = snoozeUntil,
             snoozeCount = snoozeCount,
+            ringSince = ringSince,
+            ringingAt = ringingAt,
         )
         return Outcome(result, retire, ring, events)
     }
@@ -208,6 +217,13 @@ object AlarmPlanner {
     } catch (_: AlarmException) {
         false
     }
+
+    /**
+     * The state of a disabled alarm (T50): no planned ring, skip, snooze or ring round.
+     * zh-CN: 禁用闹钟的状态 (T50): 没有计划响铃, 跳过, 贪睡与响铃轮次.
+     */
+    fun idle(state: AlarmRuntimeState): AlarmRuntimeState =
+        state.copy(nextTrigger = null, skipAt = null, snoozeUntil = null, snoozeCount = 0, ringSince = null, ringingAt = null)
 
     /** [handled] unless it is more than [REPLAY_GUARD_MILLIS] ahead of [now]. zh-CN: 超前 [now] 超过 [REPLAY_GUARD_MILLIS] 时为 null. */
     private fun guarded(handled: Long?, now: Long): Long? = handled?.takeIf { it - now <= REPLAY_GUARD_MILLIS }

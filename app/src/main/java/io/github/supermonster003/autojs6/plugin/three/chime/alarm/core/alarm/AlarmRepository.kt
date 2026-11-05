@@ -316,9 +316,9 @@ class AlarmRepository(
         }
     }
 
-    /** Disabling drops the planned ring, the skip and the snooze of the alarm. zh-CN: 禁用时清除计划响铃, 跳过与贪睡. */
+    /** Disabling drops the planned ring, the skip, the snooze and the ring round. zh-CN: 禁用时清除计划响铃, 跳过, 贪睡与响铃轮次. */
     private fun stateFor(state: AlarmRuntimeState, enabled: Boolean): AlarmRuntimeState =
-        if (enabled) state else state.copy(nextTrigger = null, skipAt = null, snoozeUntil = null, snoozeCount = 0)
+        if (enabled) state else AlarmPlanner.idle(state)
 
     private fun zoneOf(spec: AlarmSpec): ZoneId = TimeZonePolicy.zoneOf(spec, deviceZone())
 

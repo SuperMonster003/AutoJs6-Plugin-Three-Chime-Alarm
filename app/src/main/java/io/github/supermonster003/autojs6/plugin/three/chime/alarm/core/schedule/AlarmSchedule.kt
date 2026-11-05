@@ -27,6 +27,11 @@ interface AlarmSchedulePort {
     /** Cancels every wake-up of [alarmId]. zh-CN: 取消 [alarmId] 的全部唤醒. */
     fun cancel(alarmId: String)
 
+    /**
+     * Hands a due ring to the ring service (roadmap P2.4); called on the thread of [AlarmSchedule.reconcile], inside the
+     * window in which the system lets the alarm start a foreground service.
+     * zh-CN: 把到时的响铃交给响铃服务 (路线图 P2.4); 在 [AlarmSchedule.reconcile] 的线程上调用, 处于系统允许闹钟启动前台服务的时间窗内.
+     */
     fun ring(record: AlarmRecord, request: AlarmPlanner.RingRequest)
 
     /** Leaves the one notification of a missed ring (T16). zh-CN: 为错过的响铃留一条通知 (T16). */
@@ -89,4 +94,40 @@ class AlarmSchedule(
         val schedulable = port.canScheduleExact()
         repository.list().forEach { if (schedulable) port.schedule(it) else port.cancel(it.id) }
     }
+
+    /** False when a snooze could not be scheduled (T60). zh-CN: 无法排程贪睡时为 false (T60). */
+    fun canSnooze(): Boolean = port.canScheduleExact()
+
+    /**
+     * Snoozes the sounding round of [alarmId] until [until] as its [count]-th snooze (roadmap P2.4) and sets the wake-up;
+     * null for an unknown or disabled alarm, or when the exact alarm permission is missing.
+     * zh-CN: 让 [alarmId] 正在响的一轮贪睡到 [until], 记为第 [count] 次贪睡 (路线图 P2.4), 并设置唤醒; 闹钟未知或已禁用, 或缺精确闹钟权限时为 null.
+     */
+    fun snooze(alarmId: String, until: Long, count: Int): AlarmRecord? {
+        if (!port.canScheduleExact()) return null
+        if (repository.get(alarmId)?.enabled != true) return null
+        val record = repository.updateState(alarmId) { it.state.copy(snoozeUntil = until, snoozeCount = count, ringingAt = null) } ?: return null
+        port.schedule(record)
+        return record
+    }
+
+    /**
+     * Ends the ring round of [alarmId] (dismissed, silenced or interrupted, roadmap P2.4): drops its snooze and round,
+     * retires a one-shot alarm that has nothing left (T57) and sets the wake-ups again. Null for an unknown alarm.
+     * zh-CN: 结束 [alarmId] 的响铃轮次 (关闭, 自动静音或被中断, 路线图 P2.4): 清除贪睡与轮次, 让没有剩余响铃的一次性闹钟退役 (T57), 并重排唤醒. 闹钟未知时为 null.
+     */
+    fun endRound(alarmId: String): AlarmRecord? {
+        val record = repository.settle(listOf(alarmId)) { current ->
+            val state = current.state.copy(snoozeUntil = null, snoozeCount = 0, ringSince = null, ringingAt = null)
+            AlarmRepository.Settlement(state, current.spec.repeat == null && state.nextTrigger == null, Unit)
+        }.firstOrNull()?.first ?: return null
+        if (port.canScheduleExact()) port.schedule(record) else port.cancel(record.id)
+        return record
+    }
+
+    /**
+     * The alarms whose round was sounding or waiting when the process died: a saved round that is not snoozed.
+     * zh-CN: 进程死亡时正在响或在排队的闹钟: 已保存且未在贪睡的轮次.
+     */
+    fun interrupted(): List<AlarmRecord> = repository.list().filter { it.enabled && it.state.ringingAt != null && it.state.snoozeUntil == null }
 }

@@ -104,6 +104,9 @@ data class AlarmRecord(
  * - [handledThrough]: the latest occurrence that rang, was skipped or was missed; the next one is computed after it.
  * - [occurrence]: id of the current ring round (appendix A section 5.1, T31), at most 128 characters.
  * - [snoozeUntil] / [snoozeCount]: the running snooze of the current round.
+ * - [ringSince]: when the instance first rang (kept through its snoozes, the `since` of `ringing()`), null once it ends.
+ * - [ringingAt]: the scheduled instant of the round that is sounding or waiting in the ring queue (roadmap P2.4), null
+ *   while snoozed or idle; a value left after the process died marks an interrupted round.
  * - [dateImplicit]: `date` was filled in by the plugin (roadmap T48) rather than given by the caller.
  *
  * Unknown or mistyped fields read as their defaults: the state can always be recomputed.
@@ -111,7 +114,8 @@ data class AlarmRecord(
  * zh-CN: 插件自己的闹钟状态, 不属于选项 (路线图 P2.1): [nextTrigger] 为调度器计划的下一次响铃 (已计入跳过与排除, 不计贪睡), 不再响时为 null;
  * [skipAt] 为 `skipNext` 跳过的那一次, 设置期间 `skipping` 为 true; [handledThrough] 为最近一次已响, 已跳过或已错过的时刻, 下一次在其之后计算;
  * [occurrence] 为本轮响铃的 id (附录 A 第 5.1 节, T31), 至多 128 个字符; [snoozeUntil] / [snoozeCount] 为本轮正在进行的贪睡;
- * [dateImplicit] 表示 `date` 由插件补上 (路线图 T48) 而非调用方给出. 未知或类型不符的字段读为默认值, 状态总能重新计算.
+ * [ringSince] 为该次响铃首次开始的时刻 (贪睡期间保留, 即 `ringing()` 的 `since`), 结束后为 null; [ringingAt] 为正在发声或在响铃队列中等待的那一轮的
+ * 计划时刻 (路线图 P2.4), 贪睡或空闲时为 null, 进程死亡后留下的值表示被中断的一轮; [dateImplicit] 表示 `date` 由插件补上 (路线图 T48) 而非调用方给出. 未知或类型不符的字段读为默认值, 状态总能重新计算.
  */
 data class AlarmRuntimeState(
     val nextTrigger: Long? = null,
@@ -120,6 +124,8 @@ data class AlarmRuntimeState(
     val occurrence: String? = null,
     val snoozeUntil: Long? = null,
     val snoozeCount: Int = 0,
+    val ringSince: Long? = null,
+    val ringingAt: Long? = null,
     val dateImplicit: Boolean = false,
 ) {
 
@@ -139,6 +145,8 @@ data class AlarmRuntimeState(
         putIfPresent(KEY_OCCURRENCE, occurrence)
         putIfPresent(KEY_SNOOZE_UNTIL, snoozeUntil)
         if (snoozeCount != 0) put(KEY_SNOOZE_COUNT, snoozeCount)
+        putIfPresent(KEY_RING_SINCE, ringSince)
+        putIfPresent(KEY_RINGING_AT, ringingAt)
         if (dateImplicit) put(KEY_DATE_IMPLICIT, true)
     }
 
@@ -150,6 +158,8 @@ data class AlarmRuntimeState(
         const val KEY_OCCURRENCE = "occurrence"
         const val KEY_SNOOZE_UNTIL = "snoozeUntil"
         const val KEY_SNOOZE_COUNT = "snoozeCount"
+        const val KEY_RING_SINCE = "ringSince"
+        const val KEY_RINGING_AT = "ringingAt"
         const val KEY_DATE_IMPLICIT = "dateImplicit"
 
         fun fromValues(values: Map<String, Any?>) = AlarmRuntimeState(
@@ -159,6 +169,8 @@ data class AlarmRuntimeState(
             occurrence = AlarmValues.string(values, KEY_OCCURRENCE)?.takeIf { it.isNotEmpty() && it.length <= AlarmLimits.MAX_OCCURRENCE_CHARS },
             snoozeUntil = AlarmValues.long(values, KEY_SNOOZE_UNTIL)?.takeIf { it >= 0 },
             snoozeCount = AlarmValues.int(values, KEY_SNOOZE_COUNT)?.takeIf { it in 0..AlarmLimits.MAX_SNOOZE_MAX } ?: 0,
+            ringSince = AlarmValues.long(values, KEY_RING_SINCE)?.takeIf { it >= 0 },
+            ringingAt = AlarmValues.long(values, KEY_RINGING_AT)?.takeIf { it >= 0 },
             dateImplicit = AlarmValues.boolean(values, KEY_DATE_IMPLICIT) ?: false,
         )
     }

@@ -31,7 +31,10 @@ import org.autojs.plugin.alarm.api.AlarmEvent
  * 状态栏, 锁屏与 `getNextAlarmClock()` 都能看到. `skipNext` 跳过的那次另设普通精确唤醒 (不显示为下一个闹钟), 用于发送 `skip` 事件. 每个闹钟有自己的
  * PendingIntent (data uri 带 id), 触发接收器按已存状态决定, 过期的唤醒不会响铃.
  */
-class AndroidAlarmSchedulePort(private val context: Context) : AlarmSchedulePort {
+class AndroidAlarmSchedulePort(
+    private val context: Context,
+    private val onRing: (AlarmRecord, AlarmPlanner.RingRequest) -> Unit = { _, _ -> },
+) : AlarmSchedulePort {
 
     private val alarmManager: AlarmManager = context.getSystemService(AlarmManager::class.java)
 
@@ -60,8 +63,9 @@ class AndroidAlarmSchedulePort(private val context: Context) : AlarmSchedulePort
     }
 
     override fun ring(record: AlarmRecord, request: AlarmPlanner.RingRequest) {
-        // Roadmap P2.4 starts the ring service here. zh-CN: 路线图 P2.4 在这里启动响铃服务.
         Log.i(TAG, "ring ${request.alarmId} scheduledAt=${request.scheduledAt} late=${request.firedAt - request.scheduledAt}")
+        // The ring state takes it and the ring service sounds it (roadmap P2.4). zh-CN: 交给响铃状态, 由响铃服务发声 (路线图 P2.4).
+        onRing(record, request)
     }
 
     override fun notifyMissed(record: AlarmRecord, event: AlarmEvent) {

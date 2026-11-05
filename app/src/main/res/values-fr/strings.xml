@@ -9,4 +9,6 @@
     <string name="notification_missed_text_off">Prévue à %1$s, elle n\'a pas sonné car l\'appareil était éteint.</string>
     <string name="notification_missed_title">Alarme manquée : %1$s</string>
     <string name="plugin_description">Réveil, minuteurs et chronomètre avec règles de répétition de calendrier, saut des jours fériés et scripts déclenchés à la sonnerie</string>
+    <string name="ring_action_dismiss">Arrêter</string>
+    <string name="ring_action_snooze">Répéter</string>
 </resources>
