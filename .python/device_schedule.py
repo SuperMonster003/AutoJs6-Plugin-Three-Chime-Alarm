@@ -276,7 +276,8 @@ def run(serial, args):
         missed = wait_for(lambda: any(f"miss {a['id']} late" in line for line in new_lines(serial, before)))
         expected = sorted([a["at"] + DAY, b["at"] + DAY])
         notes = shell(serial, "dumpsys", "notification", "--noredact", check=False)
-        count = len(re.findall(rf"\|{re.escape(PLUGIN)}\|-?\d+\|missed\|", notes))
+        # A record shows up in several sections of the dump; count the distinct keys. zh-CN: 按不同的键计数.
+        count = len(set(re.findall(rf"\|{re.escape(PLUGIN)}\|-?\d+\|missed\|", notes)))
         allowed = notifications_allowed(serial, sdk)
         report.check("clock A + 10 min: miss late", missed and wait_for(lambda: clocks(serial) == expected) and (count >= 1 or not allowed),
                      f"clocks {[stamp(t, offset) for t in clocks(serial)]}, missed notifications {count}"
