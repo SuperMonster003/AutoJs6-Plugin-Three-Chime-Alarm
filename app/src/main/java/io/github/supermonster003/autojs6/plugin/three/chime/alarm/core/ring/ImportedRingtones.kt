@@ -27,6 +27,9 @@ object ImportedRingtones {
         return PREFIX + id
     }
 
+    /** Whether [name] is a ringtone id (a file name in [DIRECTORY]). zh-CN: [name] 是否为铃声 id ([DIRECTORY] 中的文件名). */
+    fun isId(name: String): Boolean = ID.matches(name)
+
     /** Whether [source] names an imported ringtone (valid or not). zh-CN: [source] 是否指向导入铃声 (无论是否有效). */
     fun isImported(source: String): Boolean = source.startsWith("$SCHEME:")
 

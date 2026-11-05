@@ -15,12 +15,15 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.service.ThreeChimeAlarmInfoService
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.service.ThreeChimeAlarmService
+import org.autojs.plugin.alarm.api.AlarmCapabilityKeys
+import org.autojs.plugin.alarm.api.AlarmContract
+import org.autojs.plugin.alarm.api.AlarmFeatures
+import org.autojs.plugin.alarm.api.IAlarmPlugin
 import org.autojs.plugin.common.api.IPluginInfoProvider
 import org.autojs.plugin.common.api.PluginCapabilityKeys
 import org.autojs.plugin.common.api.PluginInfo
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -29,18 +32,18 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 
 /**
- * The host-facing activation and discovery contract against the installed APK (roadmap P0.4): the Wake activity,
+ * The host-facing activation and discovery contract against the installed APK (roadmap P0.4, P2.5): the Wake activity,
  * discovery of exactly one service per formal action and category, explicit binding with the expected Binder descriptors,
- * `getInfo()` marshalled through a real Parcel with the transaction code the host uses, and the placeholder capability
- * Binder that rejects every call until roadmap P2.5 implements `IAlarmPlugin`.
+ * `getInfo()` marshalled through a real Parcel with the transaction code the host uses, and the `IAlarmPlugin` Binder
+ * with its capabilities (`alarmFeatures` = `["alarms"]`, the permission states). [AlarmPluginBinderTest] covers the methods.
  *
- * The services run in the plugin's own process, so the calls below use `transact` with explicit Parcels instead of
- * `asInterface`, which would return the local object and skip marshalling. Roadmap P2.7 and P5.1 add the alarm calls.
+ * The services run in the plugin's own process, so the calls below use `transact` with explicit Parcels or a
+ * [MarshallingBinder] instead of plain `asInterface`, which would return the local object and skip marshalling.
  *
- * zh-CN: 针对已安装 APK 验证面向宿主的激活与发现契约 (路线图 P0.4): Wake Activity, 每组正式 action 与 category 恰好发现一个服务,
- * 显式绑定与 Binder 描述符, 以宿主使用的事务号经真实 Parcel 编组的 `getInfo()`, 以及在路线图 P2.5 实现 `IAlarmPlugin` 之前拒绝全部
- * 调用的占位能力 Binder. 服务与测试同进程, 因此下文用显式 Parcel 调用 `transact`, 不用会直接返回本地对象而跳过编组的
- * `asInterface`. 闹钟调用由路线图 P2.7 与 P5.1 补充.
+ * zh-CN: 针对已安装 APK 验证面向宿主的激活与发现契约 (路线图 P0.4, P2.5): Wake Activity, 每组正式 action 与 category 恰好发现一个服务,
+ * 显式绑定与 Binder 描述符, 以宿主使用的事务号经真实 Parcel 编组的 `getInfo()`, 以及 `IAlarmPlugin` Binder 与其能力 (`alarmFeatures` 为
+ * `["alarms"]`, 权限状态). 各方法由 [AlarmPluginBinderTest] 覆盖. 服务与测试同进程, 因此下文用显式 Parcel 调用 `transact` 或经
+ * [MarshallingBinder], 不直接用会返回本地对象而跳过编组的 `asInterface`.
  */
 @RunWith(AndroidJUnit4::class)
 class ThreeChimeAlarmContractTest {
@@ -87,29 +90,29 @@ class ThreeChimeAlarmContractTest {
             )
             assertEquals(ThreeChimeAlarmContract.REQUIRED_HOST_VERSION, capabilities.getLong(PluginCapabilityKeys.REQUIRES_HOST_VERSION))
             assertEquals(1, capabilities.getInt(ThreeChimeAlarmContract.CAPABILITY_CONTRACT_VERSION))
-            // Roadmap T25: the skeleton advertises no feature, so the host calls nothing yet.
-            assertArrayEquals(emptyArray<String>(), capabilities.getStringArray(ThreeChimeAlarmContract.CAPABILITY_FEATURES))
+            // Roadmap T25: version 1.0.0 declares the alarms feature only (P2.5).
+            assertArrayEquals(arrayOf(AlarmFeatures.ALARMS), capabilities.getStringArray(ThreeChimeAlarmContract.CAPABILITY_FEATURES))
         }
     }
 
     @Test
-    fun capabilityServiceCarriesThePlaceholderDescriptor() {
+    fun capabilityServiceAnswersTheAlarmContract() {
         val serviceInfo = discoverSingleService(
             ThreeChimeAlarmContract.SERVICE_ACTION, ThreeChimeAlarmContract.SERVICE_CATEGORY, ThreeChimeAlarmService::class.java.name,
         )
         assertEquals(ThreeChimeAlarmContract.REQUIRED_HOST_VERSION.toString(), serviceInfo.metaData?.get(PluginCapabilityKeys.REQUIRES_HOST_VERSION)?.toString())
         withBoundService(serviceInfo) { binder ->
+            assertEquals(IAlarmPlugin.DESCRIPTOR, binder.interfaceDescriptor)
             assertEquals(ThreeChimeAlarmContract.CAPABILITY_DESCRIPTOR, binder.interfaceDescriptor)
-            // The first AIDL transaction (getInfo of IAlarmPlugin from roadmap P1.1) is not handled by the placeholder.
-            val data = Parcel.obtain()
-            val reply = Parcel.obtain()
-            try {
-                data.writeInterfaceToken(ThreeChimeAlarmContract.CAPABILITY_DESCRIPTOR)
-                assertFalse("the placeholder rejects every call", binder.transact(IBinder.FIRST_CALL_TRANSACTION, data, reply, 0))
-            } finally {
-                data.recycle()
-                reply.recycle()
-            }
+            // Marshalled through Parcels: the local object is hidden from asInterface (see AlarmPluginBinderTest).
+            val plugin = IAlarmPlugin.Stub.asInterface(MarshallingBinder(binder))
+            assertIdentity(plugin.info)
+            val capabilities = plugin.capabilities
+            assertEquals(ThreeChimeAlarmContract.REQUIRED_HOST_VERSION, capabilities.getLong(PluginCapabilityKeys.REQUIRES_HOST_VERSION))
+            assertEquals(1, capabilities.getInt(ThreeChimeAlarmContract.CAPABILITY_CONTRACT_VERSION))
+            assertArrayEquals(arrayOf(AlarmFeatures.ALARMS), capabilities.getStringArray(ThreeChimeAlarmContract.CAPABILITY_FEATURES))
+            val permissions = requireNotNull(capabilities.getBundle(AlarmCapabilityKeys.PERMISSIONS))
+            assertEquals(AlarmContract.PERMISSIONS, permissions.keySet())
         }
     }
 

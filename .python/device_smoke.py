@@ -11,7 +11,8 @@
    three-chime-alarm and for org.autojs.plugin.ALARM / alarm.
 4. activation and getInfo: an AutoJs6 script (RunIntentActivity, as in 3-Macaw Speech) starts the Wake activity (it
    needs org.autojs.permission.PLUGIN, which the shell lacks), binds the INFO service explicitly and calls getInfo(),
-   then binds the ALARM service and checks the placeholder IAlarmPlugin descriptor (roadmap P2.5 replaces it). The
+   then binds the ALARM service, checks the IAlarmPlugin descriptor and, on a host with the alarm contract, reads the
+   capabilities (alarmFeatures [alarms], the permission states) and calls listAlarms once (roadmap P2.5). The
    Wake start is confirmed from the ActivityManager log lines after a marker.
 5. --screenshot <dir>: the script opens AutoJs6's Plugin Center and the screen is saved as
    plugin-center-<serial>-system-<light|dark>.png. The name records the system night mode, which picks the launcher
@@ -108,11 +109,32 @@ attempt("info", function () {
 });
 attempt("alarm", function () {
     var binder = bind(".service.ThreeChimeAlarmService");
-    var data = android.os.Parcel.obtain(), reply = android.os.Parcel.obtain();
-    data.writeInterfaceToken("%(descriptor)s");
-    var handled = binder.transact(android.os.IBinder.FIRST_CALL_TRANSACTION, data, reply, 0);
-    data.recycle(); reply.recycle();
-    return { descriptor: String(binder.getInterfaceDescriptor()), firstCallHandled: handled };
+    var out = { descriptor: String(binder.getInterfaceDescriptor()) };
+    var plugin = null;
+    try { plugin = Packages.org.autojs.plugin.alarm.api.IAlarmPlugin.Stub.asInterface(binder); } catch (e) { plugin = null; }
+    if (plugin != null) {
+        // A host with the alarm contract (roadmap P1.1): the capabilities and one listAlarms call through the proxy.
+        var caps = plugin.getCapabilities();
+        var features = caps.getStringArray("alarmFeatures");
+        var names = [];
+        if (features != null) for (var i = 0; i < features.length; i++) names.push(String(features[i]));
+        out.features = names.join(",");
+        var permissions = caps.getBundle("alarmPermissions");
+        out.permissions = permissions == null ? "" : ["exactAlarm", "notifications", "fullScreen"].map(function (k) {
+            return k + "=" + permissions.getBoolean(k);
+        }).join(",");
+        var list = plugin.listAlarms(null);
+        out.listError = list.getString("errorCode") == null ? "" : String(list.getString("errorCode"));
+        out.proxy = true;
+    } else {
+        // An older host: getInfo of IAlarmPlugin (the first transaction) as a raw Parcel.
+        var data = android.os.Parcel.obtain(), reply = android.os.Parcel.obtain();
+        data.writeInterfaceToken("%(descriptor)s");
+        out.firstCallHandled = binder.transact(android.os.IBinder.FIRST_CALL_TRANSACTION, data, reply, 0);
+        data.recycle(); reply.recycle();
+        out.proxy = false;
+    }
+    return out;
 });
 bound.forEach(function (c) { try { context.unbindService(c); } catch (e) { r.errors.push("unbind " + e); } });
 if (%(center)s) {
@@ -268,8 +290,15 @@ def run(serial, args):
            f"{info.get('requiresHostVersion')}, contract {info.get('contractVersion')}, features {info.get('features')}, capability keys "
            f"[{info.get('capabilityKeys')}], {info.get('ms')} ms {info.get('error') or ''}".rstrip())
     alarm = steps.get("alarm", {})
-    report("alarm binder", alarm.get("descriptor") == CAPABILITY_DESCRIPTOR and alarm.get("firstCallHandled") is False,
-           f"descriptor {alarm.get('descriptor')}, first call handled {alarm.get('firstCallHandled')} {alarm.get('error') or ''}".rstrip())
+    if alarm.get("proxy"):
+        alarm_ok = alarm.get("features") == "alarms" and alarm.get("listError") == ""
+        alarm_detail = (f"features [{alarm.get('features')}], permissions [{alarm.get('permissions')}], listAlarms "
+                        f"{alarm.get('listError') or 'ok'}")
+    else:
+        alarm_ok = alarm.get("firstCallHandled") is True
+        alarm_detail = f"no IAlarmPlugin proxy in the host, first call handled {alarm.get('firstCallHandled')}"
+    report("alarm binder", not alarm.get("error") and alarm.get("descriptor") == CAPABILITY_DESCRIPTOR and alarm_ok,
+           f"descriptor {alarm.get('descriptor')}, {alarm_detail} {alarm.get('error') or ''}".rstrip())
     if r.get("errors"):
         report("script", False, f"errors {[e[:160] for e in r['errors']]}")
     if args.screenshot:

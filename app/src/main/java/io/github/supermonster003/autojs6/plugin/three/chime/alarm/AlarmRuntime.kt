@@ -4,15 +4,23 @@ import android.content.Context
 import android.util.Log
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmRepository
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmStore
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.api.AlarmApi
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.api.BindingHints
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.event.AlarmEventBus
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.event.ChangeEvents
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.ring.RingCoordinator
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.ring.RingVolume
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.ring.RingtoneLibrary
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.schedule.AlarmPlanner
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.schedule.AlarmSchedule
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ring.AlarmStreamVolume
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ring.RingService
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ring.StoredVolumeMemory
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.schedule.AndroidAlarmSchedulePort
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.service.AlarmEventCallbacks
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.service.AlarmTriggerSender
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.service.AudioVerifier
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.service.SystemRingtones
 import java.io.File
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -21,13 +29,19 @@ import java.util.concurrent.Executors
  * The alarm objects of the plugin process: one [repository] on device-protected storage (roadmap T7, usable before
  * the first unlock), the [schedule] that keeps the system alarm clocks in step with it, the [rings] it hands due rings
  * to (roadmap P2.4) and the [events] of the process. The first use reconciles every alarm once, which also restores
- * the wake-ups a force stop cleared, then picks up the rounds a dead process left ringing (T67).
+ * the wake-ups a force stop cleared, then picks up the rounds a dead process left ringing (T67). The Binder service
+ * (roadmap P2.5) adds the [hints] of the hosts, the imported [ringtones], the live [callbacks], the [triggers] of bound
+ * scripts and the [api] its methods run on.
  * zh-CN: 插件进程的闹钟对象: 设备加密存储上的一个 [repository] (路线图 T7, 首次解锁前可用), 让系统闹钟与之保持一致的 [schedule], 接收到时响铃的 [rings]
- * (路线图 P2.4), 以及进程内的 [events]. 首次使用时对全部闹钟对账一次, 同时恢复被强行停止清掉的唤醒, 再接续进程死亡时留下的响铃 (T67).
+ * (路线图 P2.4), 以及进程内的 [events]. 首次使用时对全部闹钟对账一次, 同时恢复被强行停止清掉的唤醒, 再接续进程死亡时留下的响铃 (T67). Binder 服务
+ * (路线图 P2.5) 另加各宿主的 [hints], 导入的 [ringtones], 实时 [callbacks], 绑定脚本的 [triggers] 以及其方法所用的 [api].
  */
 class AlarmRuntime private constructor(context: Context) {
 
     val context: Context = context.applicationContext
+
+    /** Device-protected `filesDir` (T7, usable before the first unlock). zh-CN: 设备加密存储的 `filesDir` (T7, 首次解锁前可用). */
+    private val deviceFilesDir: File = this.context.createDeviceProtectedStorageContext().filesDir
 
     val events = AlarmEventBus()
 
@@ -37,7 +51,7 @@ class AlarmRuntime private constructor(context: Context) {
     }
 
     val repository: AlarmRepository = AlarmRepository(
-        store = AlarmStore(File(this.context.createDeviceProtectedStorageContext().filesDir, STORE_DIRECTORY)),
+        store = AlarmStore(File(deviceFilesDir, STORE_DIRECTORY)),
         planner = { schedule.plan(it) },
         schedulingAllowed = port::canScheduleExact,
     )
@@ -49,6 +63,27 @@ class AlarmRuntime private constructor(context: Context) {
 
     /** The independent volume of rings (T14, T68). zh-CN: 响铃的独立音量 (T14, T68). */
     val volume: RingVolume = RingVolume(AlarmStreamVolume(this.context), StoredVolumeMemory(this.context))
+
+    /** The binding hint tables of the hosts (T12, roadmap P2.5). zh-CN: 各宿主的绑定提示表 (T12, 路线图 P2.5). */
+    val hints = BindingHints(File(deviceFilesDir, BindingHints.FILE_NAME))
+
+    /** The imported ringtones (T15, T72). zh-CN: 导入的铃声 (T15, T72). */
+    val ringtones = RingtoneLibrary(deviceFilesDir, AudioVerifier::mimeOf)
+
+    /** The live event callbacks of the hosts (T13). zh-CN: 各宿主的实时事件回调 (T13). */
+    val callbacks = AlarmEventCallbacks(events)
+
+    /** The `ALARM_TRIGGER` broadcasts of bound scripts (T11, T12). zh-CN: 绑定脚本的 `ALARM_TRIGGER` 广播 (T11, T12). */
+    val triggers = AlarmTriggerSender(this.context, hints, events)
+
+    /** The `IAlarmPlugin` methods on value trees (roadmap P2.5). zh-CN: 以值树实现的 `IAlarmPlugin` 方法 (路线图 P2.5). */
+    val api = AlarmApi(repository, rings, hints, ringtones, { SystemRingtones.list(this.context) })
+
+    init {
+        // Every change of the alarm list, whoever made it, becomes a `change` event (roadmap P2.5, T18).
+        // zh-CN: 闹钟列表的每次变更, 无论由谁发起, 都成为 `change` 事件 (路线图 P2.5, T18).
+        repository.addListener { events.emit(ChangeEvents.of(it, System.currentTimeMillis())) }
+    }
 
     /** One thread for the scheduler work of receivers. zh-CN: 接收器的调度工作所用的单线程. */
     val executor: ExecutorService = Executors.newSingleThreadExecutor { Thread(it, "chime-schedule") }

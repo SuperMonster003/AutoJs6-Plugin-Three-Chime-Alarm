@@ -204,7 +204,7 @@
             </intent-filter>
         </service>
 
-        <!-- Alarm capability service (roadmap 4.5): a placeholder Binder until the host contract of roadmap P1.1 exists. -->
+        <!-- Alarm capability service (roadmap 4.5, P2.5): the IAlarmPlugin Binder of the alarm-api contract. -->
         <service
             android:name=".service.ThreeChimeAlarmService"
             android:exported="true"

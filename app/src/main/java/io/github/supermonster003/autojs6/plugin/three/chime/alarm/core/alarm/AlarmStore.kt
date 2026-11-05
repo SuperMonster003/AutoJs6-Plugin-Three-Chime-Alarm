@@ -1,15 +1,13 @@
 package io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm
 
 import android.content.Context
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.io.AtomicFiles
 import org.autojs.plugin.alarm.api.AlarmJson
 import org.autojs.plugin.alarm.api.AlarmLimits
 import org.autojs.plugin.alarm.api.AlarmSpec
 import org.autojs.plugin.alarm.api.AlarmValues
 import java.io.File
-import java.io.FileOutputStream
 import java.io.IOException
-import java.io.RandomAccessFile
-import java.util.UUID
 
 /**
  * The alarm document (roadmap P2.1, T21): one JSON file `alarms.json` in device-protected storage, written as a temp
@@ -196,35 +194,10 @@ class AlarmStore(
 
     private fun writeAtomically(target: File, bytes: ByteArray) {
         if (bytes.size > MAX_FILE_BYTES) throw AlarmException.limitExceeded("alarm document would exceed $MAX_FILE_BYTES bytes")
-        val dir = target.parentFile ?: directory
-        if (!dir.isDirectory && !dir.mkdirs()) throw AlarmException.ioFailed("cannot create ${dir.path}")
-        val temp = File(dir, "$TEMP_PREFIX${UUID.randomUUID()}$TEMP_SUFFIX")
         try {
-            FileOutputStream(temp).use { out ->
-                out.write(bytes)
-                out.flush()
-                out.fd.sync()
-            }
-            if (!temp.renameTo(target)) {
-                // Android replaces the target atomically; the JVM on Windows refuses, which only happens in unit tests.
-                // zh-CN: Android 上改名会原子替换目标; Windows 上的 JVM 会拒绝, 这只出现在单元测试中.
-                target.delete()
-                if (!temp.renameTo(target)) throw IOException("cannot rename ${temp.name} to ${target.name}")
-            }
-            syncDirectory(dir)
+            AtomicFiles.write(target, bytes, TEMP_PREFIX, TEMP_SUFFIX)
         } catch (e: IOException) {
-            temp.delete()
             throw AlarmException.ioFailed("cannot save ${target.name}: ${e.message}")
-        }
-    }
-
-    /** Makes the rename durable where the platform allows it. zh-CN: 平台允许时让改名落盘. */
-    private fun syncDirectory(dir: File) {
-        try {
-            RandomAccessFile(dir, "r").use { it.channel.force(true) }
-        } catch (_: IOException) {
-            // Directories cannot be opened on every platform (Windows); the file itself is already synced.
-            // zh-CN: 并非所有平台都能打开目录 (Windows); 文件本身已同步.
         }
     }
 

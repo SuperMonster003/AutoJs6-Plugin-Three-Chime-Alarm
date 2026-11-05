@@ -44,7 +44,7 @@ class PluginRuntimeInfoTest {
         assertEquals(6641L, fields.requiredHostVersion)
         assertEquals(ThreeChimeAlarmContract.REQUIRED_HOST_VERSION, fields.requiredHostVersion)
         assertEquals(1, fields.contractVersion)
-        assertEquals("the skeleton advertises no feature yet (roadmap T25)", emptyList<String>(), fields.features)
+        assertEquals("roadmap T25: 1.0.0 declares the alarms feature once the Binder works (P2.5)", listOf("alarms"), fields.features)
     }
 
     @Test
