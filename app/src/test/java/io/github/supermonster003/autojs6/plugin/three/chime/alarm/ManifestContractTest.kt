@@ -101,11 +101,12 @@ class ManifestContractTest {
     }
 
     @Test
-    fun `the activities are the wake, home, open, clock intent and ring screens`() {
+    fun `the activities are the wake, home, permissions, open, clock intent and ring screens`() {
         assertEquals(
             listOf(
                 ".WakeActivity",
                 ".ui.home.HomeActivity",
+                ".ui.permissions.PermissionsActivity",
                 ".ui.OpenPluginActivity",
                 ".intent.ClockIntentActivity",
                 ".intent.ClockDialogActivity",
@@ -114,6 +115,10 @@ class ManifestContractTest {
             application.children("activity").map { it.android("name") },
         )
         assertEquals("false", activity(".ui.home.HomeActivity").android("exported"))
+        // Roadmap P3.4: the permissions page opens from the alarm list banner and the OPEN trampoline only.
+        val permissions = activity(".ui.permissions.PermissionsActivity")
+        assertEquals("false", permissions.android("exported"))
+        assertEquals("singleTop", permissions.android("launchMode"))
         // Roadmap T81: the window-less trampoline of alarms.openPlugin answers the frozen OPEN action without a permission.
         val open = activity(".ui.OpenPluginActivity")
         assertEquals("true", open.android("exported"))

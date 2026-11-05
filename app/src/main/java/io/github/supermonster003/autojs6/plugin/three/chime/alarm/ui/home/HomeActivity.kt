@@ -1,8 +1,10 @@
 package io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.home
 
 import android.content.Context
+import android.content.Intent
 import android.util.Log
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -19,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -26,6 +29,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -67,8 +71,13 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.components.
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.components.EmptyState
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.components.Hairline
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.components.MessageDialog
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.components.RowDefaults
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.components.TopBarAction
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.format.TimeFormats
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.permissions.PermissionRow
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.permissions.Permissions
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.permissions.PermissionsActivity
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.permissions.titleOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -85,11 +94,12 @@ import java.time.ZoneId
  * The alarm list (roadmap P3.1, D7, T18, D20), the launcher target: every alarm with its time, repeat, label and next
  * ring ("in 9 hr, 3 min"), its enable switch, who created and last changed it, and a mark when AutoJs6 scripts are
  * bound to it (tap to unbind, T27). The overflow menu skips or restores the next ring and deletes; a long press starts
- * the multi-select delete. Repository calls run off the main thread; the list reloads on resume, on repository and
+ * the multi-select delete. A banner on top opens the permissions page while a permission the alarms need is missing
+ * (P3.4, T82). Repository calls run off the main thread; the list and the banner reload on resume, on repository and
  * ring changes, and at every minute (state changes such as a new next ring send no change event).
  * zh-CN: 闹钟列表 (路线图 P3.1, D7, T18, D20), 启动器目标: 每个闹钟的时间, 重复, 标签与下次响铃 ("还有 9 小时 3 分"), 启用开关, 创建与最后修改来源,
- * 以及 AutoJs6 脚本绑定标记 (点击解除绑定, T27). 溢出菜单跳过或恢复下次响铃并删除; 长按进入多选删除. 仓库调用不在主线程; 列表在恢复, 仓库与响铃变化
- * 以及每分钟时重新加载 (新的下次响铃等状态变化不发变更事件).
+ * 以及 AutoJs6 脚本绑定标记 (点击解除绑定, T27). 溢出菜单跳过或恢复下次响铃并删除; 长按进入多选删除. 缺少闹钟所需的权限时, 顶部横幅打开权限页 (P3.4,
+ * T82). 仓库调用不在主线程; 列表与横幅在恢复, 仓库与响铃变化以及每分钟时重新加载 (新的下次响铃等状态变化不发变更事件).
  */
 class HomeActivity : StandaloneActivity() {
 
@@ -128,6 +138,7 @@ private fun HomeScreen() {
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
     var items by remember { mutableStateOf<List<AlarmItem>?>(null) }
+    var missing by remember { mutableStateOf(emptyList<PermissionRow>()) }
     var generation by remember { mutableIntStateOf(0) }
     var selection by rememberSaveable { mutableStateOf(emptyList<String>()) }
     var unbinding by rememberSaveable { mutableStateOf<String?>(null) }
@@ -135,8 +146,9 @@ private fun HomeScreen() {
     val selecting = selection.isNotEmpty()
 
     LaunchedEffect(generation) {
-        val loaded = withContext(Dispatchers.IO) { loadItems(context) }
+        val (loaded, lacking) = withContext(Dispatchers.IO) { loadItems(context) to Permissions.read(context).missing }
         items = loaded
+        missing = lacking
         val ids = loaded.mapTo(HashSet()) { it.record.id }
         if (selection.any { it !in ids }) selection = selection.filter { it in ids }
     }
@@ -177,18 +189,23 @@ private fun HomeScreen() {
         },
     ) { padding ->
         val list = items
+        val banner = missing.isNotEmpty() && !selecting
+        val openPermissions = { context.startActivity(Intent(context, PermissionsActivity::class.java)) }
         when {
             list == null -> Box(Modifier.padding(padding).fillMaxSize())
-            list.isEmpty() -> EmptyState(
-                title = stringResource(R.string.home_empty_title),
-                body = stringResource(R.string.home_empty_body),
-                icon = R.drawable.ic_alarm_24,
-                modifier = Modifier.padding(padding),
-            )
+            list.isEmpty() -> Column(Modifier.padding(padding)) {
+                if (banner) PermissionBanner(missing, openPermissions)
+                EmptyState(
+                    title = stringResource(R.string.home_empty_title),
+                    body = stringResource(R.string.home_empty_body),
+                    icon = R.drawable.ic_alarm_24,
+                )
+            }
             else -> LazyColumn(
                 modifier = Modifier.fillMaxSize().testTag("chime.home.list"),
                 contentPadding = PaddingValues(top = padding.calculateTopPadding(), bottom = padding.calculateBottomPadding() + 24.dp),
             ) {
+                if (banner) item(key = "permissionBanner") { PermissionBanner(missing, openPermissions) }
                 items(list, key = { it.record.id }) { item ->
                     val id = item.record.id
                     AlarmRow(
@@ -232,6 +249,41 @@ private fun HomeScreen() {
             },
             tag = "chime.home.deleteDialog",
         )
+    }
+}
+
+/**
+ * The banner of the missing permissions (roadmap P3.1, P3.4, T82): names them and opens the permissions page.
+ * zh-CN: 缺失权限横幅 (路线图 P3.1, P3.4, T82): 列出缺失项并打开权限页.
+ */
+@Composable
+private fun PermissionBanner(missing: List<PermissionRow>, onClick: () -> Unit) {
+    val names = missing.map { stringResource(titleOf(it)) }.joinToString(", ")
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).testTag("chime.home.permissionBanner"),
+    ) {
+        Row(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(painterResource(R.drawable.ic_warning_24), contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(24.dp))
+            Spacer(Modifier.width(16.dp))
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.home_permission_banner_title), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                Text(
+                    stringResource(R.string.home_permission_banner_summary, names),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            Icon(
+                painterResource(R.drawable.ic_chevron_right_24),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = RowDefaults.CHEVRON_ALPHA),
+            )
+        }
     }
 }
 

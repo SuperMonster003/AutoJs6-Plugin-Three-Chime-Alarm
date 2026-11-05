@@ -130,6 +130,12 @@
             </intent-filter>
         </activity-alias>
 
+        <!-- The permissions page (roadmap P3.4), reached from the alarm list banner and the OPEN trampoline. -->
+        <activity
+            android:name=".ui.permissions.PermissionsActivity"
+            android:exported="false"
+            android:launchMode="singleTop" />
+
         <!--
             `alarms.openPlugin(page)` (roadmap T81, appendix A section 9): the frozen OPEN action with the optional `page`
             extra. Exported without a permission, as it only shows the plugin's own screens. No task affinity: the host

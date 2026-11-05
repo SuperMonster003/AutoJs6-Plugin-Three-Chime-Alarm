@@ -12,6 +12,7 @@ import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
 import androidx.test.runner.lifecycle.Stage
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.OpenPluginActivity
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.home.HomeActivity
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.permissions.PermissionsActivity
 import org.autojs.plugin.alarm.api.AlarmPluginActions
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -23,11 +24,11 @@ import org.junit.runner.RunWith
 
 /**
  * The `alarms.openPlugin(page)` trampoline of the installed plugin (roadmap T81): the frozen OPEN action resolves to
- * [OpenPluginActivity] alone, without a permission and without a task affinity, and every page opens its screen; until
- * the permissions (P3.4) and settings (P3.5) screens land, and for the 1.1.0 pages and unknown values, that screen is
- * the alarm list.
+ * [OpenPluginActivity] alone, without a permission and without a task affinity, and every page opens its screen:
+ * `permissions` the permissions page (P3.4); until the settings screen (P3.5) lands, and for the 1.1.0 pages and
+ * unknown values, the alarm list.
  * zh-CN: 已安装插件的 `alarms.openPlugin(page)` 跳板 (路线图 T81): 冻结的 OPEN action 只解析到 [OpenPluginActivity], 不要求权限, 没有任务
- * 亲和性, 每个页面打开对应界面; 在权限页 (P3.4) 与设置页 (P3.5) 落地之前, 以及 1.1.0 的页面与未知值, 该界面都是闹钟列表.
+ * 亲和性, 每个页面打开对应界面: `permissions` 打开权限页 (P3.4); 在设置页 (P3.5) 落地之前, 以及 1.1.0 的页面与未知值, 都打开闹钟列表.
  */
 @RunWith(AndroidJUnit4::class)
 class OpenPluginActivityTest {
@@ -64,22 +65,30 @@ class OpenPluginActivityTest {
      * 亲和性时跳板是插件任务的根, 第二次调用只会把该任务带到前台 (P2 收尾时在 XQ-AT72 上发现).
      */
     @Test
-    fun everyPageReachesTheTrampolineAndOpensTheAlarmListForNow() {
+    fun everyPageReachesTheTrampolineAndOpensItsScreen() {
         var list: Activity? = null
         try {
             for (page in listOf(null) + AlarmPluginActions.PAGES.toList() + "unknown-page") {
                 val trampoline = instrumentation.addMonitor(OpenPluginActivity::class.java.name, null, false).also { monitors += it }
                 val home = instrumentation.addMonitor(HomeActivity::class.java.name, null, false).also { monitors += it }
+                val permissions = instrumentation.addMonitor(PermissionsActivity::class.java.name, null, false).also { monitors += it }
                 val intent = Intent(AlarmPluginActions.OPEN).setPackage(context.packageName).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 page?.let { intent.putExtra(AlarmPluginActions.EXTRA_PAGE, it) }
                 context.startActivity(intent)
                 val opened = instrumentation.waitForMonitorWithTimeout(trampoline, WAIT_MILLIS)
                 assertNotNull("page $page reached the trampoline", opened)
                 assertEquals(page, opened.intent.getStringExtra(AlarmPluginActions.EXTRA_PAGE))
-                if (list == null) list = instrumentation.waitForMonitorWithTimeout(home, WAIT_MILLIS)
-                assertNotNull("page $page opened the alarm list", list)
-                assertTrue("page $page resumed the alarm list", waitUntil { resumed().any { it is HomeActivity } })
-                listOf(trampoline, home).forEach { instrumentation.removeMonitor(it); monitors -= it }
+                if (page == AlarmPluginActions.PAGE_PERMISSIONS) {
+                    val screen = instrumentation.waitForMonitorWithTimeout(permissions, WAIT_MILLIS)
+                    assertNotNull("page $page opened the permissions page", screen)
+                    assertTrue("page $page resumed the permissions page", waitUntil { resumed().any { it is PermissionsActivity } })
+                    close(screen)
+                } else {
+                    if (list == null) list = instrumentation.waitForMonitorWithTimeout(home, WAIT_MILLIS)
+                    assertNotNull("page $page opened the alarm list", list)
+                    assertTrue("page $page resumed the alarm list", waitUntil { resumed().any { it is HomeActivity } })
+                }
+                listOf(trampoline, home, permissions).forEach { instrumentation.removeMonitor(it); monitors -= it }
             }
         } finally {
             list?.let(::close)
@@ -103,7 +112,7 @@ class OpenPluginActivityTest {
 
     private fun close(activity: Activity) {
         activity.finish()
-        assertTrue("the alarm list closed", waitUntil { instrumentation.waitForIdleSync(); activity.isDestroyed })
+        assertTrue("${activity.javaClass.simpleName} closed", waitUntil { instrumentation.waitForIdleSync(); activity.isDestroyed })
     }
 
     companion object {
