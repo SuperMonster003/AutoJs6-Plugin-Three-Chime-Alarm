@@ -402,8 +402,8 @@ P0 (插件骨架, 含 P0.2 评估)          P1.1 - P1.3 (宿主契约, 桥接, �
 
 ### P3.4 权限页
 
-- [ ] (插件) 精确闹钟 (API 31 - 32: `ACTION_REQUEST_SCHEDULE_EXACT_ALARM`), 通知 (33+), 全屏 (34+: `ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT`), 电池优化与厂商自启动引导 (只引导不强制, 文案说明不响铃的后果), 每项当前状态与跳转; `alarms.openPlugin('permissions')` 直达. 证据: 提交 hash; 设备: XQ-AT72 (31), Xiaomi Pad (35), OnePlus (ColorOS) 三台走完全部跳转.
-  - 进度 (2026-11-06, chime-p3): 权限页, 跳板 `permissions` 直达与列表横幅已实现 (T82; `PermissionSnapshotTest`, `ManifestContractTest`, `OpenPluginActivityTest`), 设备巡检脚本 `.python/device_permissions.py` (`PermissionsJumpProbe`); 三台设备的巡检待测试机空闲后执行, 完成后勾选并回填提交 hash.
+- [x] (插件) 精确闹钟 (API 31 - 32: `ACTION_REQUEST_SCHEDULE_EXACT_ALARM`), 通知 (33+), 全屏 (34+: `ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT`), 电池优化与厂商自启动引导 (只引导不强制, 文案说明不响铃的后果), 每项当前状态与跳转; `alarms.openPlugin('permissions')` 直达. 证据: 提交 hash; 设备: XQ-AT72 (31), Xiaomi Pad (35), OnePlus (ColorOS) 三台走完全部跳转.
+  - 证据 (2026-11-06, chime-p3): 提交 bcfa737 (权限页, 跳板 `permissions` 直达, 列表横幅, T82; `PermissionSnapshotTest`, `ManifestContractTest`, `OpenPluginActivityTest`) 与本提交 (巡检探针等系统页稳定后再返回: HyperOS 平板的全屏通知设置页会在片刻后转交双栏主页). `.python/device_permissions.py <序列号>` 三台全部 PASS, 只打开系统页, 不改开关, 不响铃: XQ-AT72 (API 31) 精确闹钟 -> `AlarmsAndRemindersAppActivity`, 通知 -> `AppNotificationSettingsActivity`, 电池优化 -> `HighPowerApplicationsActivity`, 后台限制 -> `InstalledAppDetails`, 全屏通知本版本不需要, 无缺失项无横幅; Xiaomi Pad (API 35, HyperOS) 通知, 全屏通知 -> `AppManageFullScreenIntent`, 电池优化 -> `AppBatteryUsageActivity`, 后台限制, 自启动 -> `com.miui.securitycenter/...AutoStartManagementActivity`, 精确闹钟安装时已允许 (不可点按), 无缺失项无横幅; OnePlus (API 35, ColorOS V15.0.1) 新装未授通知: 横幅列出通知并打开权限页, 全屏通知, 电池优化, 后台限制跳转到达系统页, ColorOS 15 已无独立自启动页 (四个候选页都不存在), 自启动退回应用详情 (其 "耗电管理" 含自启动开关), 通知一行会弹运行时权限对话框, 巡检跳过 (由维护者作答). 三台都经 OPEN action (`page=permissions`) 直达权限页.
 
 ### P3.5 设置页与发行历史
 

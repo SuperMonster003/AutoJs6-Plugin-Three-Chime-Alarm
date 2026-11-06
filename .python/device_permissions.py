@@ -11,7 +11,7 @@
    missing and opening the page, the OPEN action again, then a tap on each tappable row (all by default) with the
    system page it opened: the page the row chose and the component on top; a fallback to the app details is marked.
    The notification row is skipped (SKIP) while it would show the runtime permission dialog, which only the
-   maintainer answers on the device.
+   maintainer answers on the device. A row without a result, a row that threw and a probe that stopped early fail.
 5. the plugin is started once again (`am instrument` force-stops it) and the androidTest APK is uninstalled unless
    --keep-test-package (the plugin stays installed).
 
@@ -67,7 +67,7 @@ def run(serial, args):
             return False
     try:
         keyguard = ringing.Device(serial).hook("state").get("keyguard")
-        if not report.check("screen unlocked", keyguard == "false", "unlock the device, then run again"):
+        if not report.check("screen unlocked", keyguard == "false", "" if keyguard == "false" else "unlock the device, then run again"):
             return False
 
         schedule.shell(serial, "am", "start", "-W", "-a", OPEN, "-p", PLUGIN, "--es", "page", "permissions", check=False)
@@ -83,6 +83,8 @@ def run(serial, args):
         if not values:
             report.check("PermissionsJumpProbe", False, failure or "no output")
             return False
+        if failure:
+            report.check("PermissionsJumpProbe finished", False, failure)
         rows = [row for row in values.get("chime.rows", "").split(",") if row]
         missing = [row for row in values.get("chime.missing", "").split(",") if row]
         print(f"    rows (API {values.get('chime.sdk')}): " + ", ".join(f"{row}={values.get(f'chime.state.{row}')}" for row in rows))
@@ -92,11 +94,14 @@ def run(serial, args):
         if banner:
             report.check("banner opens the page", values.get("chime.bannerOpens") == "true")
         report.check("OPEN action reaches the page from the plugin", values.get("chime.direct") == "true")
-        for row in rows:
+        wanted = rows if args.rows == "all" else [row for row in rows if row in args.rows.split(",")]
+        for row in wanted:
             jump = values.get(f"chime.jump.{row}")
             if jump is None:
-                continue
-            if jump == "notActionable":
+                report.check(f"jump {row}", False, "no result")
+            elif jump.startswith("error:"):
+                report.check(f"jump {row}", False, jump[len("error:"):])
+            elif jump == "notActionable":
                 line(report, f"jump {row}", "SKIP", "not tappable on this version")
             elif jump.startswith("skipped:"):
                 line(report, f"jump {row}", "SKIP", "would show the runtime permission dialog (the maintainer answers it)")
