@@ -1,7 +1,11 @@
 # Host API release AARs (roadmap 4.5), both staged on 2026-11-05 (roadmap P2) from host commit 0924ecefcc, the commit
 # that introduces plugin-api/alarm-api (roadmap P1.1). See libs/README.md for the provenance check.
+# plugin-tool-api (roadmap P4.1, staged 2026-11-06): the plugin-tool-api 1.1.0 release AAR of host commit 8fe6d154f9, the
+# artifact 3-Macaw Speech stages (same SHA-256); no later host commit touches plugin-api/plugin-tool-api.
 format=1
 alarm-api.file=alarm-api.aar
 alarm-api.sha256=f2727527de88f9811f67b0e23bbf27a8d6a9eb3237f61e74ff31534ea3aaf00b
 common-plugin-api.file=common-plugin-api.aar
 common-plugin-api.sha256=9eaba785db6128f9a0ded272ab976f37835e9fa17a49cc250a6a75ddf76cf769
+plugin-tool-api.file=plugin-tool-api.aar
+plugin-tool-api.sha256=8bce82dd2c9811fa689f6b2c7b3926262cf3a756d78569ef4b19e1af21016005

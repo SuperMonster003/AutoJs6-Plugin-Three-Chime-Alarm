@@ -319,6 +319,19 @@
             </intent-filter>
         </service>
 
+        <!--
+            Plugin tool provider (roadmap P4.1, D5): the alarm_* tools of the plugin-tool-api contract for MCP Server,
+            3-Stove Agent and plugins.tools; no category, one provider per package.
+        -->
+        <service
+            android:name=".tool.ChimeToolService"
+            android:exported="true"
+            android:permission="org.autojs.permission.PLUGIN">
+            <intent-filter>
+                <action android:name="org.autojs.plugin.TOOL_PROVIDER" />
+            </intent-filter>
+        </service>
+
     </application>
 
 </manifest>

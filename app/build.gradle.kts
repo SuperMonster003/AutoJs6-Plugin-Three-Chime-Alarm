@@ -66,8 +66,10 @@ fun verifiedFile(path: String, expected: String?, label: String): File {
 }
 
 // The host contract AARs (roadmap 4.5): alarm-api (roadmap P1.1) and common-plugin-api, both staged in roadmap P2 from the
-// same host commit. Release AARs only, staged under libs/ and pinned by locks/host-api-aars.lock.
-// zh-CN: 宿主契约 AAR (路线图 4.5): alarm-api (路线图 P1.1) 与 common-plugin-api, 均于路线图 P2 从同一宿主提交暂存.
+// same host commit, and plugin-tool-api (roadmap P4.1) for the alarm_* tools. Release AARs only, staged under libs/ and
+// pinned by locks/host-api-aars.lock.
+// zh-CN: 宿主契约 AAR (路线图 4.5): alarm-api (路线图 P1.1) 与 common-plugin-api, 均于路线图 P2 从同一宿主提交暂存, 以及供 alarm_* 工具使用的
+// plugin-tool-api (路线图 P4.1).
 // 只接受 release AAR, 暂存于 libs/ 并由 locks/host-api-aars.lock 固定.
 val hostApiAars: List<File> = run {
     val entries = readLock("locks/host-api-aars.lock")

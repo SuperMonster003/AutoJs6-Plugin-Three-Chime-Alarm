@@ -10,6 +10,7 @@ graphics-path library listed below (roadmap T34).
 | --- | --- | --- |
 | `libs/alarm-api.aar` | AutoJs6 host module `plugin-api/alarm-api` (https://github.com/SuperMonster003/AutoJs6) | MPL-2.0 |
 | `libs/common-plugin-api.aar` | AutoJs6 host module `plugin-api/common-plugin-api` (https://github.com/SuperMonster003/AutoJs6) | MPL-2.0 |
+| `libs/plugin-tool-api.aar` | AutoJs6 host module `plugin-api/plugin-tool-api` (https://github.com/SuperMonster003/AutoJs6) | MPL-2.0 |
 
 Provenance and SHA-256 digests are recorded in `locks/host-api-aars.lock` and `libs/README.md`.
 

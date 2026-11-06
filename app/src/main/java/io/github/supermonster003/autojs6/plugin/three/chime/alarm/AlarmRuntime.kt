@@ -22,6 +22,7 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.service.AlarmE
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.service.AlarmTriggerSender
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.service.AudioVerifier
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.service.SystemRingtones
+import org.autojs.plugin.alarm.api.AlarmContract
 import java.io.File
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -82,6 +83,16 @@ class AlarmRuntime private constructor(context: Context) {
 
     /** The `IAlarmPlugin` methods on value trees (roadmap P2.5). zh-CN: 以值树实现的 `IAlarmPlugin` 方法 (路线图 P2.5). */
     val api = AlarmApi(repository, rings, hints, ringtones, { SystemRingtones.list(this.context) })
+
+    /**
+     * The same methods for the plugin tools (roadmap P4.1): changes are recorded with source `tool` and dismissals with
+     * `by` `tool` (T18, T78).
+     * zh-CN: 供插件工具使用的同一组方法 (路线图 P4.1): 变更以来源 `tool` 记录, 关闭以 `by` `tool` 记录 (T18, T78).
+     */
+    val toolApi = AlarmApi(
+        repository, rings, hints, ringtones, { SystemRingtones.list(this.context) },
+        source = AlarmContract.SOURCE_TOOL, by = AlarmContract.BY_TOOL,
+    )
 
     init {
         // Every change of the alarm list, whoever made it, becomes a `change` event (roadmap P2.5, T18).

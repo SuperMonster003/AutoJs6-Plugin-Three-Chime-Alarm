@@ -7,6 +7,7 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.RepositoryFile
 import org.autojs.plugin.alarm.api.AlarmPluginActions
 import org.autojs.plugin.common.api.PluginActions
 import org.autojs.plugin.common.api.PluginCapabilityKeys
+import org.autojs.plugin.tool.api.PluginToolContract
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -208,7 +209,7 @@ class ManifestContractTest {
     @Test
     fun `the INFO and ALARM services match the discovery constants and the ring service stays internal`() {
         assertEquals(
-            listOf(".ring.RingService", ".service.ThreeChimeAlarmInfoService", ".service.ThreeChimeAlarmService"),
+            listOf(".ring.RingService", ".service.ThreeChimeAlarmInfoService", ".service.ThreeChimeAlarmService", ".tool.ChimeToolService"),
             application.children("service").map { it.android("name") },
         )
         val info = service(".service.ThreeChimeAlarmInfoService")
@@ -226,6 +227,14 @@ class ManifestContractTest {
             assertNull("services run in the plugin's default process", service.androidOrNull("process"))
             assertNull("discovery services are not foreground services", service.androidOrNull("foregroundServiceType"))
         }
+
+        // The plugin tool provider (roadmap P4.1): the contract action without a category, behind the plugin permission.
+        val tools = service(".tool.ChimeToolService")
+        assertEquals("true", tools.android("exported"))
+        assertEquals(PLUGIN_PERMISSION, tools.android("permission"))
+        assertEquals(listOf(PluginToolContract.SERVICE_ACTION), tools.child("intent-filter").children("action").map { it.android("name") })
+        assertTrue(tools.child("intent-filter").children("category").isEmpty())
+        assertNull(tools.androidOrNull("process"))
 
         val ring = service(".ring.RingService")
         assertEquals("false", ring.android("exported"))

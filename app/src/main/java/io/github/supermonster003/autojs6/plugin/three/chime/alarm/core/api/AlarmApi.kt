@@ -23,14 +23,16 @@ import java.util.Locale
 
 /**
  * The 1.0.0 methods of `IAlarmPlugin` on value trees (roadmap P2.5, appendix A section 4.1), so JVM tests cover the
- * whole request and answer mapping; the Binder service only decodes and encodes Bundles. Every call comes from a host
- * script: changes are recorded with source `script` and dismissals with `by` `script` (T18). Requests are checked as
+ * whole request and answer mapping; the Binder service only decodes and encodes Bundles. The Binder service's instance
+ * serves host scripts: changes are recorded with [source] `script` and dismissals with [by] `script` (T18); the plugin
+ * tools (roadmap P4.1) use a second instance with `tool`. Requests are checked as
  * appendix A section 11 says: unknown keys and mistyped values are `INVALID_OPTIONS`, counts above their limit
  * `LIMIT_EXCEEDED`; `getAlarm` of an unknown id answers no `alarm`, `dismiss` / `snooze` of an alarm that is not
  * ringing answer `handled` false (T75).
  *
  * zh-CN: 以值树实现 `IAlarmPlugin` 的 1.0.0 方法 (路线图 P2.5, 附录 A 第 4.1 节), 使 JVM 测试覆盖完整的请求与应答映射; Binder 服务只负责 Bundle 的
- * 解码与编码. 每个调用都来自宿主脚本: 变更以来源 `script` 记录, 关闭以 `by` `script` 记录 (T18). 请求按附录 A 第 11 节检查: 未知键与类型不符报
+ * 解码与编码. Binder 服务所用的实例服务于宿主脚本: 变更以 [source] `script` 记录, 关闭以 [by] `script` 记录 (T18); 插件工具 (路线图 P4.1)
+ * 另用一个记 `tool` 的实例. 请求按附录 A 第 11 节检查: 未知键与类型不符报
  * `INVALID_OPTIONS`, 数量超出上限报 `LIMIT_EXCEEDED`; `getAlarm` 查不到 id 时应答不含 `alarm`, 对未在响铃的闹钟 `dismiss` / `snooze` 应答 `handled`
  * 为 false (T75).
  */
@@ -44,11 +46,13 @@ class AlarmApi(
     private val clock: () -> Long = System::currentTimeMillis,
     private val deviceZone: () -> ZoneId = ZoneId::systemDefault,
     private val locale: () -> Locale = Locale::getDefault,
+    private val source: String = AlarmContract.SOURCE_SCRIPT,
+    private val by: String = AlarmContract.BY_SCRIPT,
 ) {
 
     fun addAlarm(values: Map<String, Any?>): Map<String, Any?> {
         val request = AlarmRequest.of(values, null)
-        return alarmAnswer(repository.add(request.values, SOURCE))
+        return alarmAnswer(repository.add(request.values, source))
     }
 
     fun getAlarm(values: Map<String, Any?>): Map<String, Any?> {
@@ -66,28 +70,28 @@ class AlarmApi(
     fun updateAlarm(values: Map<String, Any?>): Map<String, Any?> {
         val request = AlarmRequest.of(values, UPDATE_KEYS)
         val id = request.requireString(AlarmOptionKeys.ID)
-        return alarmAnswer(repository.update(id, request.requireMap(AlarmOptionKeys.PATCH), SOURCE))
+        return alarmAnswer(repository.update(id, request.requireMap(AlarmOptionKeys.PATCH), source))
     }
 
     fun removeAlarm(values: Map<String, Any?>): Map<String, Any?> {
         val request = AlarmRequest.of(values, ID_KEYS)
-        return mapOf(AlarmResultKeys.REMOVED to repository.remove(request.requireString(AlarmOptionKeys.ID), SOURCE))
+        return mapOf(AlarmResultKeys.REMOVED to repository.remove(request.requireString(AlarmOptionKeys.ID), source))
     }
 
     fun setAlarmEnabled(values: Map<String, Any?>): Map<String, Any?> {
         val request = AlarmRequest.of(values, ENABLED_KEYS)
         val id = request.requireString(AlarmOptionKeys.ID)
-        return alarmAnswer(repository.setEnabled(id, request.requireBoolean(AlarmOptionKeys.ENABLED), SOURCE))
+        return alarmAnswer(repository.setEnabled(id, request.requireBoolean(AlarmOptionKeys.ENABLED), source))
     }
 
     fun skipNext(values: Map<String, Any?>): Map<String, Any?> {
         val request = AlarmRequest.of(values, ID_KEYS)
-        return alarmAnswer(repository.skipNext(request.requireString(AlarmOptionKeys.ID), SOURCE))
+        return alarmAnswer(repository.skipNext(request.requireString(AlarmOptionKeys.ID), source))
     }
 
     fun cancelSkip(values: Map<String, Any?>): Map<String, Any?> {
         val request = AlarmRequest.of(values, ID_KEYS)
-        return alarmAnswer(repository.cancelSkip(request.requireString(AlarmOptionKeys.ID), SOURCE))
+        return alarmAnswer(repository.cancelSkip(request.requireString(AlarmOptionKeys.ID), source))
     }
 
     fun upcoming(values: Map<String, Any?>): Map<String, Any?> {
@@ -113,13 +117,13 @@ class AlarmApi(
 
     fun dismiss(values: Map<String, Any?>): Map<String, Any?> {
         val request = AlarmRequest.of(values, ID_KEYS)
-        return mapOf(AlarmResultKeys.HANDLED to rings.dismiss(request.string(AlarmOptionKeys.ID), AlarmContract.BY_SCRIPT))
+        return mapOf(AlarmResultKeys.HANDLED to rings.dismiss(request.string(AlarmOptionKeys.ID), by))
     }
 
     fun snooze(values: Map<String, Any?>): Map<String, Any?> {
         val request = AlarmRequest.of(values, SNOOZE_KEYS)
         val id = request.string(AlarmOptionKeys.ID)
-        return mapOf(AlarmResultKeys.HANDLED to rings.snooze(id, request.int(AlarmOptionKeys.MINUTES), AlarmContract.BY_SCRIPT))
+        return mapOf(AlarmResultKeys.HANDLED to rings.snooze(id, request.int(AlarmOptionKeys.MINUTES), by))
     }
 
     /**
@@ -173,9 +177,6 @@ class AlarmApi(
     }
 
     private companion object {
-
-        /** Every Binder call comes from a host script (T18). zh-CN: 每个 Binder 调用都来自宿主脚本 (T18). */
-        const val SOURCE = AlarmContract.SOURCE_SCRIPT
 
         val NO_KEYS: Set<String> = emptySet()
         val ID_KEYS: Set<String> = setOf(AlarmOptionKeys.ID)
