@@ -171,7 +171,9 @@ class RingService : Service() {
         // The texts follow the language of the plugin's screens, not the system (roadmap Q21). zh-CN: 文字跟随插件界面语言而非系统 (路线图 Q21).
         val texts = screenTexts(this)
         val builder = NotificationCompat.Builder(this, ThreeChimeAlarmApplication.CHANNEL_RING)
-            .setSmallIcon(R.mipmap.ic_icon_studio_application_monochrome)
+            // A 24 dp glyph: the monochrome layer of the adaptive icon keeps its safe zone and shows at half the size of the
+            // system icons (roadmap Q22). zh-CN: 24 dp 图形: 自适应图标的单色层带着安全区留白, 显示时只有系统图标的一半大 (路线图 Q22).
+            .setSmallIcon(R.drawable.ic_alarm_24)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)

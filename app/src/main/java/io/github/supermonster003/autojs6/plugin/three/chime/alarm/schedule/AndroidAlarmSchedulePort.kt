@@ -78,7 +78,7 @@ class AndroidAlarmSchedulePort(
             TimeFormats.dateTimeOf(texts, scheduledAt),
         )
         val notification = NotificationCompat.Builder(context, ThreeChimeAlarmApplication.CHANNEL_MISSED)
-            .setSmallIcon(R.mipmap.ic_icon_studio_application_monochrome)
+            .setSmallIcon(R.drawable.ic_alarm_24)  // Roadmap Q22. zh-CN: 路线图 Q22.
             .setContentTitle(texts.getString(R.string.notification_missed_title, label))
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))

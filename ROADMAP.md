@@ -12,7 +12,7 @@
 2. 条目完成后勾选 `[x]`, 并在条目后追加证据 (提交 hash / 测试类名 / 设备型号与 API / 度量值), 证据等级见附录 C. 未勾选条目属于规划意向, 不代表当前版本能力.
 3. 条目前缀标明主要落点: `(插件)` 本仓库, `(宿主)` `D:/idea-projects/AutoJs6`, `(资产)` `D:/idea-projects/AutoJs6-Shared-Assets`, `(索引)` `D:/idea-projects/AutoJs6-Official-Plugins-Index`, `(文档)` AutoJs6-Documentation / AutoJs6-TypeScript-Declarations / AutoJs6-Plugin-Ace-Editor / AutoJs6-Plugin-Offline-Docs, `(测试)` 真机或 AVD 验证, `(发布)` 版本, tag, Release 与索引.
 4. 涉及宿主公开契约 (alarm 契约, 脚本 API) 的条目, 完成后必须同步宿主 `docs/dev/alarm-plugin-protocol-v1.md`, 宿主 `.changelog` (10 种语言同时写全并翻译; 2026-11-05 起按工作区规则 `.claude/rules/all-languages.md`, 不再只写 zh-Hans) 与本仓库 `.changelog` (同样 10 种语言). 宿主侧提交只落本地, 由维护者合并与推送. 宿主工作区多会话共用: 只提交自己的文件, 不推送, 不切分支, 不碰其他会话在改的文件, 宿主构建与其他会话排队.
-5. 第 1 节 "固定决策" (D1 - D25) 由维护者确认, 后续阶段不再重新讨论; 第 2 节 "派生技术决策" (T1 - T25) 可在进入对应阶段前推翻 (推翻点已逐条标注), 之后视同固定; 附录 B "待决事项" (Q7 起; Q1 - Q6 已转为 D20 - D25, 编号不复用) 在进入对应阶段前由维护者拍板 (调度会话用选择题提问), 拍板结果回填到附录 B 与对应决策行. 子会话新增的派生决策从 T26 起编号, 新增的待决事项从 Q10 起编号 (2026-11-06 现状: 派生决策已用到 T88, 下一个为 T89; 待决已用到 Q16, Q17 - Q19 留给宿主子会话 chime-host-q14, 插件侧 Q20 - Q21 已用, 下一个为 Q22).
+5. 第 1 节 "固定决策" (D1 - D25) 由维护者确认, 后续阶段不再重新讨论; 第 2 节 "派生技术决策" (T1 - T25) 可在进入对应阶段前推翻 (推翻点已逐条标注), 之后视同固定; 附录 B "待决事项" (Q7 起; Q1 - Q6 已转为 D20 - D25, 编号不复用) 在进入对应阶段前由维护者拍板 (调度会话用选择题提问), 拍板结果回填到附录 B 与对应决策行. 子会话新增的派生决策从 T26 起编号, 新增的待决事项从 Q10 起编号 (2026-11-06 现状: 派生决策已用到 T88, 下一个为 T89; 待决已用到 Q16, Q17 - Q19 留给宿主子会话 chime-host-q14, 插件侧 Q20 - Q22 已用, 下一个为 Q23).
 6. 本仓库骨架 (Gradle / Manifest / 资源 / CI) 在 P0 按 `D:/idea-projects/AUTOJS6_PLUGIN_NEW_REPO_AGENTS.md` 生成, 其裁剪版即本仓库 `AGENTS.md`; 命名与身份派生按 `AUTOJS6_PLUGIN_THREE_SERIES_RENAME_AGENTS.md` 第 3 节 (Chime 为 5 字母单词); 图标按 `AUTOJS6_PLUGIN_BLACK_N_WHITE_ADAPTIVE_ICON_AGENTS.md`; 独立界面按 `AUTOJS6_PLUGIN_STANDALONE_SETTINGS_AGENTS.md`; 全部用户可见文案只用 ASCII 标点, 阿拉伯语里的品牌名 `3-Chime Alarm` 用 FSI / PDI 包裹 (Three 系列既有做法).
 7. 2026-11-05 的立项会话只落盘本路线图并 `git init` + 首次提交, 同时建看板 `D:/idea-projects/.claude/boards/3-chime.md` 与调度会话; 之后按 `AGENTS.md` 的提交规则工作 (每笔提交前 `VERSION_BUILD` = 当前提交数 + 1).
 
@@ -262,7 +262,7 @@ io.github.supermonster003.autojs6.plugin.three.chime.alarm
 | P0 | 1.0.0 | 仓库骨架: 构建链与身份, 评估 (RRULE 库, 节假日数据源, 前台服务类型) 与单 APK 策略, 图标, 测试与 CI | 完成 (P0.1 - P0.4) |
 | P1 | 宿主 (6.8.0 之后的版本) | 宿主契约 `alarm-api`, `AlarmPluginHost` / `AlarmTriggerReceiver` / 绑定表, 注册与协议文档, 脚本 API `alarms`, `alarms.system`, 样例 | 完成 (P1.1 - P1.6; P1.4 第 2 条的设备补证在 P2.7 完成) |
 | P2 | 1.0.0 | 闹钟核心: 存储, 重复规则引擎, 排程与恢复, 响铃, Binder 服务端与宿主联动, 系统时钟 Intent 接收, 契约一致性测试 | 完成 |
-| P3 | 1.0.0 | 独立界面: 闹钟列表与编辑, 响铃界面, 铃声选择, 权限页, 设置页与发行历史, 图标核对与截图 | 进行中 (P3.1 - P3.5 完成) |
+| P3 | 1.0.0 | 独立界面: 闹钟列表与编辑, 响铃界面, 铃声选择, 权限页, 设置页与发行历史, 图标核对与截图 | 完成 |
 | P4 | 1.0.0 | 插件工具 `alarm_*` 与 MCP Server 实机调用 | 未开始 |
 | P5 | 1.0.0 | 验证: AVD 矩阵, 真机矩阵, 时间与系统事件场景, ColorOS 激活, 联动边界, 基线 | 未开始 |
 | P6 | 1.0.0 | 文档, 声明, 四仓库同步, README / changelog / 截图, 发布与索引登记 | 未开始 |
@@ -429,7 +429,8 @@ P0 (插件骨架, 含 P0.2 评估)          P1.1 - P1.3 (宿主契约, 桥接, �
 
 ### P3.6 图标核对与截图
 
-- [ ] (插件) 启动器 / 插件中心 / 通知小图标明暗核对 (P0.3 选定的源图); `docs/images/screenshots` 采集 (XQ-DQ72, 1096 x 2560, 明暗各一: 列表, 编辑, 响铃, 设置). 证据: 截图路径.
+- [x] (插件) 启动器 / 插件中心 / 通知小图标明暗核对 (P0.3 选定的源图); `docs/images/screenshots` 采集 (XQ-DQ72, 1096 x 2560, 明暗各一: 列表, 编辑, 响铃, 设置). 证据: 截图路径.
+  - 证据 (2026-11-06, chime-p3): 截图 `docs/images/screenshots/{list,edit,ring,settings}-{light,dark}.png` 共 8 张, 由 `.python/device_screens.py` 在 XQ-DQ72 QV770340J7 (API 33, 1096x2560, 插件跟随 AutoJs6 为简体中文) 采集, 原始 `screencap` 不裁剪, 只去掉全不透明的 alpha 通道并保留 ICC (sRGB 传递函数, Display P3 色域); 列表 / 编辑 / 设置取自 12:05 一轮, 响铃取自 13:01 一轮 (锁屏, 小图标改后). 图标: 源图, 配方与 Icon Studio 资源自 P0.3 (`9a63e7a`) 未改, `generate_icon_studio.py --check` 输出 "Verified 28 Icon Studio resources"; 启动器与插件中心的明暗核对沿用 P0.3 实机截图 (共享笔记目录 `side-session-notes/local_daee5399-90f5-4c35-8d70-f8150ec53e21/chime-p0-screenshots/`: 启动器 G8441 系统亮色 / XQ-DQ72 系统暗色, 插件中心 宿主亮色 G8441 / XQ-DQ72, 宿主暗色 AVD_API_24), 此后图标无变化, 未重拍. 通知小图标: 原用自适应图标的单色层, XQ-DQ72 系统暗色下状态栏 (浅色着色) 与浮动通知 (深色着色, 浅色圆底) 都可辨认, 但带着安全区留白, 只有同排图标约一半大 (状态栏宽约 15 px, 同排约 31 px), 登记 Q22 并按推荐先行改为 24 dp 的 `ic_alarm_24`; 改后 `device_screens.py QV770340J7 --screens ring` 明暗两轮都是 `lock` (通知记录 `naturalImportance=4`), 状态栏里的小图标与同排图标同大, 响铃界面亮色时着色为灰, 暗色时为白. 系统亮色下的浮动通知未单独截取 (XQ-DQ72 系统主题为维护者设置, 未改); 单色小图标由系统统一着色. 含本提交代码的 debug 包 (versionCode 29) 已原位装在 XQ-DQ72, 单元测试 183 例 0 失败.
 
 ---
 
@@ -1121,6 +1122,7 @@ Q1 - Q6 已于 2026-11-03 拍板为 D20 - D25 (原表见附录 F), 编号不复�
 | Q16 | 1.0.0 是否声明网络权限 (P3.5 设置页的更新检查需要联网; 原 T4 与 `AGENTS.md` 写的是 1.0.0 不申请网络权限) | (a) 1.0.0 加 `INTERNET` + `ACCESS_NETWORK_STATE`, 只用于 P3.5 更新检查与 1.2.0 节假日数据刷新 (保留 Three 系列一致的设置页更新检查); (b) 1.0.0 不联网, 设置页只放发行历史, 更新检查推到 1.2.0 与节假日刷新一起加 | T4, P3.5, P8.2 | (b) P3.5 去掉更新检查一组, Manifest 不变 | P3.5 开始前 | 已决 (2026-11-05 23:58, 维护者选 (a)): T4 与 `AGENTS.md` 已改, Manifest 随 P3.5 |
 | Q20 | ColorOS 15 (OnePlus 平板 OPD2413) 上, 全屏 Intent 在关屏响铃时三次都没打开响铃界面: 响铃类别为高重要性, 全屏权限已授, 锁屏拦截已允许, 只有测试程序直接启动才显示, 实际使用时用户只听到铃声并看到通知 | (a) 另开条目, 本会话不深挖: P3.2 证据如实写 "OnePlus 为直接启动, 全屏 Intent 未生效", 新增 ColorOS 适配条目 (先查明哪个系统开关让全屏 Intent 生效, 再加权限页 ColorOS 项与悬浮窗后备), 由调度会话排批次 (推荐); (b) 本会话现在就查: 维护者在平板上依次打开候选开关, 每开一项跑一轮静音响铃, 查明后在权限页加 ColorOS 项与悬浮窗后备; (c) 不处理, 只在 README 兼容性一节写明 ColorOS 上锁屏响铃以通知加铃声呈现 | P3.2, P3.4, P5.4, P6.1 | (b) P3.2 延后约 1.5 小时 | P3.2 勾选前 | 已决 (2026-11-06, 维护者选 (b) 非推荐项): 根因是应用级 "横幅" 通知 (新装默认关闭) 把 `ring` 类别压到 DEFAULT, SystemUI 记 `FSI=off|not important enough`; 维护者勾选横幅后 `naturalImportance=4`, 关屏响铃自行打开响铃界面. 实施见 T87 |
 | Q21 | 响铃通知的 "贪睡 / 关闭" 动作与错过通知跟系统语言, 不跟插件语言 (XQ-DQ72 系统英文, 插件跟随 AutoJs6 为中文, 浮动通知上是中文标签配 "Snooze / Dismiss"); 响铃时进程多半新起, 响铃界面先用系统语言画出, 读到宿主语言后再重建 | (a) 跟插件语言 + 记住宿主外观: 读到的宿主外观存一份到设备加密存储, 进程新起时通知与各界面首帧都先用这份 (推荐); (b) 只让通知跟插件语言: 通知用内存里的宿主外观, 没有就退回系统语言; (c) 保持现状, 与 3-Macaw Speech 的通知一致 | P3.2 | (b) 约 20 分钟, 进程新起时的首次响铃仍是系统语言 | P3.2 勾选前 | 已决 (2026-11-06, 维护者选 (a)): 实施见 T88 |
+| Q22 | 通知小图标 (响铃通知, 错过闹钟通知) 原用自适应图标的单色层 (P0.3 源图经 Icon Studio 生成), 单色层带着自适应图标的安全区留白, 在 XQ-DQ72 状态栏与浮动通知里只有同排系统图标约一半大 (状态栏宽约 15 px, 同排约 31 px) | (a) 改用 24 dp 的 Material 闹钟图形 `ic_alarm_24` (与响铃滑块同一图形, 双铃闹钟轮廓与 P0.3 图案相近), 与同排图标同大 (推荐); (b) 从 P0.3 源图另生成专用小图标 (裁去安全区留白, 5 种密度 PNG 或矢量), 需扩展 Icon Studio 配方或另写生成脚本, 图案与启动器一致; (c) 保持单色层 | P3.6, P6.1 (README 截图) | (b) 约 1 小时加 XQ-DQ72 复拍; (c) 改回两行 | P6.4 发布前 | 已按推荐先行待确认 (2026-11-06, chime-p3): 两处 `setSmallIcon` 改为 `ic_alarm_24`, XQ-DQ72 锁屏响铃复拍明暗都与同排图标同大, 见 P3.6 |
 
 ---
 
