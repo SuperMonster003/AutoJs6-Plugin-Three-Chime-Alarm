@@ -137,6 +137,22 @@
             android:launchMode="singleTop" />
 
         <!--
+            The edit page (roadmap P3.1, T83): a new or a stored alarm from the alarm list. ClockDraftActivity is the same
+            page for a SET_ALARM without SKIP_UI, in a task of its own and out of the recent apps like the clock intent
+            window it replaces. adjustResize keeps the fields of the rule editor above the keyboard.
+        -->
+        <activity
+            android:name=".ui.edit.EditAlarmActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".ui.edit.ClockDraftActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:taskAffinity=""
+            android:windowSoftInputMode="adjustResize" />
+
+        <!--
             `alarms.openPlugin(page)` (roadmap T81, appendix A section 9): the frozen OPEN action with the optional `page`
             extra. Exported without a permission, as it only shows the plugin's own screens. No task affinity: the host
             starts it with FLAG_ACTIVITY_NEW_TASK, and as the root of the plugin's task it would only bring that task to
@@ -182,7 +198,7 @@
             </intent-filter>
         </activity>
 
-        <!-- The new alarm page and the alarm chooser of the system clock intents (roadmap P2.6), internal until P3.1. -->
+        <!-- The alarm chooser of DISMISS_ALARM (roadmap P2.6, T80); the new alarm page of SET_ALARM is the edit page since P3.1. -->
         <activity
             android:name=".intent.ClockDialogActivity"
             android:excludeFromRecents="true"

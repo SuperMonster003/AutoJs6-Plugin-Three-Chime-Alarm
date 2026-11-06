@@ -1,5 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <plurals name="edit_auto_silence_summary">
+        <item quantity="one">Se detiene después de %1$d minuto</item>
+        <item quantity="many">Se detiene después de %1$d minutos</item>
+        <item quantity="other">Se detiene después de %1$d minutos</item>
+    </plurals>
+    <plurals name="edit_exclude_count">
+        <item quantity="one">%1$d fecha</item>
+        <item quantity="many">%1$d fechas</item>
+        <item quantity="other">%1$d fechas</item>
+    </plurals>
+    <plurals name="edit_minutes">
+        <item quantity="one">%1$d minuto</item>
+        <item quantity="many">%1$d minutos</item>
+        <item quantity="other">%1$d minutos</item>
+    </plurals>
+    <plurals name="edit_snooze_every">
+        <item quantity="one">Cada %1$d minuto</item>
+        <item quantity="many">Cada %1$d minutos</item>
+        <item quantity="other">Cada %1$d minutos</item>
+    </plurals>
+    <plurals name="edit_snooze_limit">
+        <item quantity="one">como máximo %1$d vez</item>
+        <item quantity="many">como máximo %1$d veces</item>
+        <item quantity="other">como máximo %1$d veces</item>
+    </plurals>
     <plurals name="home_delete_title">
         <item quantity="one">Eliminar %1$d alarma?</item>
         <item quantity="many">Eliminar %1$d alarmas?</item>

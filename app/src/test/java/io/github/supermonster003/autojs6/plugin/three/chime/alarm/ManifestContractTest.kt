@@ -101,12 +101,14 @@ class ManifestContractTest {
     }
 
     @Test
-    fun `the activities are the wake, home, permissions, open, clock intent and ring screens`() {
+    fun `the activities are the wake, home, permissions, edit, open, clock intent and ring screens`() {
         assertEquals(
             listOf(
                 ".WakeActivity",
                 ".ui.home.HomeActivity",
                 ".ui.permissions.PermissionsActivity",
+                ".ui.edit.EditAlarmActivity",
+                ".ui.edit.ClockDraftActivity",
                 ".ui.OpenPluginActivity",
                 ".intent.ClockIntentActivity",
                 ".intent.ClockDialogActivity",
@@ -127,7 +129,13 @@ class ManifestContractTest {
         assertNull(open.androidOrNull("permission"))
         assertEquals("@android:style/Theme.NoDisplay", open.android("theme"))
         assertFilter(open, action = AlarmPluginActions.OPEN, category = DEFAULT_CATEGORY)
-        // The new alarm page and the chooser of the clock intents (roadmap P2.6) open only from ClockIntentActivity.
+        // Roadmap P3.1: the edit page opens from the alarm list; its SET_ALARM copy stays out of the recent apps in a task of its own.
+        assertEquals("false", activity(".ui.edit.EditAlarmActivity").android("exported"))
+        val draft = activity(".ui.edit.ClockDraftActivity")
+        assertEquals("false", draft.android("exported"))
+        assertEquals("true", draft.android("excludeFromRecents"))
+        assertEquals("", draft.android("taskAffinity"))
+        // The chooser of the clock intents (roadmap P2.6) opens only from ClockIntentActivity.
         val dialog = activity(".intent.ClockDialogActivity")
         assertEquals("false", dialog.android("exported"))
         assertEquals("true", dialog.android("excludeFromRecents"))

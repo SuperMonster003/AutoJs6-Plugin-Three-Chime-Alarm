@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -68,11 +69,13 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.Repe
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.TimeZonePolicy
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.StandaloneActivity
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.components.ChimeScreen
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.components.EmptyAction
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.components.EmptyState
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.components.Hairline
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.components.MessageDialog
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.components.RowDefaults
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.components.TopBarAction
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.edit.EditAlarmActivity
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.format.TimeFormats
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.permissions.PermissionRow
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.permissions.Permissions
@@ -95,11 +98,13 @@ import java.time.ZoneId
  * ring ("in 9 hr, 3 min"), its enable switch, who created and last changed it, and a mark when AutoJs6 scripts are
  * bound to it (tap to unbind, T27). The overflow menu skips or restores the next ring and deletes; a long press starts
  * the multi-select delete. A banner on top opens the permissions page while a permission the alarms need is missing
- * (P3.4, T82). Repository calls run off the main thread; the list and the banner reload on resume, on repository and
- * ring changes, and at every minute (state changes such as a new next ring send no change event).
+ * (P3.4, T82). A tap on a row, the add button and the empty state open the edit page (P3.1, T83). Repository calls run
+ * off the main thread; the list and the banner reload on resume, on repository and ring changes, and at every minute
+ * (state changes such as a new next ring send no change event).
  * zh-CN: 闹钟列表 (路线图 P3.1, D7, T18, D20), 启动器目标: 每个闹钟的时间, 重复, 标签与下次响铃 ("还有 9 小时 3 分"), 启用开关, 创建与最后修改来源,
  * 以及 AutoJs6 脚本绑定标记 (点击解除绑定, T27). 溢出菜单跳过或恢复下次响铃并删除; 长按进入多选删除. 缺少闹钟所需的权限时, 顶部横幅打开权限页 (P3.4,
- * T82). 仓库调用不在主线程; 列表与横幅在恢复, 仓库与响铃变化以及每分钟时重新加载 (新的下次响铃等状态变化不发变更事件).
+ * T82). 点击列表行, 新建按钮与空状态打开编辑页 (P3.1, T83). 仓库调用不在主线程; 列表与横幅在恢复, 仓库与响铃变化以及每分钟时重新加载
+ * (新的下次响铃等状态变化不发变更事件).
  */
 class HomeActivity : StandaloneActivity() {
 
@@ -173,10 +178,19 @@ private fun HomeScreen() {
     }
 
     val title = if (selecting) pluralStringResource(R.plurals.home_selected_count, selection.size, selection.size) else stringResource(R.string.app_name)
+    val newAlarm = stringResource(R.string.edit_new_alarm)
+    val create = { context.startActivity(EditAlarmActivity.create(context)) }
     ChimeScreen(
         title = title,
         onBack = if (selecting) ({ selection = emptyList() }) else null,
         snackbarHostState = snackbar,
+        floatingActionButton = {
+            if (!selecting && items != null) {
+                FloatingActionButton(onClick = create, modifier = Modifier.testTag("chime.home.add")) {
+                    Icon(painterResource(R.drawable.ic_add_24), contentDescription = newAlarm)
+                }
+            }
+        },
         actions = {
             if (selecting) {
                 TopBarAction(R.drawable.ic_select_all_24, stringResource(R.string.home_select_all), "chime.home.selectAll") {
@@ -199,11 +213,12 @@ private fun HomeScreen() {
                     title = stringResource(R.string.home_empty_title),
                     body = stringResource(R.string.home_empty_body),
                     icon = R.drawable.ic_alarm_24,
+                    primary = EmptyAction(newAlarm, create, "chime.home.emptyAdd"),
                 )
             }
             else -> LazyColumn(
                 modifier = Modifier.fillMaxSize().testTag("chime.home.list"),
-                contentPadding = PaddingValues(top = padding.calculateTopPadding(), bottom = padding.calculateBottomPadding() + 24.dp),
+                contentPadding = PaddingValues(top = padding.calculateTopPadding(), bottom = padding.calculateBottomPadding() + 88.dp),
             ) {
                 if (banner) item(key = "permissionBanner") { PermissionBanner(missing, openPermissions) }
                 items(list, key = { it.record.id }) { item ->
@@ -212,7 +227,10 @@ private fun HomeScreen() {
                         item = item,
                         selecting = selecting,
                         selected = id in selection,
-                        onClick = { if (selecting) selection = if (id in selection) selection - id else selection + id },
+                        onClick = {
+                            if (selecting) selection = if (id in selection) selection - id else selection + id
+                            else context.startActivity(EditAlarmActivity.edit(context, id))
+                        },
                         onLongClick = { if (!selecting) selection = listOf(id) },
                         onToggle = { enabled -> act { it.repository.setEnabled(id, enabled, AlarmContract.SOURCE_USER) } },
                         onSkip = { act { it.repository.skipNext(id, AlarmContract.SOURCE_USER) } },
@@ -253,18 +271,19 @@ private fun HomeScreen() {
 }
 
 /**
- * The banner of the missing permissions (roadmap P3.1, P3.4, T82): names them and opens the permissions page.
- * zh-CN: 缺失权限横幅 (路线图 P3.1, P3.4, T82): 列出缺失项并打开权限页.
+ * The banner of the missing permissions (roadmap P3.1, P3.4, T82): names them and opens the permissions page; the edit
+ * page shows it too (T83).
+ * zh-CN: 缺失权限横幅 (路线图 P3.1, P3.4, T82): 列出缺失项并打开权限页; 编辑页也显示它 (T83).
  */
 @Composable
-private fun PermissionBanner(missing: List<PermissionRow>, onClick: () -> Unit) {
+internal fun PermissionBanner(missing: List<PermissionRow>, onClick: () -> Unit, tag: String = "chime.home.permissionBanner") {
     val names = missing.map { stringResource(titleOf(it)) }.joinToString(", ")
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).testTag("chime.home.permissionBanner"),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).testTag(tag),
     ) {
         Row(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(painterResource(R.drawable.ic_warning_24), contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(24.dp))

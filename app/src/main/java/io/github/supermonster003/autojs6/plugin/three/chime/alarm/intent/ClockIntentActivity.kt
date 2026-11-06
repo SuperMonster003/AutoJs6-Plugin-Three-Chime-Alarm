@@ -7,6 +7,7 @@ import android.provider.AlarmClock
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.AlarmRuntime
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.R
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmException
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.edit.EditAlarmActivity
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.home.HomeActivity
 import org.autojs.plugin.alarm.api.AlarmContract
 import java.time.ZoneId
@@ -15,11 +16,13 @@ import java.time.ZoneId
  * Answers the system clock intents (roadmap D21, P2.6) without a window of its own: `SET_ALARM`, `SHOW_ALARMS`,
  * `DISMISS_ALARM` and `SNOOZE_ALARM` (the extras are mapped by [ClockRequests]). Callers hold
  * `com.android.alarm.permission.SET_ALARM` (Manifest). Changes are recorded with source `intent`; dismissals and
- * snoozes with `by` `user` (T66). The edit page and the alarm chooser are [ClockDialogActivity], the alarm list is
- * [HomeActivity]. Each outcome is a toast and one line of `adb logcat -s ChimeIntent` ([ClockActions]).
+ * snoozes with `by` `user` (T66). A `SET_ALARM` without `SKIP_UI` opens the edit page ([EditAlarmActivity.draft], roadmap
+ * P3.1), the alarm chooser is [ClockDialogActivity], the alarm list is [HomeActivity]. Each outcome is a toast and one
+ * line of `adb logcat -s ChimeIntent` ([ClockActions]).
  * zh-CN: 不带自身窗口地应答系统时钟 Intent (路线图 D21, P2.6): `SET_ALARM`, `SHOW_ALARMS`, `DISMISS_ALARM` 与 `SNOOZE_ALARM` (extras 由
  * [ClockRequests] 映射). 调用方须持有 `com.android.alarm.permission.SET_ALARM` (Manifest). 变更以来源 `intent` 记录; 关闭与贪睡以 `by` `user`
- * 记录 (T66). 编辑页与闹钟选择由 [ClockDialogActivity] 提供, 闹钟列表为 [HomeActivity]. 每个结果为一个 toast 与 `adb logcat -s ChimeIntent` 的一行 ([ClockActions]).
+ * 记录 (T66). 不带 `SKIP_UI` 的 `SET_ALARM` 打开编辑页 ([EditAlarmActivity.draft], 路线图 P3.1), 闹钟选择由 [ClockDialogActivity] 提供, 闹钟列表为
+ * [HomeActivity]. 每个结果为一个 toast 与 `adb logcat -s ChimeIntent` 的一行 ([ClockActions]).
  */
 class ClockIntentActivity : Activity() {
 
@@ -52,7 +55,7 @@ class ClockIntentActivity : Activity() {
         val request = ClockRequests.setAlarm(extras)
         val options = request.options
         if (options == null || !request.skipUi) {
-            startActivity(ClockDialogActivity.draft(this, options))
+            startActivity(EditAlarmActivity.draft(this, options))
             ClockActions.report(this, action, if (options == null) "draft=new" else "draft=filled", null)
         } else {
             ClockActions.save(this, action, options, reuse = true)

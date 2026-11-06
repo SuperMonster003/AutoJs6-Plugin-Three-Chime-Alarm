@@ -10,9 +10,4 @@
     </style>
 
     <color name="chime_window_background">#F3F4F5</color>
-
-    <!-- The spinner time picker of the system clock intent page (roadmap P2.6), small enough for an alert dialog. -->
-    <style name="Widget.ThreeChimeAlarm.TimePicker" parent="android:Widget.Material.TimePicker">
-        <item name="android:timePickerMode">spinner</item>
-    </style>
 </resources>

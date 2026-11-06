@@ -1,5 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <plurals name="edit_auto_silence_summary">
+        <item quantity="other">%1$d분 후 중지</item>
+    </plurals>
+    <plurals name="edit_exclude_count">
+        <item quantity="other">날짜 %1$d개</item>
+    </plurals>
+    <plurals name="edit_minutes">
+        <item quantity="other">%1$d분</item>
+    </plurals>
+    <plurals name="edit_snooze_every">
+        <item quantity="other">%1$d분마다</item>
+    </plurals>
+    <plurals name="edit_snooze_limit">
+        <item quantity="other">최대 %1$d회</item>
+    </plurals>
     <plurals name="home_delete_title">
         <item quantity="other">알람 %1$d개를 삭제할까요?</item>
     </plurals>

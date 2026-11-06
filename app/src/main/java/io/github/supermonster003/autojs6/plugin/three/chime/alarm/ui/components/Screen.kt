@@ -76,6 +76,7 @@ internal fun ChimeScreen(
     onBack: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
     snackbarHostState: SnackbarHostState? = null,
+    floatingActionButton: @Composable () -> Unit = {},
     content: @Composable (PaddingValues) -> Unit,
 ) {
     Scaffold(
@@ -104,14 +105,15 @@ internal fun ChimeScreen(
             )
         },
         snackbarHost = { if (snackbarHostState != null) SnackbarHost(snackbarHostState, modifier = Modifier.testTag("chime.snackbar")) },
+        floatingActionButton = floatingActionButton,
         content = content,
     )
 }
 
 /** A top bar action: a 48 dp icon button with its description. zh-CN: 顶栏动作: 带描述的 48 dp 图标按钮. */
 @Composable
-internal fun TopBarAction(@DrawableRes icon: Int, description: String, tag: String, onClick: () -> Unit) {
-    IconButton(onClick = onClick, modifier = Modifier.testTag(tag)) {
+internal fun TopBarAction(@DrawableRes icon: Int, description: String, tag: String, enabled: Boolean = true, onClick: () -> Unit) {
+    IconButton(onClick = onClick, enabled = enabled, modifier = Modifier.testTag(tag)) {
         Icon(painterResource(icon), contentDescription = description)
     }
 }

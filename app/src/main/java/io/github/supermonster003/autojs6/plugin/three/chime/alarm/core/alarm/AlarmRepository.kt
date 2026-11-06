@@ -112,15 +112,22 @@ class AlarmRepository(
         return change.after!!
     }
 
-    /** Applies a T29 patch ([AlarmOptionsValidator.patch]); an unknown [id] throws `NOT_FOUND`. zh-CN: 应用 T29 patch; 未知 [id] 报 `NOT_FOUND`. */
-    fun update(id: String, patch: Map<String, Any?>, by: String): AlarmRecord {
+    /**
+     * Applies a T29 patch ([AlarmOptionsValidator.patch]); an unknown [id] throws `NOT_FOUND`. [implicitDate] (the edit
+     * page, T83) drops the stored date of a `time` alarm so that it is filled in again as for a new alarm (T48) and
+     * stays implicit; the patch may then be empty and must not carry `date`.
+     * zh-CN: 应用 T29 patch; 未知 [id] 报 `NOT_FOUND`. [implicitDate] (编辑页, T83) 丢弃 `time` 闹钟已存的日期, 让它像新建闹钟那样重新补上 (T48) 并保持
+     * 隐式; 此时 patch 可以为空, 且不得含 `date`.
+     */
+    fun update(id: String, patch: Map<String, Any?>, by: String, implicitDate: Boolean = false): AlarmRecord {
         requireSource(by)
+        require(!implicitDate || !patch.containsKey(AlarmOptionKeys.DATE)) { "implicitDate with an explicit date" }
         val change = synchronized(lock) {
             val all = loaded()
             val current = all[id] ?: throw AlarmException.notFound("no alarm with id '$id'")
             val followsTime = DATE_FOLLOWS_KEYS.any(patch::containsKey) && !patch.containsKey(AlarmOptionKeys.DATE)
-            val base = if (current.state.dateImplicit && followsTime) current.spec.copy(date = null) else current.spec
-            val merged = validator.patch(base, patch)
+            val base = if (implicitDate || (current.state.dateImplicit && followsTime)) current.spec.copy(date = null) else current.spec
+            val merged = if (implicitDate && patch.isEmpty()) base else validator.patch(base, patch)
             val spec = merged.copy(enabled = merged.enabled != false)
             val enabling = !current.enabled && spec.enabled == true
             if (enabling) checkEnabledLimit(all)

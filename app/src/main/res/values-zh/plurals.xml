@@ -1,5 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <plurals name="edit_auto_silence_summary">
+        <item quantity="other">响铃 %1$d 分钟后停止</item>
+    </plurals>
+    <plurals name="edit_exclude_count">
+        <item quantity="other">%1$d 个日期</item>
+    </plurals>
+    <plurals name="edit_minutes">
+        <item quantity="other">%1$d 分钟</item>
+    </plurals>
+    <plurals name="edit_snooze_every">
+        <item quantity="other">每 %1$d 分钟</item>
+    </plurals>
+    <plurals name="edit_snooze_limit">
+        <item quantity="other">最多 %1$d 次</item>
+    </plurals>
     <plurals name="home_delete_title">
         <item quantity="other">删除 %1$d 个闹钟?</item>
     </plurals>

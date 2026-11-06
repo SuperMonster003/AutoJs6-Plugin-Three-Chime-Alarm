@@ -8,6 +8,12 @@ import android.content.DialogInterface
 import android.content.Intent
 import android.os.SystemClock
 import android.provider.AlarmClock
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmRecord
@@ -15,6 +21,7 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.intent.ClockAc
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.intent.ClockDialogActivity
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.intent.ClockIntentActivity
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.intent.ClockRequests
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.edit.ClockDraftActivity
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.home.HomeActivity
 import org.autojs.plugin.alarm.api.AlarmContract
 import org.junit.After
@@ -24,6 +31,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.time.LocalDateTime
@@ -34,8 +42,8 @@ import java.util.UUID
 /**
  * The system clock intents of the installed plugin (roadmap P2.6, D21, T79, T80), started as intents at
  * [ClockIntentActivity] and read back from its outcome line and the alarm list: `SET_ALARM` saves once and enables the
- * same alarm the second time (source `intent`), without `EXTRA_SKIP_UI` or a time it opens the new alarm page, which
- * saves; `SHOW_ALARMS` opens the alarm list; `DISMISS_ALARM` skips a ring within a day, refuses one further away, finds
+ * same alarm the second time (source `intent`), without `EXTRA_SKIP_UI` or a time it opens the edit page (roadmap P3.1,
+ * T83), which saves with source `intent` or closes without saving; `SHOW_ALARMS` opens the alarm list; `DISMISS_ALARM` skips a ring within a day, refuses one further away, finds
  * nothing for an unknown label and lets the user choose among several matches; `SNOOZE_ALARM` without a ringing alarm
  * and the refused extras; a ringing alarm is snoozed for one minute by `SNOOZE_ALARM` and its round ended by
  * `DISMISS_ALARM` without a search mode.
@@ -44,13 +52,16 @@ import java.util.UUID
  * it found it. Nothing here touches the device's other alarms (no `all` search on a device).
  *
  * zh-CN: 已安装插件的系统时钟 Intent (路线图 P2.6, D21, T79, T80), 以 Intent 启动 [ClockIntentActivity], 再从其结果行与闹钟列表读回: `SET_ALARM`
- * 只保存一次, 第二次改为启用同一闹钟 (来源 `intent`), 没有 `EXTRA_SKIP_UI` 或时间时打开新建页并可保存; `SHOW_ALARMS` 打开闹钟列表; `DISMISS_ALARM`
+ * 只保存一次, 第二次改为启用同一闹钟 (来源 `intent`), 没有 `EXTRA_SKIP_UI` 或时间时打开编辑页 (路线图 P3.1, T83), 以来源 `intent` 保存或不保存直接关闭; `SHOW_ALARMS` 打开闹钟列表; `DISMISS_ALARM`
  * 跳过一天之内的响铃, 拒绝更远的, 未知标签找不到闹钟, 多个匹配时由用户选择; `SNOOZE_ALARM` 在没有闹钟响铃时的结果与被拒的 extras; 正在响的闹钟经
  * `SNOOZE_ALARM` 贪睡一分钟, 再由不带搜索模式的 `DISMISS_ALARM` 结束本轮. 这里的闹钟都带标签前缀 `p26-probe`; [cleanUp] 删除它们, 运行后闹钟
  * 列表保持原样. 不触碰设备上的其他闹钟 (设备上不做 `all` 搜索).
  */
 @RunWith(AndroidJUnit4::class)
 class ClockIntentActivityTest {
+
+    @get:Rule
+    val compose = createEmptyComposeRule()
 
     private val instrumentation: Instrumentation
         get() = InstrumentationRegistry.getInstrumentation()
@@ -106,11 +117,12 @@ class ClockIntentActivityTest {
 
     @Test
     fun setAlarmWithoutSkipUiOpensTheFilledPage() {
-        val page = monitor(ClockDialogActivity::class.java)
+        val page = monitor(ClockDraftActivity::class.java)
         assertEquals("setAlarm draft=filled", send(AlarmClock.ACTION_SET_ALARM, AlarmClock.EXTRA_HOUR to 6, AlarmClock.EXTRA_MINUTES to 5, AlarmClock.EXTRA_MESSAGE to label))
-        val dialog = dialogOf(page)
+        val activity = editPage(page)
+        compose.onNodeWithTag("chime.edit.label").assert(hasText(label, substring = true))
         ClockActions.lastOutcome = null
-        instrumentation.runOnMainSync { dialog.getButton(DialogInterface.BUTTON_POSITIVE).performClick() }
+        compose.onNodeWithTag("chime.edit.save").performClick()
         val saved = outcome()
         assertTrue(saved, saved.startsWith("setAlarm added="))
         val record = runtime.repository.get(saved.substringAfter("added="))!!
@@ -118,17 +130,16 @@ class ClockIntentActivityTest {
         assertEquals(label, record.spec.label)
         assertEquals(6, record.spec.time!!.hour)
         assertEquals(5, record.spec.time!!.minute)
+        waitFor("the page closes after saving", WAIT_MILLIS) { activity.isFinishing || activity.isDestroyed }
     }
 
     @Test
     fun setAlarmWithoutTimeOpensTheNewPage() {
-        val page = monitor(ClockDialogActivity::class.java)
+        val page = monitor(ClockDraftActivity::class.java)
         assertEquals("setAlarm draft=new", send(AlarmClock.ACTION_SET_ALARM, AlarmClock.EXTRA_MESSAGE to label, AlarmClock.EXTRA_SKIP_UI to true))
-        val dialog = dialogOf(page)
-        instrumentation.runOnMainSync { dialog.getButton(DialogInterface.BUTTON_NEGATIVE).performClick() }
-        instrumentation.waitForIdleSync()
-        val activity = this.page!!
-        assertTrue("the page closes with its dialog", activity.isFinishing || activity.isDestroyed)
+        val activity = editPage(page)
+        instrumentation.runOnMainSync { activity.onBackPressedDispatcher.onBackPressed() }
+        waitFor("an unchanged page closes on back", WAIT_MILLIS) { activity.isFinishing || activity.isDestroyed }
         assertEquals(0, probes(label).size)
     }
 
@@ -264,6 +275,14 @@ class ClockIntentActivityTest {
 
     private fun monitor(type: Class<out Activity>): Instrumentation.ActivityMonitor =
         instrumentation.addMonitor(type.name, null, false).also { monitors += it }
+
+    /** The edit page [page] opened, once its content shows. zh-CN: [page] 打开的编辑页, 等到其内容显示. */
+    private fun editPage(page: Instrumentation.ActivityMonitor): ClockDraftActivity {
+        val activity = instrumentation.waitForMonitorWithTimeout(page, WAIT_MILLIS) as? ClockDraftActivity
+            ?: throw AssertionError("the edit page did not open")
+        compose.waitUntil(WAIT_MILLIS) { compose.onAllNodesWithTag("chime.edit.content").fetchSemanticsNodes().isNotEmpty() }
+        return activity
+    }
 
     /** The dialog the [ClockDialogActivity] of [page] shows. zh-CN: [page] 中 [ClockDialogActivity] 显示的对话框. */
     private fun dialogOf(page: Instrumentation.ActivityMonitor): AlertDialog {

@@ -1,5 +1,45 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <plurals name="edit_auto_silence_summary">
+        <item quantity="zero">الإيقاف بعد %1$d دقيقة</item>
+        <item quantity="one">الإيقاف بعد دقيقة واحدة</item>
+        <item quantity="two">الإيقاف بعد دقيقتين</item>
+        <item quantity="few">الإيقاف بعد %1$d دقائق</item>
+        <item quantity="many">الإيقاف بعد %1$d دقيقة</item>
+        <item quantity="other">الإيقاف بعد %1$d دقيقة</item>
+    </plurals>
+    <plurals name="edit_exclude_count">
+        <item quantity="zero">%1$d تاريخ</item>
+        <item quantity="one">تاريخ واحد</item>
+        <item quantity="two">تاريخان</item>
+        <item quantity="few">%1$d تواريخ</item>
+        <item quantity="many">%1$d تاريخا</item>
+        <item quantity="other">%1$d تاريخ</item>
+    </plurals>
+    <plurals name="edit_minutes">
+        <item quantity="zero">%1$d دقيقة</item>
+        <item quantity="one">دقيقة واحدة</item>
+        <item quantity="two">دقيقتان</item>
+        <item quantity="few">%1$d دقائق</item>
+        <item quantity="many">%1$d دقيقة</item>
+        <item quantity="other">%1$d دقيقة</item>
+    </plurals>
+    <plurals name="edit_snooze_every">
+        <item quantity="zero">كل %1$d دقيقة</item>
+        <item quantity="one">كل دقيقة</item>
+        <item quantity="two">كل دقيقتين</item>
+        <item quantity="few">كل %1$d دقائق</item>
+        <item quantity="many">كل %1$d دقيقة</item>
+        <item quantity="other">كل %1$d دقيقة</item>
+    </plurals>
+    <plurals name="edit_snooze_limit">
+        <item quantity="zero">%1$d مرة على الأكثر</item>
+        <item quantity="one">مرة واحدة على الأكثر</item>
+        <item quantity="two">مرتان على الأكثر</item>
+        <item quantity="few">%1$d مرات على الأكثر</item>
+        <item quantity="many">%1$d مرة على الأكثر</item>
+        <item quantity="other">%1$d مرة على الأكثر</item>
+    </plurals>
     <plurals name="home_delete_title">
         <item quantity="zero">حذف %1$d منبه?</item>
         <item quantity="one">حذف منبه واحد?</item>

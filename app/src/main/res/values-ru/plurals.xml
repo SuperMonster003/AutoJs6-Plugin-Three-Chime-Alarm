@@ -1,5 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <plurals name="edit_auto_silence_summary">
+        <item quantity="one">Выключить через %1$d минуту</item>
+        <item quantity="few">Выключить через %1$d минуты</item>
+        <item quantity="many">Выключить через %1$d минут</item>
+        <item quantity="other">Выключить через %1$d минуты</item>
+    </plurals>
+    <plurals name="edit_exclude_count">
+        <item quantity="one">%1$d дата</item>
+        <item quantity="few">%1$d даты</item>
+        <item quantity="many">%1$d дат</item>
+        <item quantity="other">%1$d даты</item>
+    </plurals>
+    <plurals name="edit_minutes">
+        <item quantity="one">%1$d минута</item>
+        <item quantity="few">%1$d минуты</item>
+        <item quantity="many">%1$d минут</item>
+        <item quantity="other">%1$d минуты</item>
+    </plurals>
+    <plurals name="edit_snooze_every">
+        <item quantity="one">Каждую %1$d минуту</item>
+        <item quantity="few">Каждые %1$d минуты</item>
+        <item quantity="many">Каждые %1$d минут</item>
+        <item quantity="other">Каждые %1$d минуты</item>
+    </plurals>
+    <plurals name="edit_snooze_limit">
+        <item quantity="one">не более %1$d раза</item>
+        <item quantity="few">не более %1$d раз</item>
+        <item quantity="many">не более %1$d раз</item>
+        <item quantity="other">не более %1$d раза</item>
+    </plurals>
     <plurals name="home_delete_title">
         <item quantity="one">Удалить %1$d будильник?</item>
         <item quantity="few">Удалить %1$d будильника?</item>

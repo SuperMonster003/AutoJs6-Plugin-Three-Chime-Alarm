@@ -16,11 +16,12 @@ import java.util.Calendar
 import java.util.Date
 
 /**
- * The actions of the system clock intents shared by [ClockIntentActivity] and [ClockDialogActivity] (roadmap P2.6):
- * changes are recorded with source `intent`, dismissals and snoozes with `by` `user` (T66). Each outcome is shown as a
- * toast and logged under [TAG] as one line (`<action> <outcome>`), which the device checks read.
- * zh-CN: [ClockIntentActivity] 与 [ClockDialogActivity] 共用的系统时钟 Intent 操作 (路线图 P2.6): 变更以来源 `intent` 记录, 关闭与贪睡以 `by` `user`
- * 记录 (T66). 每个结果以 toast 显示, 并以一行 (`<action> <outcome>`) 记入日志 [TAG], 供设备检查读取.
+ * The actions of the system clock intents shared by [ClockIntentActivity], the alarm chooser [ClockDialogActivity] and
+ * the `SET_ALARM` edit page (roadmap P2.6, P3.1): changes are recorded with source `intent`, dismissals and snoozes with
+ * `by` `user` (T66). Each outcome is shown as a toast and logged under [TAG] as one line (`<action> <outcome>`), which
+ * the device checks read.
+ * zh-CN: [ClockIntentActivity], 闹钟选择窗口 [ClockDialogActivity] 与 `SET_ALARM` 编辑页共用的系统时钟 Intent 操作 (路线图 P2.6, P3.1): 变更以来源
+ * `intent` 记录, 关闭与贪睡以 `by` `user` 记录 (T66). 每个结果以 toast 显示, 并以一行 (`<action> <outcome>`) 记入日志 [TAG], 供设备检查读取.
  */
 internal object ClockActions {
 
@@ -33,21 +34,34 @@ internal object ClockActions {
     @VisibleForTesting
     var lastOutcome: String? = null
 
+    /** A stored `SET_ALARM`: a new alarm, or the same stored one [reused] (T79). zh-CN: 已保存的 `SET_ALARM`: 新闹钟, 或被 [reused] 的相同闹钟 (T79). */
+    data class Stored(val record: AlarmRecord, val reused: Boolean) {
+        val outcome: String get() = if (reused) "enabled=${record.id}" else "added=${record.id}"
+    }
+
     /**
-     * Saves [options] as a new alarm, or enables the same stored alarm instead when [reuse] (T79).
-     * zh-CN: 把 [options] 保存为新闹钟; [reuse] 为 true 且已有相同的闹钟时改为启用它 (T79).
+     * Saves [options] as a new alarm, or enables the same stored alarm instead when [reuse] (T79); reports nothing, so
+     * it may run off the main thread.
+     * zh-CN: 把 [options] 保存为新闹钟; [reuse] 为 true 且已有相同的闹钟时改为启用它 (T79); 不报告结果, 因此可在主线程之外运行.
      */
-    fun save(context: Context, action: String, options: Map<String, Any?>, reuse: Boolean) {
+    fun store(context: Context, options: Map<String, Any?>, reuse: Boolean): Stored {
         val repository = AlarmRuntime.get(context).repository
+        val same = if (reuse) ClockRequests.sameAlarm(repository.list(), options) else null
+        return if (same != null) {
+            Stored(repository.setEnabled(same.id, true, AlarmContract.SOURCE_INTENT), reused = true)
+        } else {
+            Stored(repository.add(options, AlarmContract.SOURCE_INTENT), reused = false)
+        }
+    }
+
+    /** Reports a [stored] alarm on the main thread. zh-CN: 在主线程报告 [stored] 闹钟. */
+    fun saved(context: Context, action: String, stored: Stored) =
+        report(context, action, stored.outcome, context.getString(R.string.clock_toast_alarm_set, timeOf(context, stored.record)))
+
+    /** [store] and [saved], or the failure. zh-CN: [store] 后 [saved], 或报告失败. */
+    fun save(context: Context, action: String, options: Map<String, Any?>, reuse: Boolean) {
         try {
-            val same = if (reuse) ClockRequests.sameAlarm(repository.list(), options) else null
-            val record = if (same != null) {
-                repository.setEnabled(same.id, true, AlarmContract.SOURCE_INTENT)
-            } else {
-                repository.add(options, AlarmContract.SOURCE_INTENT)
-            }
-            val outcome = if (same != null) "enabled=${record.id}" else "added=${record.id}"
-            report(context, action, outcome, context.getString(R.string.clock_toast_alarm_set, timeOf(context, record)))
+            saved(context, action, store(context, options, reuse))
         } catch (e: AlarmException) {
             failed(context, action, e)
         }

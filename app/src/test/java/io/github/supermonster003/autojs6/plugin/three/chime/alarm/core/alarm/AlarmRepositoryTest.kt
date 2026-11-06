@@ -9,6 +9,7 @@ import org.autojs.plugin.alarm.api.AlarmTime
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Rule
@@ -222,6 +223,35 @@ class AlarmRepositoryTest {
         repository.setEnabled(explicit.id, false, "user")
         val pinnedAgain = repository.update(explicit.id, mapOf("enabled" to true, "date" to "2026-12-02"), "user")
         assertEquals("an explicit date in the same patch wins", "2026-12-02", pinnedAgain.spec.date)
+    }
+
+    @Test
+    fun `the edit page turns an explicit date back into an implicit one (T83)`() {
+        val repository = repository()
+        val pinned = repository.add(optionsOf(7, 30, "date" to "2026-12-01"), "user")
+        assertFalse(pinned.state.dateImplicit)
+
+        // Without other changes: an empty patch is enough, the date is filled in as for a new alarm (08:00 now).
+        // zh-CN: 没有其他修改: 空 patch 即可, 日期按新建闹钟的方式补上 (此时 08:00).
+        val implicit = repository.update(pinned.id, emptyMap(), "user", implicitDate = true)
+        assertEquals("2026-11-06", implicit.spec.date)
+        assertTrue(implicit.state.dateImplicit)
+        assertEquals("update", changes.last().action)
+
+        // Together with a new time, and it stays implicit for the next time change.
+        // zh-CN: 与新时刻一起修改, 之后再改时刻时仍为隐式.
+        repository.update(pinned.id, mapOf("date" to "2026-12-24"), "user")
+        val moved = repository.update(pinned.id, mapOf("hour" to 9, "minute" to 0), "user", implicitDate = true)
+        assertEquals("2026-11-05", moved.spec.date)
+        assertTrue(moved.state.dateImplicit)
+        assertEquals("2026-11-06", repository.update(pinned.id, mapOf("hour" to 7, "minute" to 0), "user").spec.date)
+
+        // Without the flag an empty patch is still refused, and the flag never comes with a date.
+        // zh-CN: 不带该标志时空 patch 仍被拒绝, 该标志也不能与日期同时给出.
+        assertAlarmError(INVALID_OPTIONS, "nothing to change") { repository.update(pinned.id, emptyMap(), "user") }
+        assertThrows(IllegalArgumentException::class.java) {
+            repository.update(pinned.id, mapOf("date" to "2026-12-24"), "user", implicitDate = true)
+        }
     }
 
     private fun stored(id: String, enabled: Boolean) = AlarmRecord(
