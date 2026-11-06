@@ -50,12 +50,14 @@ import kotlinx.coroutines.withContext
  * The permissions page (roadmap P3.4, T82), reached from the alarm list banner and from `alarms.openPlugin('permissions')`
  * (T81). Every row shows its state and what does not work without it, and opens its system page: exact alarms (API
  * 31 - 32), notifications (the runtime request on API 33+ until the system stops showing it, then the notification
- * settings; the ring channel settings when only that channel is off), the full screen intent (API 34+), the battery
- * optimization list, the background restriction (API 28+, app details) and the vendor autostart page (guidance only).
+ * settings; the ring channel settings when only that channel is off), the ColorOS "Banner" notifications (guidance
+ * only, roadmap Q20), the full screen intent (API 34+), display over other apps (advice, T87), the battery optimization
+ * list, the background restriction (API 28+, app details) and the vendor autostart page (guidance only).
  * The state is read again on every resume.
  * zh-CN: 权限页 (路线图 P3.4, T82), 从闹钟列表横幅与 `alarms.openPlugin('permissions')` (T81) 进入. 每行显示状态与缺少它时什么不能用, 并打开对应
  * 的系统页面: 精确闹钟 (API 31 - 32), 通知 (API 33+ 申请运行时权限, 直到系统不再显示申请, 之后打开通知设置; 只有响铃通知类别关闭时打开该类别的设置),
- * 全屏通知 (API 34+), 电池优化列表, 后台限制 (API 28+, 应用详情) 与厂商自启动页 (只作引导). 每次恢复时重新读取状态.
+ * ColorOS "横幅" 通知 (只作引导, 路线图 Q20), 全屏通知 (API 34+), 悬浮窗 (建议, T87), 电池优化列表, 后台限制 (API 28+, 应用详情) 与厂商自启动页
+ * (只作引导). 每次恢复时重新读取状态.
  */
 class PermissionsActivity : StandaloneActivity() {
 
@@ -135,7 +137,13 @@ private fun PermissionsScreen(requests: Int, onBack: () -> Unit, onOpen: (Permis
     }
 }
 
-private val RINGING_ROWS = listOf(PermissionRow.EXACT_ALARM, PermissionRow.NOTIFICATIONS, PermissionRow.FULL_SCREEN)
+private val RINGING_ROWS = listOf(
+    PermissionRow.EXACT_ALARM,
+    PermissionRow.NOTIFICATIONS,
+    PermissionRow.VENDOR_BANNER,
+    PermissionRow.FULL_SCREEN,
+    PermissionRow.OVERLAY,
+)
 private val BACKGROUND_ROWS = listOf(PermissionRow.BATTERY, PermissionRow.BACKGROUND, PermissionRow.AUTOSTART)
 
 private fun LazyListScope.group(@StringRes title: Int, rows: List<PermissionRow>, snapshot: PermissionSnapshot, open: (PermissionRow) -> Unit) {
@@ -168,7 +176,9 @@ private fun PermissionItem(row: PermissionRow, snapshot: PermissionSnapshot, ope
 internal fun titleOf(row: PermissionRow): Int = when (row) {
     PermissionRow.EXACT_ALARM -> R.string.permissions_exact_alarm
     PermissionRow.NOTIFICATIONS -> R.string.permissions_notifications
+    PermissionRow.VENDOR_BANNER -> R.string.permissions_vendor_banner
     PermissionRow.FULL_SCREEN -> R.string.permissions_full_screen
+    PermissionRow.OVERLAY -> R.string.permissions_overlay
     PermissionRow.BATTERY -> R.string.permissions_battery
     PermissionRow.BACKGROUND -> R.string.permissions_background
     PermissionRow.AUTOSTART -> R.string.permissions_autostart
@@ -178,7 +188,9 @@ internal fun titleOf(row: PermissionRow): Int = when (row) {
 private fun iconOf(row: PermissionRow): Int = when (row) {
     PermissionRow.EXACT_ALARM -> R.drawable.ic_alarm_24
     PermissionRow.NOTIFICATIONS -> R.drawable.ic_notifications_24
+    PermissionRow.VENDOR_BANNER -> R.drawable.ic_notifications_active_24
     PermissionRow.FULL_SCREEN -> R.drawable.ic_fullscreen_24
+    PermissionRow.OVERLAY -> R.drawable.ic_layers_24
     PermissionRow.BATTERY -> R.drawable.ic_battery_saver_24
     PermissionRow.BACKGROUND -> R.drawable.ic_tune_24
     PermissionRow.AUTOSTART -> R.drawable.ic_power_24
@@ -198,11 +210,13 @@ private fun summaryOf(row: PermissionRow, snapshot: PermissionSnapshot): Int {
             !snapshot.notifications -> R.string.permissions_notifications_missing
             else -> R.string.permissions_notifications_channel_off
         }
+        PermissionRow.VENDOR_BANNER -> R.string.permissions_vendor_banner_guide
         PermissionRow.FULL_SCREEN -> when (state) {
             RowState.NOT_NEEDED -> R.string.permissions_not_needed
             RowState.OK -> R.string.permissions_allowed
             else -> R.string.permissions_full_screen_missing
         }
+        PermissionRow.OVERLAY -> if (state == RowState.OK) R.string.permissions_overlay_allowed else R.string.permissions_overlay_advised
         PermissionRow.BATTERY -> if (state == RowState.OK) R.string.permissions_battery_unrestricted else R.string.permissions_battery_optimized
         PermissionRow.BACKGROUND -> when (state) {
             RowState.NOT_NEEDED -> R.string.permissions_not_needed

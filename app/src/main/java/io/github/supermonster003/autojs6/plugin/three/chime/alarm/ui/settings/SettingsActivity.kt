@@ -282,7 +282,7 @@ class SettingsActivity : StandaloneActivity() {
                 val current = AppearancePreferences.read(this)
                 ThemeColorDialog(
                     currentColor = current.color,
-                    hostColor = HostAppearanceReader.cached()?.primary ?: AppearancePreferences.DEFAULT_COLOR,
+                    hostColor = HostAppearanceReader.cached(this)?.primary ?: AppearancePreferences.DEFAULT_COLOR,
                     onDismissRequest = close,
                     onConfirm = { color -> close(); saveAppearance(current.copy(color = color)) },
                 )
@@ -417,7 +417,7 @@ class SettingsActivity : StandaloneActivity() {
 
     @Composable
     private fun followNote(isFollow: Boolean): String? =
-        if (isFollow && HostAppearanceReader.cached() == null) stringResource(R.string.settings_follow_autojs6_unavailable) else null
+        if (isFollow && HostAppearanceReader.cached(this) == null) stringResource(R.string.settings_follow_autojs6_unavailable) else null
 
     @Composable
     private fun languageSummary(value: String): String = when (value) {

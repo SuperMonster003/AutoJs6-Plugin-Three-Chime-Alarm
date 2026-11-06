@@ -6,8 +6,6 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
-import android.text.format.DateFormat
-import android.text.format.DateUtils
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -16,6 +14,8 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ThreeChimeAlar
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmRecord
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.schedule.AlarmPlanner
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.schedule.AlarmSchedulePort
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.appearance.screenTexts
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.format.TimeFormats
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.home.HomeActivity
 import org.autojs.plugin.alarm.api.AlarmContract
 import org.autojs.plugin.alarm.api.AlarmEvent
@@ -70,17 +70,16 @@ class AndroidAlarmSchedulePort(
 
     override fun notifyMissed(record: AlarmRecord, event: AlarmEvent) {
         val scheduledAt = event.scheduledAt ?: return
-        val label = record.spec.label?.takeIf { it.isNotBlank() } ?: context.getString(R.string.alarm_default_label)
-        val flags = DateUtils.FORMAT_SHOW_TIME or DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_ABBREV_MONTH or
-            (if (DateFormat.is24HourFormat(context)) DateUtils.FORMAT_24HOUR else DateUtils.FORMAT_12HOUR)
-        val time = DateUtils.formatDateTime(context, scheduledAt, flags)
-        val text = context.getString(
+        // The texts follow the language of the plugin's screens, not the system (roadmap Q21). zh-CN: 文字跟随插件界面语言而非系统 (路线图 Q21).
+        val texts = screenTexts(context)
+        val label = record.spec.label?.takeIf { it.isNotBlank() } ?: texts.getString(R.string.alarm_default_label)
+        val text = texts.getString(
             if (event.reason == AlarmContract.MISS_REASON_OFF) R.string.notification_missed_text_off else R.string.notification_missed_text_late,
-            time,
+            TimeFormats.dateTimeOf(texts, scheduledAt),
         )
         val notification = NotificationCompat.Builder(context, ThreeChimeAlarmApplication.CHANNEL_MISSED)
             .setSmallIcon(R.mipmap.ic_icon_studio_application_monochrome)
-            .setContentTitle(context.getString(R.string.notification_missed_title, label))
+            .setContentTitle(texts.getString(R.string.notification_missed_title, label))
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setCategory(NotificationCompat.CATEGORY_ALARM)

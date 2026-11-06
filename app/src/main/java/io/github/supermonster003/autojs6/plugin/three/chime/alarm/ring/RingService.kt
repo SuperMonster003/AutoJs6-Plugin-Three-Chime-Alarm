@@ -1,5 +1,6 @@
 package io.github.supermonster003.autojs6.plugin.three.chime.alarm.ring
 
+import android.app.KeyguardManager
 import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -12,8 +13,7 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.PowerManager
-import android.text.format.DateFormat
-import android.text.format.DateUtils
+import android.provider.Settings
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -23,6 +23,8 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.AlarmRuntime
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.R
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ThreeChimeAlarmApplication
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.ring.RingCoordinator
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.appearance.screenTexts
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.format.TimeFormats
 import org.autojs.plugin.alarm.api.AlarmContract
 
 /**
@@ -32,14 +34,17 @@ import org.autojs.plugin.alarm.api.AlarmContract
  * defers it by up to 10 seconds otherwise). The service follows [RingCoordinator.sounding]: one [RingSession] per
  * sounding round, a partial wake lock while anything sounds, and it stops when nothing does. The notification opens
  * [RingActivity] as its full screen intent when the system allows one (API 34+ `canUseFullScreenIntent()`, T5),
- * otherwise it is a heads-up notification while the sound plays; it carries snooze and dismiss actions. Without the
- * notification permission (API 33+) the service still runs and the ring sounds without a notification or screen (T69).
+ * otherwise it is a heads-up notification while the sound plays; it carries snooze and dismiss actions. When the
+ * plugin may display over other apps and the device is not in use, the service also opens [RingActivity] directly
+ * (roadmap Q20, T87), as some systems hold the full screen intent back. Without the notification permission (API 33+)
+ * the service still runs and the ring sounds without a notification or screen (T69).
  *
  * zh-CN: 响铃前台服务 (路线图 T5, T6, T35, P2.4). 路线图 P0.2 在 API 34 - 37 实测了类型: `systemExempted` 在任何应用状态下都能从 `setAlarmClock`
  * 的接收器启动, 因此服务在 API 34+ 以该类型调用 `startForeground`, 更低版本不带类型; 通知用 `FOREGROUND_SERVICE_IMMEDIATE` 发出 (否则系统最多推迟
  * 10 秒). 服务跟随 [RingCoordinator.sounding]: 每个发声的一轮一个 [RingSession], 有闹钟发声时持有部分唤醒锁, 没有时停止. 系统允许时 (API 34+
- * `canUseFullScreenIntent()`, T5) 通知以全屏 Intent 打开 [RingActivity], 否则在铃声播放期间作为悬浮通知; 通知带贪睡与关闭按钮. 没有通知权限 (API 33+)
- * 时服务照常运行, 响铃没有通知与界面但照常发声 (T69).
+ * `canUseFullScreenIntent()`, T5) 通知以全屏 Intent 打开 [RingActivity], 否则在铃声播放期间作为悬浮通知; 通知带贪睡与关闭按钮. 插件可显示在其他应用
+ * 上层且设备未被使用时, 服务还会直接打开 [RingActivity] (路线图 Q20, T87), 因为部分系统会压下全屏 Intent. 没有通知权限 (API 33+) 时服务照常运行,
+ * 响铃没有通知与界面但照常发声 (T69).
  */
 class RingService : Service() {
 
@@ -109,7 +114,8 @@ class RingService : Service() {
             return
         }
         val current = session
-        if (current == null || current.occurrence != ring.occurrence) {
+        val fresh = current == null || current.occurrence != ring.occurrence
+        if (fresh) {
             current?.stop()
             wakeLock.acquire(ring.settings.autoSilenceMillis + WAKE_LOCK_EXTRA_MILLIS)
             session = RingSession(this, runtime, ring).also { it.begin() }
@@ -117,6 +123,25 @@ class RingService : Service() {
             current.ring = ring
         }
         foreground(ring)
+        if (fresh) openDirectly(ring)
+    }
+
+    /**
+     * Opens the ringing screen of a new round directly when [opensDirectly] says so (roadmap Q20, T87). ColorOS caps the
+     * ring channel to the default importance while the app's "Banner" notifications are off and then drops the full
+     * screen intent, although `canUseFullScreenIntent()` is true; the overlay permission exempts this start from the
+     * background activity limits. A second start of the single instance screen only brings it forward.
+     * zh-CN: [opensDirectly] 允许时直接打开新一轮的响铃界面 (路线图 Q20, T87). 应用的 "横幅" 通知关闭时, ColorOS 把响铃通知类别压到默认重要性并丢弃全屏
+     * Intent, 尽管 `canUseFullScreenIntent()` 为 true; 悬浮窗权限让这次启动不受后台启动 Activity 的限制. 单实例界面被再次启动时只会回到前台.
+     */
+    private fun openDirectly(ring: RingCoordinator.Ring) {
+        if (!opensDirectly(this)) return
+        try {
+            startActivity(Intent(this, RingActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_USER_ACTION))
+            Log.i(TAG, "ring screen ${ring.alarmId} opened directly")
+        } catch (e: RuntimeException) {
+            Log.w(TAG, "ring screen direct open refused: ${e.message}")
+        }
     }
 
     private fun idle() {
@@ -143,6 +168,8 @@ class RingService : Service() {
     }
 
     private fun notification(ring: RingCoordinator.Ring?): Notification {
+        // The texts follow the language of the plugin's screens, not the system (roadmap Q21). zh-CN: 文字跟随插件界面语言而非系统 (路线图 Q21).
+        val texts = screenTexts(this)
         val builder = NotificationCompat.Builder(this, ThreeChimeAlarmApplication.CHANNEL_RING)
             .setSmallIcon(R.mipmap.ic_icon_studio_application_monochrome)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
@@ -152,17 +179,19 @@ class RingService : Service() {
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setShowWhen(false)
-        if (ring == null) return builder.setContentTitle(getString(R.string.alarm_default_label)).build()
-        val label = ring.record.spec.label?.takeIf { it.isNotBlank() } ?: getString(R.string.alarm_default_label)
+        if (ring == null) return builder.setContentTitle(texts.getString(R.string.alarm_default_label)).build()
+        val label = ring.record.spec.label?.takeIf { it.isNotBlank() } ?: texts.getString(R.string.alarm_default_label)
         val screen = ringScreen()
         val fullScreen = fullScreenAllowed(this)
         val snooze = ring.canSnooze && runtime.schedule.canSnooze()
+        val queued = runtime.rings.queued.size
         builder.setContentTitle(label)
-            .setContentText(timeOf(this, ring.request.scheduledAt))
+            .setContentText(TimeFormats.minuteOf(texts, ring.request.scheduledAt))
             .setContentIntent(screen)
+        if (queued > 0) builder.setSubText(texts.resources.getQuantityString(R.plurals.ring_queue, queued, queued))
         if (fullScreen) builder.setFullScreenIntent(screen, true)
-        if (snooze) builder.addAction(0, getString(R.string.ring_action_snooze), action(ACTION_SNOOZE, ring.alarmId))
-        builder.addAction(0, getString(R.string.ring_action_dismiss), action(ACTION_DISMISS, ring.alarmId))
+        if (snooze) builder.addAction(0, texts.getString(R.string.ring_action_snooze), action(ACTION_SNOOZE, ring.alarmId))
+        builder.addAction(0, texts.getString(R.string.ring_action_dismiss), action(ACTION_DISMISS, ring.alarmId))
         if (ring.occurrence != shown) {
             shown = ring.occurrence
             Log.i(TAG, "ring notification ${ring.alarmId} posted=${NotificationManagerCompat.from(this).areNotificationsEnabled()} fullScreen=$fullScreen snooze=$snooze")
@@ -231,15 +260,19 @@ class RingService : Service() {
             }
         }
 
+        /**
+         * Whether a new ring opens its screen directly (roadmap Q20, T87): the plugin may display over other apps and the
+         * device is not in use (screen off or locked). While the device is in use the heads-up notification is the alert.
+         * zh-CN: 新的响铃是否直接打开界面 (路线图 Q20, T87): 插件可显示在其他应用上层, 且设备未被使用 (熄屏或锁屏). 设备使用中时提醒是悬浮通知.
+         */
+        fun opensDirectly(context: Context): Boolean {
+            if (!Settings.canDrawOverlays(context)) return false
+            val interactive = context.getSystemService(PowerManager::class.java).isInteractive
+            return !interactive || context.getSystemService(KeyguardManager::class.java).isKeyguardLocked
+        }
+
         /** Whether the ringing screen may open over the lock screen by itself (T5). zh-CN: 响铃界面能否自行在锁屏上打开 (T5). */
         fun fullScreenAllowed(context: Context): Boolean =
             Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE || context.getSystemService(NotificationManager::class.java).canUseFullScreenIntent()
-
-        /** The time of a ring as the user reads it. zh-CN: 用户所见的响铃时间. */
-        fun timeOf(context: Context, millis: Long): String = DateUtils.formatDateTime(
-            context,
-            millis,
-            DateUtils.FORMAT_SHOW_TIME or (if (DateFormat.is24HourFormat(context)) DateUtils.FORMAT_24HOUR else DateUtils.FORMAT_12HOUR),
-        )
     }
 }

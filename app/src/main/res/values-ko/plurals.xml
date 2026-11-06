@@ -27,6 +27,18 @@
     <plurals name="home_unbind_done">
         <item quantity="other">스크립트 연결 %1$d개를 해제했습니다</item>
     </plurals>
+    <plurals name="ring_queue">
+        <item quantity="other">알람 %1$d개 더 있음</item>
+    </plurals>
+    <plurals name="ring_snooze_left">
+        <item quantity="other">다시 알림 %1$d회 남음</item>
+    </plurals>
+    <plurals name="ring_snooze_minutes">
+        <item quantity="other">%1$d분 후 다시 알림</item>
+    </plurals>
+    <plurals name="ring_snoozed_times">
+        <item quantity="other">다시 알림 %1$d회 사용</item>
+    </plurals>
     <plurals name="ringtones_delete_used">
         <item quantity="other">알람 %1$d개가 이 소리를 사용 중이며, 삭제 후에는 시스템 알람음이 울립니다.</item>
     </plurals>

@@ -27,6 +27,9 @@ internal class RingSpeaker(context: Context, private val speak: AlarmSpeak, priv
     interface Listener {
         fun onSpoken()
         fun onUnavailable()
+
+        /** The voice started ([speaking] true) or stopped speaking; the ring screen shows it (P3.2). zh-CN: 开始或停止朗读; 响铃界面据此显示 (P3.2). */
+        fun onSpeaking(speaking: Boolean)
     }
 
     private val main = Handler(Looper.getMainLooper())
@@ -73,9 +76,12 @@ internal class RingSpeaker(context: Context, private val speak: AlarmSpeak, priv
         }
         main.removeCallbacks(watchdog)
         main.postDelayed(watchdog, UTTERANCE_TIMEOUT_MILLIS)
+        listener.onSpeaking(true)
     }
 
     fun shutdown() {
+        if (utterance != null) listener.onSpeaking(false)
+        utterance = null
         failed = true
         main.removeCallbacks(initTimeout)
         main.removeCallbacks(watchdog)
@@ -137,6 +143,7 @@ internal class RingSpeaker(context: Context, private val speak: AlarmSpeak, priv
         utterance = null
         main.removeCallbacks(watchdog)
         Log.i(RingService.TAG, "speech $how")
+        listener.onSpeaking(false)
         listener.onSpoken()
     }
 
@@ -145,6 +152,10 @@ internal class RingSpeaker(context: Context, private val speak: AlarmSpeak, priv
         failed = true
         main.removeCallbacks(initTimeout)
         main.removeCallbacks(watchdog)
+        if (utterance != null) {
+            utterance = null
+            listener.onSpeaking(false)
+        }
         Log.w(RingService.TAG, "speech unavailable: $reason")
         main.post { listener.onUnavailable() }
     }

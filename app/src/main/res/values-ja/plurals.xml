@@ -27,6 +27,18 @@
     <plurals name="home_unbind_done">
         <item quantity="other">%1$d 件のスクリプト連携を解除しました</item>
     </plurals>
+    <plurals name="ring_queue">
+        <item quantity="other">ほかに %1$d 件のアラーム</item>
+    </plurals>
+    <plurals name="ring_snooze_left">
+        <item quantity="other">あと %1$d 回スヌーズできます</item>
+    </plurals>
+    <plurals name="ring_snooze_minutes">
+        <item quantity="other">スヌーズ %1$d 分</item>
+    </plurals>
+    <plurals name="ring_snoozed_times">
+        <item quantity="other">スヌーズ済み %1$d 回</item>
+    </plurals>
     <plurals name="ringtones_delete_used">
         <item quantity="other">%1$d 件のアラームがこの音を使っています. 削除後はシステムのアラーム音が鳴ります.</item>
     </plurals>

@@ -1,12 +1,13 @@
 package io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.appearance
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.content.res.Configuration
 import android.content.res.Resources
 import android.net.Uri
 import android.os.Bundle
 import android.os.LocaleList
-import android.os.SystemClock
+import android.os.UserManager
 import org.autojs.plugin.common.api.AutoJs6HostSettingsContract as C
 import java.util.Locale
 import java.util.concurrent.Executors
@@ -127,9 +128,22 @@ internal data class AppearancePreferences(
             return read(context).resolve(host, language, system.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES)
         }
 
-        private fun file(context: Context) = context.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+        /**
+         * Device-protected storage: the ring screen and the ring notification follow the plugin's choice before the
+         * first unlock too (roadmap Q21).
+         * zh-CN: 设备加密存储: 响铃界面与响铃通知在首次解锁前同样遵循插件的选择 (路线图 Q21).
+         */
+        internal fun file(context: Context): SharedPreferences =
+            context.applicationContext.createDeviceProtectedStorageContext().getSharedPreferences(FILE, Context.MODE_PRIVATE)
     }
 }
+
+/**
+ * A context whose resources speak the language of the plugin's screens (roadmap Q21), for texts shown outside them:
+ * notifications. It never reads the host provider.
+ * zh-CN: 资源语言与插件界面一致的上下文 (路线图 Q21), 用于界面之外的文字 (通知). 从不读取宿主 Provider.
+ */
+internal fun screenTexts(context: Context): Context = AppearancePreferences.resolve(context, HostAppearanceReader.cached(context)).wrap(context)
 
 /**
  * The official host settings Provider is the only source of the host appearance; missing access (no AutoJs6, a debug
@@ -137,17 +151,77 @@ internal data class AppearancePreferences(
  * zh-CN: 官方宿主设置 Provider 是宿主外观的唯一来源; 无法访问 (未装 AutoJs6, 调试签名, 旧宿主) 属于正常回退. 改编自 3-Block Compose.
  */
 internal object HostAppearanceReader {
-    private data class Cached(val value: HostAppearance, val readAt: Long)
-    private const val CACHE_TTL_MILLIS = 30_000L
-    @Volatile private var cache: Cached? = null
+    /** A known host state; [value] is null when AutoJs6 answered nothing. zh-CN: 已知的宿主状态; AutoJs6 没有应答时 [value] 为 null. */
+    private class Known(val value: HostAppearance?)
+    @Volatile private var known: Known? = null
     val worker = Executors.newSingleThreadExecutor { task -> Thread(task, "ChimeHostAppearance").apply { isDaemon = true } }
 
-    fun cached(): HostAppearance? = cache?.takeIf { SystemClock.elapsedRealtime() - it.readAt < CACHE_TTL_MILLIS }?.value
+    /** The remembered snapshot (roadmap Q21) and its keys. zh-CN: 记住的快照 (路线图 Q21) 与键名. */
+    internal const val FILE = "host-appearance"
+    private const val KEY_LANGUAGE = "language"
+    private const val KEY_DARK = "dark"
+    private const val KEY_PRIMARY = "primary"
+    private const val KEY_ACCENT = "accent"
 
-    /** Called only after a still-resumed Activity accepts the refresh, including a missing host. zh-CN: 仅在仍处于前台的 Activity 接受刷新后调用. */
-    fun accept(value: HostAppearance?) {
-        cache = value?.let { Cached(it, SystemClock.elapsedRealtime()) }
+    /**
+     * The last accepted host appearance, also in a new process and before the first unlock (roadmap Q21): the ring
+     * notification, the missed alarm notification and the first frame of every screen use it, so they speak the language
+     * of the screens; the host provider itself is only read on [worker] by a resumed screen.
+     * zh-CN: 最近接受的宿主外观, 新进程与首次解锁前同样可用 (路线图 Q21): 响铃通知, 错过闹钟通知与每个界面的首帧都用它, 因此与界面语言一致;
+     * 宿主 Provider 本身只由前台界面在 [worker] 上读取.
+     */
+    fun cached(context: Context): HostAppearance? {
+        known?.let { return it.value }
+        return load(context).also { known = Known(it) }
     }
+
+    /**
+     * Called only after a still-resumed Activity accepts the refresh, including a missing host. Before the first unlock
+     * the host provider cannot answer, so a missing host then keeps the remembered snapshot.
+     * zh-CN: 仅在仍处于前台的 Activity 接受刷新后调用, 包括宿主缺失. 首次解锁前宿主 Provider 无法应答, 此时的缺失保留记住的快照.
+     */
+    fun accept(context: Context, value: HostAppearance?) {
+        val current = known
+        if (!replaces(current != null, current?.value, value, unlocked(context))) return
+        known = Known(value)
+        runCatching {
+            val editor = file(context).edit().clear()
+            if (value != null) remember(value).forEach { (key, item) -> if (item is Boolean) editor.putBoolean(key, item) else editor.putString(key, item as String) }
+            editor.apply()
+        }
+    }
+
+    /**
+     * Whether an accepted [value] replaces the known state: a missing host before the first unlock never does, an
+     * unchanged one needs no write.
+     * zh-CN: 接受的 [value] 是否替换已知状态: 首次解锁前的宿主缺失从不替换, 未变化的值无需写入.
+     */
+    internal fun replaces(isKnown: Boolean, known: HostAppearance?, value: HostAppearance?, unlocked: Boolean): Boolean =
+        (value != null || unlocked) && !(isKnown && known == value)
+
+    /** The stored form of [value]; colors as hexadecimal text. zh-CN: [value] 的存储形式; 颜色写成十六进制文本. */
+    internal fun remember(value: HostAppearance): Map<String, Any> = mapOf(
+        KEY_LANGUAGE to value.language, KEY_DARK to value.dark,
+        KEY_PRIMARY to Integer.toHexString(value.primary), KEY_ACCENT to Integer.toHexString(value.accent),
+    )
+
+    /** The remembered appearance, or null when nothing valid is stored. zh-CN: 记住的外观; 没有有效内容时为 null. */
+    internal fun recall(values: Map<String, *>): HostAppearance? = runCatching {
+        val language = values[KEY_LANGUAGE] as? String ?: return@runCatching null
+        require(Locale.Builder().setLanguageTag(language).build().language.isNotEmpty())
+        val dark = values[KEY_DARK] as Boolean
+        fun color(key: String) = java.lang.Long.parseLong(values[key] as String, 16).toInt() or OPAQUE
+        HostAppearance(language, dark, color(KEY_PRIMARY), color(KEY_ACCENT))
+    }.getOrNull()
+
+    private fun load(context: Context): HostAppearance? = runCatching { recall(file(context).all) }.getOrNull()
+
+    private fun unlocked(context: Context): Boolean = context.getSystemService(UserManager::class.java)?.isUserUnlocked != false
+
+    private fun file(context: Context) =
+        context.applicationContext.createDeviceProtectedStorageContext().getSharedPreferences(FILE, Context.MODE_PRIVATE)
+
+    private const val OPAQUE = -0x1000000
 
     /** Must run on [worker]; keeps no Activity reference and closes the unstable client. zh-CN: 必须在 [worker] 上运行. */
     fun read(context: Context): HostAppearance? = runCatching {

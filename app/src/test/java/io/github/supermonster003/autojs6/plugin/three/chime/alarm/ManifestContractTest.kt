@@ -27,13 +27,14 @@ class ManifestContractTest {
     private val application: Element get() = manifest.child("application")
 
     @Test
-    fun `the permissions are exactly the plugin permission, the roadmap T4 set and the Q16 (a) network pair`() {
+    fun `the permissions are exactly the plugin permission, the roadmap T4 set with the T87 overlay and the Q16 (a) network pair`() {
         assertEquals(
             listOf(
                 PLUGIN_PERMISSION,
                 "android.permission.USE_EXACT_ALARM",
                 "android.permission.SCHEDULE_EXACT_ALARM",
                 "android.permission.USE_FULL_SCREEN_INTENT",
+                "android.permission.SYSTEM_ALERT_WINDOW",
                 "android.permission.POST_NOTIFICATIONS",
                 "android.permission.VIBRATE",
                 "android.permission.WAKE_LOCK",

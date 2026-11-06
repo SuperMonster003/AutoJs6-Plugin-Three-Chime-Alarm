@@ -47,6 +47,7 @@ internal object Permissions {
             notifications = compat.areNotificationsEnabled(),
             ringChannel = ringChannel,
             fullScreen = RingService.fullScreenAllowed(app),
+            overlay = Settings.canDrawOverlays(app),
             batteryUnrestricted = app.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(app.packageName),
             backgroundRestricted = background,
             autostart = AutostartVendor.of(Build.MANUFACTURER, Build.BRAND),
@@ -78,6 +79,15 @@ internal object Permissions {
             } else {
                 emptyList()
             }
+            PermissionRow.VENDOR_BANNER -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                listOf(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName))
+            } else {
+                emptyList()
+            }
+            PermissionRow.OVERLAY -> listOf(
+                Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, packageUri),
+                Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION),
+            )
             PermissionRow.BATTERY -> listOf(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
             PermissionRow.BACKGROUND -> emptyList()
             PermissionRow.AUTOSTART -> snapshot.autostart?.pages.orEmpty().map { (pkg, cls) -> Intent().setComponent(ComponentName(pkg, cls)) }

@@ -7,13 +7,16 @@
         Roadmap T4: the plugin is an alarm clock. USE_EXACT_ALARM is granted at install on API 33+, SCHEDULE_EXACT_ALARM
         covers API 31 - 32 (on API 24 - 30 exact alarms need no permission). The full screen intent, notifications,
         vibration, the wake lock and the boot broadcast serve ringing and rescheduling (roadmap T5 / T8). The ringing
-        foreground service type is the one roadmap P0.2 measured (T6).
+        foreground service type is the one roadmap P0.2 measured (T6). Display over other apps lets the ring service open
+        the ringing screen while the device is not in use where the system holds the full screen intent back (roadmap
+        Q20, T87); the user grants it from the permissions page; without it the full screen intent stays the only way.
     -->
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission
         android:name="android.permission.SCHEDULE_EXACT_ALARM"
         android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />

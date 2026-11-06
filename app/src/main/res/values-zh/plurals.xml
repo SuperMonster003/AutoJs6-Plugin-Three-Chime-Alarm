@@ -27,6 +27,18 @@
     <plurals name="home_unbind_done">
         <item quantity="other">已解除 %1$d 个脚本绑定</item>
     </plurals>
+    <plurals name="ring_queue">
+        <item quantity="other">还有 %1$d 个闹钟</item>
+    </plurals>
+    <plurals name="ring_snooze_left">
+        <item quantity="other">还可贪睡 %1$d 次</item>
+    </plurals>
+    <plurals name="ring_snooze_minutes">
+        <item quantity="other">贪睡 %1$d 分钟</item>
+    </plurals>
+    <plurals name="ring_snoozed_times">
+        <item quantity="other">已贪睡 %1$d 次</item>
+    </plurals>
     <plurals name="ringtones_delete_used">
         <item quantity="other">%1$d 个闹钟正在使用它, 删除后改响系统闹钟铃声.</item>
     </plurals>

@@ -54,6 +54,30 @@
         <item quantity="many">Отвязано %1$d скриптов</item>
         <item quantity="other">Отвязано %1$d скрипта</item>
     </plurals>
+    <plurals name="ring_queue">
+        <item quantity="one">Ещё %1$d будильник</item>
+        <item quantity="few">Ещё %1$d будильника</item>
+        <item quantity="many">Ещё %1$d будильников</item>
+        <item quantity="other">Ещё %1$d будильника</item>
+    </plurals>
+    <plurals name="ring_snooze_left">
+        <item quantity="one">Можно отложить ещё %1$d раз</item>
+        <item quantity="few">Можно отложить ещё %1$d раза</item>
+        <item quantity="many">Можно отложить ещё %1$d раз</item>
+        <item quantity="other">Можно отложить ещё %1$d раза</item>
+    </plurals>
+    <plurals name="ring_snooze_minutes">
+        <item quantity="one">Отложить на %1$d минуту</item>
+        <item quantity="few">Отложить на %1$d минуты</item>
+        <item quantity="many">Отложить на %1$d минут</item>
+        <item quantity="other">Отложить на %1$d минуты</item>
+    </plurals>
+    <plurals name="ring_snoozed_times">
+        <item quantity="one">Отложен %1$d раз</item>
+        <item quantity="few">Отложен %1$d раза</item>
+        <item quantity="many">Отложен %1$d раз</item>
+        <item quantity="other">Отложен %1$d раза</item>
+    </plurals>
     <plurals name="ringtones_delete_used">
         <item quantity="one">Её использует %1$d будильник, он будет звонить системной мелодией.</item>
         <item quantity="few">Её используют %1$d будильника, они будут звонить системной мелодией.</item>

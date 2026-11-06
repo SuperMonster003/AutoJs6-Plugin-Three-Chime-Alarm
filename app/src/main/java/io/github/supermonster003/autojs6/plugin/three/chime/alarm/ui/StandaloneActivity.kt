@@ -77,7 +77,7 @@ abstract class StandaloneActivity : ComponentActivity() {
     private var refreshGeneration = 0
 
     override fun attachBaseContext(newBase: Context) {
-        appearance = AppearancePreferences.resolve(newBase, HostAppearanceReader.cached())
+        appearance = AppearancePreferences.resolve(newBase, HostAppearanceReader.cached(newBase))
         super.attachBaseContext(appearance.wrap(newBase))
     }
 
@@ -85,19 +85,26 @@ abstract class StandaloneActivity : ComponentActivity() {
         palette = ChimePalette.resolve(appearance)
         applyWindowAppearance()
         super.onCreate(savedInstanceState)
-        LauncherIcons.normalizeAsync(this)
+        if (normalizesLauncherIcons) LauncherIcons.normalizeAsync(this)
         setContent { ChimeTheme(palette) { Content() } }
     }
 
     @Composable
     protected abstract fun Content()
 
+    /**
+     * Whether opening the screen checks the launcher entry (T22); the ring screen skips it, as it may open before the
+     * first unlock and must open fast.
+     * zh-CN: 打开界面时是否检查启动器入口 (T22); 响铃界面跳过, 因为它可能在首次解锁前打开, 且必须尽快显示.
+     */
+    protected open val normalizesLauncherIcons: Boolean get() = true
+
     /** True while the screen must not be recreated for an appearance change. zh-CN: 为真时不因外观变化重建界面. */
     protected open fun holdsAppearance(): Boolean = false
 
     override fun onResume() {
         super.onResume()
-        refreshIfChanged(AppearancePreferences.resolve(this, HostAppearanceReader.cached()))
+        refreshIfChanged(AppearancePreferences.resolve(this, HostAppearanceReader.cached(this)))
         val expected = ++refreshGeneration
         val owner = WeakReference(this)
         val application = applicationContext
@@ -105,7 +112,7 @@ abstract class StandaloneActivity : ComponentActivity() {
             val snapshot = HostAppearanceReader.read(application)
             main.post {
                 owner.get()?.takeIf { !it.isFinishing && !it.isDestroyed && it.refreshGeneration == expected }?.let { activity ->
-                    HostAppearanceReader.accept(snapshot)
+                    HostAppearanceReader.accept(application, snapshot)
                     activity.refreshIfChanged(AppearancePreferences.resolve(application, snapshot))
                 }
             }
@@ -124,7 +131,7 @@ abstract class StandaloneActivity : ComponentActivity() {
 
     /** Called by the settings screen after a confirmed appearance change. zh-CN: 设置页确认外观变化后调用. */
     internal fun applyAppearanceChange() {
-        val next = AppearancePreferences.resolve(this, HostAppearanceReader.cached())
+        val next = AppearancePreferences.resolve(this, HostAppearanceReader.cached(this))
         if (next != appearance) recreate()
     }
 

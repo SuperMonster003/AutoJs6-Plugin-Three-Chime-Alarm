@@ -27,6 +27,18 @@
     <plurals name="home_unbind_done">
         <item quantity="other">已解除 %1$d 個腳本綁定</item>
     </plurals>
+    <plurals name="ring_queue">
+        <item quantity="other">還有 %1$d 個鬧鐘</item>
+    </plurals>
+    <plurals name="ring_snooze_left">
+        <item quantity="other">還可貪睡 %1$d 次</item>
+    </plurals>
+    <plurals name="ring_snooze_minutes">
+        <item quantity="other">貪睡 %1$d 分鐘</item>
+    </plurals>
+    <plurals name="ring_snoozed_times">
+        <item quantity="other">已貪睡 %1$d 次</item>
+    </plurals>
     <plurals name="ringtones_delete_used">
         <item quantity="other">%1$d 個鬧鐘正在使用它, 刪除後改為播放系統鬧鐘鈴聲.</item>
     </plurals>

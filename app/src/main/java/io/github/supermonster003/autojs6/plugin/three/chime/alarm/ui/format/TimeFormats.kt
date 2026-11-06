@@ -74,6 +74,23 @@ object TimeFormats {
         return time(context, local.hour, local.minute, local.second)
     }
 
+    /**
+     * The time of day of [millis] in [zone] to the minute, as the ring screen and its notification show it.
+     * zh-CN: [millis] 在 [zone] 中精确到分钟的时刻, 用于响铃界面与响铃通知.
+     */
+    fun minuteOf(context: Context, millis: Long, zone: ZoneId = ZoneId.systemDefault()): String {
+        val local = Instant.ofEpochMilli(millis).atZone(zone).toLocalTime()
+        return time(context, local.hour, local.minute)
+    }
+
+    /**
+     * The date and time of day of [millis] in [zone] to the minute ("Nov 6, 07:30"), as the missed alarm notification
+     * shows it.
+     * zh-CN: [millis] 在 [zone] 中的日期与精确到分钟的时刻 ("11月6日 07:30"), 用于错过闹钟通知.
+     */
+    fun dateTimeOf(context: Context, millis: Long, zone: ZoneId = ZoneId.systemDefault()): String =
+        formatter(context, "MMMd" + if (is24Hour(context)) "Hm" else "hm").format(Instant.ofEpochMilli(millis).atZone(zone))
+
     /** "Today", "Tomorrow" or "Wed, Nov 12" for the day of [millis]. zh-CN: [millis] 所在日期: "今天", "明天" 或 "11月12日 周三". */
     fun dayOf(context: Context, millis: Long, zone: ZoneId = ZoneId.systemDefault(), today: LocalDate = LocalDate.now(zone)): String {
         val day = Instant.ofEpochMilli(millis).atZone(zone).toLocalDate()

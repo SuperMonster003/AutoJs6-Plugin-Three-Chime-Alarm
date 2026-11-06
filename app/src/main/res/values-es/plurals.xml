@@ -45,6 +45,26 @@
         <item quantity="many">Se desvincularon %1$d scripts</item>
         <item quantity="other">Se desvincularon %1$d scripts</item>
     </plurals>
+    <plurals name="ring_queue">
+        <item quantity="one">%1$d alarma más</item>
+        <item quantity="many">%1$d alarmas más</item>
+        <item quantity="other">%1$d alarmas más</item>
+    </plurals>
+    <plurals name="ring_snooze_left">
+        <item quantity="one">Se puede posponer %1$d vez más</item>
+        <item quantity="many">Se puede posponer %1$d veces más</item>
+        <item quantity="other">Se puede posponer %1$d veces más</item>
+    </plurals>
+    <plurals name="ring_snooze_minutes">
+        <item quantity="one">Posponer %1$d minuto</item>
+        <item quantity="many">Posponer %1$d minutos</item>
+        <item quantity="other">Posponer %1$d minutos</item>
+    </plurals>
+    <plurals name="ring_snoozed_times">
+        <item quantity="one">Pospuesta %1$d vez</item>
+        <item quantity="many">Pospuesta %1$d veces</item>
+        <item quantity="other">Pospuesta %1$d veces</item>
+    </plurals>
     <plurals name="ringtones_delete_used">
         <item quantity="one">%1$d alarma lo usa y sonará con el sonido de alarma del sistema.</item>
         <item quantity="many">%1$d alarmas lo usan y sonarán con el sonido de alarma del sistema.</item>

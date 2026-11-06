@@ -91,11 +91,16 @@ internal class RingSession(context: Context, private val runtime: AlarmRuntime, 
         player.release()
         vibrator.stop()
         speaker?.shutdown()
+        RingIndicators.setSpeaking(occurrence, false)
         Log.i(RingService.TAG, "ring session ${ring.alarmId} ended")
     }
 
     override fun onSpoken() {
         director?.let { perform(it.spoken(now())) }
+    }
+
+    override fun onSpeaking(speaking: Boolean) {
+        RingIndicators.setSpeaking(occurrence, speaking && !stopped)
     }
 
     override fun onUnavailable() {

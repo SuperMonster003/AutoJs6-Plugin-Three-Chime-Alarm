@@ -8,8 +8,9 @@ import org.junit.Test
 
 /**
  * Roadmap P3.4 (T82): the states, the banner rows and the tappable rows of the permissions page on plain values, per
- * Android version, and the vendors whose autostart page the page opens.
- * zh-CN: 路线图 P3.4 (T82): 以普通值按 Android 版本检查权限页各行的状态, 横幅列出的行与可点按的行, 以及权限页会打开其自启动页的厂商.
+ * Android version, the vendors whose autostart page the page opens, and the ColorOS banner and overlay rows (Q20, T87).
+ * zh-CN: 路线图 P3.4 (T82): 以普通值按 Android 版本检查权限页各行的状态, 横幅列出的行与可点按的行, 权限页会打开其自启动页的厂商, 以及 ColorOS 横幅与
+ * 悬浮窗两行 (Q20, T87).
  */
 class PermissionSnapshotTest {
 
@@ -19,10 +20,21 @@ class PermissionSnapshotTest {
         notifications: Boolean = true,
         ringChannel: Boolean = true,
         fullScreen: Boolean = true,
+        overlay: Boolean = false,
         batteryUnrestricted: Boolean = true,
         backgroundRestricted: Boolean = false,
         autostart: AutostartVendor? = null,
-    ) = PermissionSnapshot(sdk, exactAlarm, notifications, ringChannel, fullScreen, batteryUnrestricted, backgroundRestricted, autostart)
+    ) = PermissionSnapshot(
+        sdk = sdk,
+        exactAlarm = exactAlarm,
+        notifications = notifications,
+        ringChannel = ringChannel,
+        fullScreen = fullScreen,
+        overlay = overlay,
+        batteryUnrestricted = batteryUnrestricted,
+        backgroundRestricted = backgroundRestricted,
+        autostart = autostart,
+    )
 
     @Test
     fun `everything allowed shows no banner on every version`() {
@@ -90,6 +102,8 @@ class PermissionSnapshotTest {
         assertTrue(snapshot(34).actionable(PermissionRow.FULL_SCREEN))
         assertFalse(snapshot(27).actionable(PermissionRow.BACKGROUND))
         for (sdk in listOf(24, 34)) {
+            assertTrue(snapshot(sdk).actionable(PermissionRow.VENDOR_BANNER))
+            assertTrue(snapshot(sdk).actionable(PermissionRow.OVERLAY))
             assertTrue(snapshot(sdk).actionable(PermissionRow.NOTIFICATIONS))
             assertTrue(snapshot(sdk).actionable(PermissionRow.BATTERY))
             assertTrue(snapshot(sdk).actionable(PermissionRow.AUTOSTART))
@@ -98,8 +112,37 @@ class PermissionSnapshotTest {
 
     @Test
     fun `the autostart row shows on known vendors only`() {
-        assertEquals(PermissionRow.entries - PermissionRow.AUTOSTART, snapshot(35).rows)
+        val vendorRows = setOf(PermissionRow.AUTOSTART, PermissionRow.VENDOR_BANNER, PermissionRow.OVERLAY)
+        assertEquals(PermissionRow.entries - vendorRows, snapshot(35).rows)
+        assertEquals(PermissionRow.entries - PermissionRow.VENDOR_BANNER - PermissionRow.OVERLAY, snapshot(35, autostart = AutostartVendor.XIAOMI).rows)
         assertEquals(PermissionRow.entries.toList(), snapshot(35, autostart = AutostartVendor.OPPO).rows)
+    }
+
+    @Test
+    fun `ColorOS guides to the banner notifications and advises the overlay (Q20, T87)`() {
+        val colorOs = snapshot(35, autostart = AutostartVendor.of("OnePlus", "OnePlus"))
+        assertTrue(colorOs.colorOs)
+        assertTrue(PermissionRow.VENDOR_BANNER in colorOs.rows)
+        assertEquals("the system does not report the banner state", RowState.UNKNOWN, colorOs.state(PermissionRow.VENDOR_BANNER))
+        assertEquals(RowState.ADVISED, colorOs.state(PermissionRow.OVERLAY))
+        assertEquals("neither row joins the alarm list banner", emptyList<PermissionRow>(), colorOs.missing)
+        assertEquals(RowState.OK, snapshot(35, overlay = true, autostart = AutostartVendor.OPPO).state(PermissionRow.OVERLAY))
+        assertFalse(snapshot(35, autostart = AutostartVendor.VIVO).colorOs)
+    }
+
+    @Test
+    fun `the overlay row shows where it helps or once it is allowed (T87)`() {
+        assertFalse("full screen intents allowed", PermissionRow.OVERLAY in snapshot(35).rows)
+        assertTrue("full screen intents refused", PermissionRow.OVERLAY in snapshot(35, fullScreen = false).rows)
+        assertFalse("no full screen setting below API 34", PermissionRow.OVERLAY in snapshot(33, fullScreen = false).rows)
+        val allowed = snapshot(30, overlay = true)
+        assertTrue("allowed: shown so it can be withdrawn", PermissionRow.OVERLAY in allowed.rows)
+        assertEquals(RowState.OK, allowed.state(PermissionRow.OVERLAY))
+        assertEquals(
+            "the full screen row stays the missing one",
+            listOf(PermissionRow.FULL_SCREEN),
+            snapshot(35, fullScreen = false).missing,
+        )
     }
 
     @Test

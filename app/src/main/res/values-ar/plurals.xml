@@ -72,6 +72,38 @@
         <item quantity="many">تم إلغاء ربط %1$d برنامجا نصيا</item>
         <item quantity="other">تم إلغاء ربط %1$d برنامج نصي</item>
     </plurals>
+    <plurals name="ring_queue">
+        <item quantity="zero">%1$d منبه آخر</item>
+        <item quantity="one">منبه واحد آخر</item>
+        <item quantity="two">منبهان آخران</item>
+        <item quantity="few">%1$d منبهات أخرى</item>
+        <item quantity="many">%1$d منبها آخر</item>
+        <item quantity="other">%1$d منبه آخر</item>
+    </plurals>
+    <plurals name="ring_snooze_left">
+        <item quantity="zero">يمكن الغفوة %1$d مرة أخرى</item>
+        <item quantity="one">يمكن الغفوة مرة واحدة أخرى</item>
+        <item quantity="two">يمكن الغفوة مرتين أخريين</item>
+        <item quantity="few">يمكن الغفوة %1$d مرات أخرى</item>
+        <item quantity="many">يمكن الغفوة %1$d مرة أخرى</item>
+        <item quantity="other">يمكن الغفوة %1$d مرة أخرى</item>
+    </plurals>
+    <plurals name="ring_snooze_minutes">
+        <item quantity="zero">غفوة %1$d دقيقة</item>
+        <item quantity="one">غفوة دقيقة واحدة</item>
+        <item quantity="two">غفوة دقيقتين</item>
+        <item quantity="few">غفوة %1$d دقائق</item>
+        <item quantity="many">غفوة %1$d دقيقة</item>
+        <item quantity="other">غفوة %1$d دقيقة</item>
+    </plurals>
+    <plurals name="ring_snoozed_times">
+        <item quantity="zero">تمت الغفوة %1$d مرة</item>
+        <item quantity="one">تمت الغفوة مرة واحدة</item>
+        <item quantity="two">تمت الغفوة مرتين</item>
+        <item quantity="few">تمت الغفوة %1$d مرات</item>
+        <item quantity="many">تمت الغفوة %1$d مرة</item>
+        <item quantity="other">تمت الغفوة %1$d مرة</item>
+    </plurals>
     <plurals name="ringtones_delete_used">
         <item quantity="zero">لا يستخدمه أي منبه.</item>
         <item quantity="one">يستخدمه منبه واحد, وسيرن بصوت منبه النظام بدلا منه.</item>

@@ -7,7 +7,9 @@ package io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.permission
 internal enum class PermissionRow(val tag: String) {
     EXACT_ALARM("exactAlarm"),
     NOTIFICATIONS("notifications"),
+    VENDOR_BANNER("vendorBanner"),
     FULL_SCREEN("fullScreen"),
+    OVERLAY("overlay"),
     BATTERY("battery"),
     BACKGROUND("background"),
     AUTOSTART("autostart"),
@@ -27,7 +29,7 @@ internal enum class RowState {
     /** This Android version needs nothing. zh-CN: 此 Android 版本无需设置. */
     NOT_NEEDED,
 
-    /** The system does not report the state (vendor autostart): guidance only. zh-CN: 系统不提供状态 (厂商自启动): 只作引导. */
+    /** The system does not report the state (vendor autostart, ColorOS banner): guidance only. zh-CN: 系统不提供状态 (厂商自启动, ColorOS 横幅): 只作引导. */
     UNKNOWN,
 }
 
@@ -37,10 +39,16 @@ internal enum class RowState {
  * as missing when the app's notifications or its ring channel are off (T69); the background restriction (API 28+) is
  * missing too, as the system then ignores the ringing foreground service. Battery optimization is advice only: the
  * alarm clock wake-ups are exempt from Doze. [autostart] is the vendor whose autostart page the row opens, or null on
- * systems without one (the row is hidden).
+ * systems without one (the row is hidden). On ColorOS (OPPO, OnePlus, realme) the app's "Banner" notifications decide
+ * whether the full screen intent opens at all (roadmap Q20, T87): the system reports no state for them, so that row
+ * only guides. [overlay] (display over other apps) lets the ring service open the ringing screen directly while the
+ * device is not in use; its row is advice and shows where it helps (ColorOS, or a full screen intent that is not
+ * allowed) or once it is allowed.
  * zh-CN: 权限页与闹钟列表横幅显示的内容 (路线图 P3.4, T82), 每次恢复时重新读取. 精确闹钟一行与 `capabilities().permissions.exactAlarm` 读同一个
  * `canScheduleExact()` (T60); 应用通知或响铃通知类别关闭时通知算作缺失 (T69); 后台限制 (API 28+) 也算缺失, 此时系统会忽略响铃前台服务. 电池优化只是
- * 建议: 闹钟时钟唤醒不受 Doze 推迟. [autostart] 是该行打开其自启动页的厂商, 没有这类页面的系统为 null (隐藏该行).
+ * 建议: 闹钟时钟唤醒不受 Doze 推迟. [autostart] 是该行打开其自启动页的厂商, 没有这类页面的系统为 null (隐藏该行). 在 ColorOS (OPPO, OnePlus, realme)
+ * 上, 应用的 "横幅" 通知决定全屏 Intent 是否打开 (路线图 Q20, T87): 系统不报告其状态, 因此该行只作引导. [overlay] (悬浮窗) 让响铃服务在设备未被
+ * 使用时直接打开响铃界面; 该行只是建议, 在有用处的地方 (ColorOS, 或全屏 Intent 未被允许) 或已允许时显示.
  */
 internal data class PermissionSnapshot(
     val sdk: Int,
@@ -48,14 +56,30 @@ internal data class PermissionSnapshot(
     val notifications: Boolean,
     val ringChannel: Boolean,
     val fullScreen: Boolean,
+    val overlay: Boolean,
     val batteryUnrestricted: Boolean,
     val backgroundRestricted: Boolean,
     val autostart: AutostartVendor?,
 ) {
 
+    /** Whether the system is ColorOS, where the app's "Banner" notifications gate the full screen intent (Q20). zh-CN: 系统是否为 ColorOS, 其应用 "横幅" 通知决定全屏 Intent (Q20). */
+    val colorOs: Boolean
+        get() = autostart == AutostartVendor.OPPO
+
+    /** Whether opening the ringing screen directly helps here (T87). zh-CN: 直接打开响铃界面在此是否有用处 (T87). */
+    val overlayHelps: Boolean
+        get() = colorOs || (sdk >= API_FULL_SCREEN && !fullScreen)
+
     /** The visible rows in display order. zh-CN: 按显示顺序的可见行. */
     val rows: List<PermissionRow>
-        get() = PermissionRow.entries.filter { it != PermissionRow.AUTOSTART || autostart != null }
+        get() = PermissionRow.entries.filter {
+            when (it) {
+                PermissionRow.AUTOSTART -> autostart != null
+                PermissionRow.VENDOR_BANNER -> colorOs
+                PermissionRow.OVERLAY -> overlay || overlayHelps
+                else -> true
+            }
+        }
 
     /** The rows the alarm list banner reports (T82). zh-CN: 闹钟列表横幅报告的行 (T82). */
     val missing: List<PermissionRow>
@@ -68,11 +92,13 @@ internal data class PermissionSnapshot(
             else -> RowState.MISSING
         }
         PermissionRow.NOTIFICATIONS -> if (notifications && ringChannel) RowState.OK else RowState.MISSING
+        PermissionRow.VENDOR_BANNER -> RowState.UNKNOWN
         PermissionRow.FULL_SCREEN -> when {
             sdk < API_FULL_SCREEN -> RowState.NOT_NEEDED
             fullScreen -> RowState.OK
             else -> RowState.MISSING
         }
+        PermissionRow.OVERLAY -> if (overlay) RowState.OK else RowState.ADVISED
         PermissionRow.BATTERY -> if (batteryUnrestricted) RowState.OK else RowState.ADVISED
         PermissionRow.BACKGROUND -> when {
             sdk < API_BACKGROUND_RESTRICTION -> RowState.NOT_NEEDED
@@ -92,7 +118,7 @@ internal data class PermissionSnapshot(
         PermissionRow.EXACT_ALARM -> sdk in API_EXACT_ALARM until API_USE_EXACT_ALARM || state(row) == RowState.MISSING
         PermissionRow.FULL_SCREEN -> sdk >= API_FULL_SCREEN
         PermissionRow.BACKGROUND -> sdk >= API_BACKGROUND_RESTRICTION
-        PermissionRow.NOTIFICATIONS, PermissionRow.BATTERY, PermissionRow.AUTOSTART -> true
+        PermissionRow.NOTIFICATIONS, PermissionRow.VENDOR_BANNER, PermissionRow.OVERLAY, PermissionRow.BATTERY, PermissionRow.AUTOSTART -> true
     }
 
     /** Whether the notification row asks the runtime permission (API 33+) instead of opening the settings. zh-CN: 通知一行是否申请运行时权限 (API 33+) 而非打开设置. */
