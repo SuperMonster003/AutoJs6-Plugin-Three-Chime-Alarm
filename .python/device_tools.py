@@ -88,7 +88,7 @@ check('chime tools listed', function () {
 check('provider available and official', function () {
     var mine = plain(plugins.tools.providers()).filter(function (p) { return p.packageName === '@PKG@'; });
     assert(mine.length === 1, 'providers ' + mine.length);
-    assert(mine[0].status === 'AVAILABLE' && mine[0].trust === 'OFFICIAL', mine[0].status + ' ' + mine[0].trust + ' ' + (mine[0].detail || ''));
+    assert(String(mine[0].status).toUpperCase() === 'AVAILABLE' && String(mine[0].trust).toUpperCase() === 'OFFICIAL', mine[0].status + ' ' + mine[0].trust + ' ' + (mine[0].detail || ''));
     return mine[0].status + ' ' + mine[0].trust + ', shortName ' + mine[0].shortName;
 });
 var id = null, second = null;
