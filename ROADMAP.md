@@ -12,7 +12,7 @@
 2. 条目完成后勾选 `[x]`, 并在条目后追加证据 (提交 hash / 测试类名 / 设备型号与 API / 度量值), 证据等级见附录 C. 未勾选条目属于规划意向, 不代表当前版本能力.
 3. 条目前缀标明主要落点: `(插件)` 本仓库, `(宿主)` `D:/idea-projects/AutoJs6`, `(资产)` `D:/idea-projects/AutoJs6-Shared-Assets`, `(索引)` `D:/idea-projects/AutoJs6-Official-Plugins-Index`, `(文档)` AutoJs6-Documentation / AutoJs6-TypeScript-Declarations / AutoJs6-Plugin-Ace-Editor / AutoJs6-Plugin-Offline-Docs, `(测试)` 真机或 AVD 验证, `(发布)` 版本, tag, Release 与索引.
 4. 涉及宿主公开契约 (alarm 契约, 脚本 API) 的条目, 完成后必须同步宿主 `docs/dev/alarm-plugin-protocol-v1.md`, 宿主 `.changelog` (10 种语言同时写全并翻译; 2026-11-05 起按工作区规则 `.claude/rules/all-languages.md`, 不再只写 zh-Hans) 与本仓库 `.changelog` (同样 10 种语言). 宿主侧提交只落本地, 由维护者合并与推送. 宿主工作区多会话共用: 只提交自己的文件, 不推送, 不切分支, 不碰其他会话在改的文件, 宿主构建与其他会话排队.
-5. 第 1 节 "固定决策" (D1 - D25) 由维护者确认, 后续阶段不再重新讨论; 第 2 节 "派生技术决策" (T1 - T25) 可在进入对应阶段前推翻 (推翻点已逐条标注), 之后视同固定; 附录 B "待决事项" (Q7 起; Q1 - Q6 已转为 D20 - D25, 编号不复用) 在进入对应阶段前由维护者拍板 (调度会话用选择题提问), 拍板结果回填到附录 B 与对应决策行. 子会话新增的派生决策从 T26 起编号, 新增的待决事项从 Q10 起编号 (2026-11-06 现状: 派生决策已用到 T83, 下一个为 T84; 待决已用到 Q16, Q17 - Q19 留给宿主子会话 chime-host-q14, 插件侧新待决从 Q20 起).
+5. 第 1 节 "固定决策" (D1 - D25) 由维护者确认, 后续阶段不再重新讨论; 第 2 节 "派生技术决策" (T1 - T25) 可在进入对应阶段前推翻 (推翻点已逐条标注), 之后视同固定; 附录 B "待决事项" (Q7 起; Q1 - Q6 已转为 D20 - D25, 编号不复用) 在进入对应阶段前由维护者拍板 (调度会话用选择题提问), 拍板结果回填到附录 B 与对应决策行. 子会话新增的派生决策从 T26 起编号, 新增的待决事项从 Q10 起编号 (2026-11-06 现状: 派生决策已用到 T84, 下一个为 T85; 待决已用到 Q16, Q17 - Q19 留给宿主子会话 chime-host-q14, 插件侧新待决从 Q20 起).
 6. 本仓库骨架 (Gradle / Manifest / 资源 / CI) 在 P0 按 `D:/idea-projects/AUTOJS6_PLUGIN_NEW_REPO_AGENTS.md` 生成, 其裁剪版即本仓库 `AGENTS.md`; 命名与身份派生按 `AUTOJS6_PLUGIN_THREE_SERIES_RENAME_AGENTS.md` 第 3 节 (Chime 为 5 字母单词); 图标按 `AUTOJS6_PLUGIN_BLACK_N_WHITE_ADAPTIVE_ICON_AGENTS.md`; 独立界面按 `AUTOJS6_PLUGIN_STANDALONE_SETTINGS_AGENTS.md`; 全部用户可见文案只用 ASCII 标点, 阿拉伯语里的品牌名 `3-Chime Alarm` 用 FSI / PDI 包裹 (Three 系列既有做法).
 7. 2026-11-05 的立项会话只落盘本路线图并 `git init` + 首次提交, 同时建看板 `D:/idea-projects/.claude/boards/3-chime.md` 与调度会话; 之后按 `AGENTS.md` 的提交规则工作 (每笔提交前 `VERSION_BUILD` = 当前提交数 + 1).
 
@@ -141,6 +141,7 @@ T1 - T18 来自设计稿 (2026-11-03), T19 - T25 为立项时补充, T26 起由�
 | T81 | `alarms.openPlugin(page)` 的入口: 无窗口跳板 `ui.OpenPluginActivity` (`Theme.NoDisplay`, `excludeFromRecents`, `taskAffinity=""`, `exported=true` 且不要求权限, intent-filter 为冻结的 `org.autojs.plugin.alarm.OPEN` + `DEFAULT`) 读可选的 `EXTRA_PAGE` 转到对应页面: 缺省与 `alarms` 为闹钟列表, `permissions` 为权限页 (P3.4), `settings` 为设置页 (P3.5); 1.1.0 之前的 `timers` / `stopwatch` 与未知值打开闹钟列表并记日志, 不报错; 各页面本身不导出, 外部只能经由跳板与启动器进入 | 跳板只显示插件自己的界面, 与启动器图标同等, 无需签名权限; 宿主只用一个冻结 action, 页面增减不改 Manifest; 未知页面退回列表, 新旧宿主与插件互配时调用不会失败; 宿主以 `FLAG_ACTIVITY_NEW_TASK` 启动, 跳板若带默认亲和性就成为插件任务的根, 下一次调用只把该任务带到前台而不进 `onCreate`, 页面参数随之丢失 (P2 收尾在 XQ-AT72 上发现), 因此不设亲和性 | 已固定 (P2 收尾, chime-p3); `permissions` 已随 P3.4 接入 (T82), `settings` 随 P3.5 接入 |
 | T82 | 权限页与列表横幅: 权限页六行 (精确闹钟, 通知 (含响铃通知类别), 全屏通知, 电池优化, 后台限制, 厂商自启动), 每次恢复时重读状态; 精确闹钟与 `capabilities().permissions.exactAlarm` 读同一个 `canScheduleExact()` (T60), API 31 - 32 跳 `ACTION_REQUEST_SCHEDULE_EXACT_ALARM`, API 33+ 显示安装时已允许 (`USE_EXACT_ALARM`), 仍缺失时跳应用详情; 通知在应用通知或 `ring` 类别关闭时缺失 (T69), API 33+ 先申请运行时权限, 系统不再显示申请 (第二次拒绝) 后改开应用通知设置, 只关了类别时开该类别的设置; 全屏通知 API 34+ 跳 `ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT`; 后台限制 (API 28+ `isBackgroundRestricted()`) 跳应用详情; 电池优化只作建议, 跳 `ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS`; 自启动只在已知厂商 (小米 / Redmi / POCO, OPPO / 一加 / realme, vivo / iQOO, 华为, 荣耀, 华硕) 显示, 依次尝试其页面, 系统不报告状态, 只作引导; 任何一行的页面都打不开时退回应用详情, 连应用详情也打不开时提示. 闹钟列表顶部横幅列出全部缺失项 (精确闹钟, 通知, 全屏通知, 后台限制), 多选时隐藏, 点按打开权限页 | 横幅只报会让闹钟不响或响铃时没有界面的项, 不为建议项打扰用户; 后台限制让 HyperOS 静默忽略响铃前台服务 (Xiaomi Pad 实测), 后果与缺权限相同; 闹钟时钟唤醒不受 Doze 推迟, 电池优化不必强求; 厂商自启动开关没有公开接口, 只能引导 | 已固定 (P3.4, chime-p3) |
 | T83 | 编辑页: `ui.edit.EditAlarmActivity` 由列表行, 新建按钮与空态打开; `SET_ALARM` 不带 `EXTRA_SKIP_UI` 或不带时间时改开同一页面的 `ClockDraftActivity` (`excludeFromRecents`, `taskAffinity=""`, 预填 Intent 的值, 以来源 `intent` 经 T79 的复用规则保存并报告结果行), `ClockDialogActivity` 只留 `DISMISS_ALARM` 的多选一 (T80). 新建闹钟默认下一个整点, 日期 "自动" (T48 隐式日期; 编辑页选 "自动" 时 `update(..., implicitDate = true)` 丢弃已存日期并重新补上); 编辑现有闹钟只提交改动的字段, 未改动时不写入. 铃声 / 贪睡 / 自动停止的 "默认" 存为未设置 (null), 跟随 P3.5 的插件设置; 朗读 `mode` 未设置时保持 null (按 `after` 响铃). 重复预设 (一次 / 每天 / 周一至周五 / 周末 / 自选星期 / 高级规则) 的文案与 `repeatText` 一致 (T51, 中文不写 "工作日"); 高级规则编辑器的表单与 RRULE 文本双向同步 (文本可解析时重建表单, 表单有效时改写文本, 无效时显示错误且不能应用), 说明用 `RepeatText`, 预览为按现在保存时的接下来 5 次 (`NextOccurrence.preview`). 排除日期只能选今天及以后, 最多 366 个; 时区列表为全部 `ZoneId` (去掉 `SystemV/`), 可搜索; 顶部横幅只列单个闹钟响铃所需的精确闹钟 / 通知 / 全屏通知 (T82 的同一份快照), 点按打开权限页; 有未保存改动时返回先确认放弃. 铃声试听不在编辑页 (P3.3) | 编辑页要同时服务用户与系统时钟 Intent, 一套页面避免两套表单不一致; "默认" 跟随设置才能让 P3.5 的默认值对旧闹钟生效; 预设与描述同文避免与 1.2.0 的节假日工作日混淆 | P3.1 |
+| T84 | 插件默认值与自动检查更新 (P3.5): 闹钟省略的 `sound.source` / `vibrate` / `snooze` (含只省略 `minutes` 或 `max`) / `autoSilenceMinutes` 在响铃时取设置页的插件默认值 (`RingDefaultsStore`, 设备加密存储, 首次解锁前也能读; 出厂值即协议默认: `default` 铃声, 振动, 贪睡 10 分钟至多 3 次, 自动停止 10 分钟; 有关闭挑战 (1.3.0) 时自动停止至少 30 分钟). 默认值在开始响铃时读取 (进程重建后恢复响铃时重新读取), 改设置只影响之后的响铃; 闹钟本身不存默认值, `get()` / `list()` 仍报未设置. 自动检查更新: 频率为关闭 / 每 12 小时 (默认) / 每天一次 / 每周一次, 只在闹钟列表首次创建时检查; 无网络时跳过, 计量网络默认跳过 (设置页 "在计量网络上检查", 默认关), 跳过不记为已尝试, 时钟被调回视为到期; 手动检查不受频率与网络类型限制. 设置页分组: 外观四项, 闹钟默认值四项, 地区与格式 (时间格式: 跟随系统 / 12 / 24 小时), 关于 (版本, 发行历史, 检查更新, 自动检查频率, 计量网络, 已忽略更新, 许可与声明); 1.2.0 节假日地区与 1.3.0 紧急解除的位置在代码中预留 | "默认" 跟随设置, 用户改一处即影响所有未单独设置的闹钟, T83 的 "默认" 才有意义; 设备加密存储避免重启后首次解锁前响铃读不到; 只在打开列表时检查, 不在后台联网, 计量网络默认不检查以省流量 | 已固定 (P3.5) |
 
 ---
 
@@ -411,6 +412,8 @@ P0 (插件骨架, 含 P0.2 评估)          P1.1 - P1.3 (宿主契约, 桥接, �
 ### P3.5 设置页与发行历史
 
 - [ ] (插件) 按 STANDALONE_SETTINGS 规范: 外观四项 (默认跟随宿主), 默认贪睡 / 默认自动停止 / 默认铃声 / 默认振动, 时间格式 (跟随系统 / 12 / 24 小时), 发行历史 (内置 `doc/CHANGELOG-<lang>.md`), 更新检查 (超时 / 取消 / 失败提示 / 忽略版本 / 频率 / 计量网络), 关于与第三方声明; 1.2.0 默认地区与 1.3.0 紧急关闭开关的位置预留. 证据: 提交 hash; E4.
+  - 进度 (2026-11-06, chime-p3): 本提交完成设置页 `ui.settings.SettingsActivity` (T84): 外观四项 (语言, 夜间模式, 主题色, 启动器图标, 默认跟随 AutoJs6), 闹钟默认值 (铃声, 振动, 贪睡, 自动停止; 存入设备加密存储 `RingDefaultsStore`, 响铃时补上闹钟省略的选项, 编辑页的 "默认" 显示当前设置值), 地区与格式 (时间格式), 关于 (版本, 发行历史, 检查更新, 自动检查频率与计量网络开关, 已忽略更新, 许可与声明); 列表右上角进入设置, `alarms.openPlugin('settings')` 经跳板直达 (T81), 列表首次打开时按频率自动检查更新; Manifest 加 `INTERNET` + `ACCESS_NETWORK_STATE` (Q16 (a)), 并补登记发行历史, 许可与声明, 法律文档三个非导出页面 (随 Compose 底座复制进来, 此前没有入口, 一直未登记). 1.2.0 节假日地区与 1.3.0 紧急解除的位置在代码中注明. 新字符串 16 条 11 个目录写全. JVM: `AppUpdateStoreTest` (4), `RingSoundTest` 与 `RingCoordinatorTest` 的 T84 用例, `ManifestContractTest`; instrumentation: `SettingsActivityTest` (默认振动与贪睡写入存储且其他值不变, 时间格式与检查频率保存), `OpenPluginActivityTest` 的 `settings` 页. 剩余: E4 XQ-DQ72 明暗截图 (设备未连接).
+  - 设备 (2026-11-06, chime-p3): Xiaomi Pad 968e9f18 (API 35, HyperOS, 横屏) 原位升级 debug 后 `SettingsActivityTest` 2/2, `OpenPluginActivityTest` 2/2, `EditAlarmActivityTest` 2/2, `ClockIntentActivityTest` 8/8 通过 (贪睡用例响铃一次). 首轮 `SettingsActivityTest` 两项失败: 横屏平板上 "已保存" 提示盖住滚到底边的下一行, 点击落在提示上; 测试改为等提示消失再点, 属测试问题, 界面不改. 测试结束恢复设备原有的默认值, 时间格式与检查频率.
 
 ### P3.6 图标核对与截图
 
@@ -680,10 +683,10 @@ interface AlarmOptions {
     tag?: string;
 
     sound?: SoundOptions;
-    vibrate?: boolean | number[]; // true 用默认节奏; 数组与 device.vibrate 同写法 (等待, 振动, 等待, 振动, ...)
+    vibrate?: boolean | number[]; // true 用默认节奏; 数组与 device.vibrate 同写法 (等待, 振动, 等待, 振动, ...); 省略时用插件设置 (出厂 true, T84)
     speak?: SpeakOptions;
-    snooze?: { minutes?: number; max?: number } | false; // 默认 { minutes: 10, max: 3 }; false 不允许贪睡
-    /** 无人处理时响多久自动停 (分钟), 默认 10, 范围 1 - 60. 停止时发 silence 事件. */
+    snooze?: { minutes?: number; max?: number } | false; // 省略时用插件设置 (出厂 { minutes: 10, max: 3 }), 只省略 minutes 或 max 时同样取设置值 (T84); false 不允许贪睡
+    /** 无人处理时响多久自动停 (分钟), 范围 1 - 60; 省略时用插件设置 (出厂 10, 有关闭挑战时至少 30, T84). 停止时发 silence 事件. */
     autoSilenceMinutes?: number;
     /** 关闭方式 (1.3.0). */
     dismiss?: DismissOptions;
@@ -717,7 +720,7 @@ interface RepeatRule {
 
 ```ts
 interface SoundOptions {
-    /** "default" 系统默认闹钟铃声 (默认); "silent" 不出声 (只振动或只朗读); ringtones.list() 给出的 uri; 或本地音频文件路径 (复制进插件). */
+    /** "default" 系统默认闹钟铃声 (出厂默认; 省略时用插件设置的默认铃声, T84); "silent" 不出声 (只振动或只朗读); ringtones.list() 给出的 uri; 或本地音频文件路径 (复制进插件). */
     source?: string;
     /** 0 - 1 的独立音量; 省略时用当前闹钟音量. */
     volume?: number;

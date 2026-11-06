@@ -42,6 +42,7 @@ class RingCoordinatorTest {
 
     private var now = at("2026-11-05T08:00")
     private var exact = true
+    private var defaults = RingDefaults.PROTOCOL
 
     private val events = ArrayList<AlarmEvent>()
     private var notified = 0
@@ -68,7 +69,7 @@ class RingCoordinatorTest {
         val bus = AlarmEventBus().also { it.addListener(events::add) }
         created = AlarmSchedule(repository, Port(), bus, clock = { now }, deviceZone = { SHANGHAI })
         schedule = created
-        rings = RingCoordinator(repository, schedule, bus, clock = { now })
+        rings = RingCoordinator(repository, schedule, bus, clock = { now }, defaults = { defaults })
         rings.addListener { notified++ }
     }
 
@@ -89,6 +90,26 @@ class RingCoordinatorTest {
     private fun state(alarm: AlarmRecord) = repository.get(alarm.id)!!.state
 
     private fun take(): List<AlarmEvent> = events.toList().also { events.clear() }
+
+    @Test
+    fun `a ring takes the settings defaults of its time for the options it leaves out (T84)`() {
+        val alarm = daily(7)
+        defaults = RingDefaults(snoozeMinutes = 4, snoozeMax = 1, autoSilenceMinutes = 3)
+        val t = at("2026-11-06T07:00")
+        now = t
+        fire(alarm)
+        take()
+        assertEquals(t + 3 * MINUTE, rings.sounding?.silenceAt)
+
+        now = t + 30 * SECOND
+        assertTrue(rings.snooze(null, null, BY_USER))
+        assertEquals(4, take().single().minutes)
+        now += 4 * MINUTE
+        fire(alarm)
+        take()
+        // snoozeMax 1: the second round may not snooze again. zh-CN: snoozeMax 为 1: 第二轮不能再贪睡.
+        assertFalse(rings.snooze(null, null, BY_USER))
+    }
 
     @Test
     fun `a ring snoozes and rings again as a new round of the same instance`() {

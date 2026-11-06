@@ -8,6 +8,7 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.Recu
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.RecurrenceRule.Freq
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.RecurrenceRule.WeekdayNum
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.TimeZonePolicy
+import org.autojs.plugin.alarm.api.AlarmContract
 import org.autojs.plugin.alarm.api.AlarmOptionKeys
 import org.autojs.plugin.alarm.api.AlarmSnooze
 import org.autojs.plugin.alarm.api.AlarmSound
@@ -34,6 +35,12 @@ import java.time.temporal.ChronoUnit
 internal data class AlarmDraft(val spec: AlarmSpec, val dateAuto: Boolean) {
 
     /** The time shown on the page; an `at` alarm shows its instant in its zone. zh-CN: 页面显示的时刻; `at` 闹钟显示其时刻在其时区的时间. */
+    /**
+     * The alarm has a dismiss challenge (1.3.0; set by a script for now), which lengthens the default auto silence.
+     * zh-CN: 闹钟带关闭挑战 (1.3.0; 目前只能由脚本设置), 它会延长默认的自动停止时长.
+     */
+    val hasChallenge: Boolean get() = spec.dismiss?.challenge.let { it != null && it != AlarmContract.CHALLENGE_NONE }
+
     fun timeOf(deviceZone: ZoneId): AlarmTime = spec.time ?: localOfAt(deviceZone)!!.let { AlarmTime(it.hour, it.minute, it.second) }
 
     /**

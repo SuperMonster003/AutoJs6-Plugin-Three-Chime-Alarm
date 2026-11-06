@@ -27,7 +27,7 @@ class ManifestContractTest {
     private val application: Element get() = manifest.child("application")
 
     @Test
-    fun `the permissions are exactly the plugin permission and the roadmap T4 set`() {
+    fun `the permissions are exactly the plugin permission, the roadmap T4 set and the Q16 (a) network pair`() {
         assertEquals(
             listOf(
                 PLUGIN_PERMISSION,
@@ -40,6 +40,8 @@ class ManifestContractTest {
                 "android.permission.RECEIVE_BOOT_COMPLETED",
                 "android.permission.FOREGROUND_SERVICE",
                 RING_SERVICE_PERMISSION,
+                "android.permission.INTERNET",
+                "android.permission.ACCESS_NETWORK_STATE",
             ),
             manifest.children("uses-permission").map { it.android("name") },
         )
@@ -47,7 +49,11 @@ class ManifestContractTest {
         assertEquals("SCHEDULE_EXACT_ALARM only below API 33 (roadmap T4)", "32", exact.android("maxSdkVersion"))
         val permissions = manifest.children("uses-permission").map { it.android("name") }
         assertTrue("no storage permission (roadmap T4)", permissions.none { it.contains("STORAGE") || it.contains("MEDIA") })
-        assertTrue("no network permission in 1.0.0 (roadmap T4)", permissions.none { it.contains("INTERNET") || it.contains("NETWORK") })
+        assertEquals(
+            "only the update check uses the network (roadmap Q16 (a), T4)",
+            listOf("android.permission.INTERNET", "android.permission.ACCESS_NETWORK_STATE"),
+            permissions.filter { it.contains("INTERNET") || it.contains("NETWORK") },
+        )
         assertTrue("no uses-sdk override: SDK levels come from version.properties", manifest.children("uses-sdk").isEmpty())
         assertTrue("no feature requirements", manifest.children("uses-feature").isEmpty())
     }
@@ -101,12 +107,16 @@ class ManifestContractTest {
     }
 
     @Test
-    fun `the activities are the wake, home, permissions, edit, open, clock intent and ring screens`() {
+    fun `the activities are the wake, home, permissions, settings, edit, open, clock intent and ring screens`() {
         assertEquals(
             listOf(
                 ".WakeActivity",
                 ".ui.home.HomeActivity",
                 ".ui.permissions.PermissionsActivity",
+                ".ui.settings.SettingsActivity",
+                ".ui.release.ReleaseHistoryActivity",
+                ".ui.about.NoticesActivity",
+                ".ui.about.LegalDocumentActivity",
                 ".ui.edit.EditAlarmActivity",
                 ".ui.edit.ClockDraftActivity",
                 ".ui.OpenPluginActivity",
@@ -121,6 +131,10 @@ class ManifestContractTest {
         val permissions = activity(".ui.permissions.PermissionsActivity")
         assertEquals("false", permissions.android("exported"))
         assertEquals("singleTop", permissions.android("launchMode"))
+        // Roadmap P3.5: the settings screen and the pages it opens are internal as well.
+        for (name in listOf(".ui.settings.SettingsActivity", ".ui.release.ReleaseHistoryActivity", ".ui.about.NoticesActivity", ".ui.about.LegalDocumentActivity")) {
+            assertEquals(name, "false", activity(name).android("exported"))
+        }
         // Roadmap T81: the window-less trampoline of alarms.openPlugin answers the frozen OPEN action without a permission.
         val open = activity(".ui.OpenPluginActivity")
         assertEquals("true", open.android("exported"))

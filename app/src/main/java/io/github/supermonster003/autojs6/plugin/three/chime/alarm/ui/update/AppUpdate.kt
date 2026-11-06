@@ -1,6 +1,8 @@
 package io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.update
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.Handler
 import android.os.Looper
 import androidx.compose.foundation.layout.padding
@@ -14,6 +16,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.core.content.edit
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.BuildConfig
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.R
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.components.CheckRow
@@ -65,9 +68,48 @@ internal object UpdateVersionPolicy {
 }
 
 /**
- * Update preferences (3-Stone AI rules): automatic checks on by default and at most once every 12 hours, ignored tags.
- * [clock] is injectable for the JVM tests.
- * zh-CN: 更新偏好 (沿用 3-Stone AI): 自动检查默认开启且每 12 小时至多一次, 已忽略的版本. [clock] 可注入, 供 JVM 测试使用.
+ * How often the plugin checks for updates by itself (roadmap P3.5, T84): never, or at most once per [intervalMillis]
+ * while a screen of the plugin is in use; every 12 hours by default (3-Stone AI rules).
+ * zh-CN: 插件自动检查更新的频率 (路线图 P3.5, T84): 从不, 或在使用插件界面时每 [intervalMillis] 至多一次; 默认每 12 小时 (沿用 3-Stone AI).
+ */
+internal enum class UpdateFrequency(val key: String, val intervalMillis: Long?) {
+    OFF("off", null),
+    TWELVE_HOURS("12h", TimeUnit.HOURS.toMillis(12)),
+    DAILY("daily", TimeUnit.DAYS.toMillis(1)),
+    WEEKLY("weekly", TimeUnit.DAYS.toMillis(7));
+
+    companion object {
+        val DEFAULT = TWELVE_HOURS
+        fun of(key: String?): UpdateFrequency = entries.firstOrNull { it.key == key } ?: DEFAULT
+    }
+}
+
+/**
+ * The network an automatic check would use (T84): none, metered (or of unknown cost) or unmetered.
+ * zh-CN: 自动检查将使用的网络 (T84): 无网络, 计量 (或费用未知) 或不计量.
+ */
+internal enum class UpdateNetwork {
+    NONE, METERED, UNMETERED;
+
+    companion object {
+        fun of(context: Context): UpdateNetwork = runCatching {
+            val connectivity = context.getSystemService(ConnectivityManager::class.java) ?: return@runCatching NONE
+            val capabilities = connectivity.getNetworkCapabilities(connectivity.activeNetwork) ?: return@runCatching NONE
+            when {
+                !capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) -> NONE
+                capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED) -> UNMETERED
+                else -> METERED
+            }
+        }.getOrDefault(NONE)
+    }
+}
+
+/**
+ * Update preferences (3-Stone AI rules, roadmap T84): the automatic check [frequency] (every 12 hours by default),
+ * whether automatic checks may use a metered network ([checkOnMetered], off by default; manual checks always run), and
+ * the ignored tags. [clock] is injectable for the JVM tests.
+ * zh-CN: 更新偏好 (沿用 3-Stone AI, 路线图 T84): 自动检查频率 [frequency] (默认每 12 小时), 自动检查是否可用计量网络 ([checkOnMetered], 默认关闭; 手动
+ * 检查总会执行), 以及已忽略的版本. [clock] 可注入, 供 JVM 测试使用.
  */
 internal class AppUpdateStore(private val storage: Storage, private val clock: () -> Long = System::currentTimeMillis) {
 
@@ -77,13 +119,19 @@ internal class AppUpdateStore(private val storage: Storage, private val clock: (
         fun putBoolean(key: String, value: Boolean)
         fun getLong(key: String, default: Long): Long
         fun putLong(key: String, value: Long)
+        fun getString(key: String): String?
+        fun putString(key: String, value: String)
         fun getStrings(key: String): Set<String>
         fun putStrings(key: String, value: Set<String>)
     }
 
-    var automaticChecks: Boolean
-        get() = storage.getBoolean(KEY_AUTOMATIC, true)
-        set(value) = storage.putBoolean(KEY_AUTOMATIC, value)
+    var frequency: UpdateFrequency
+        get() = UpdateFrequency.of(storage.getString(KEY_FREQUENCY))
+        set(value) = storage.putString(KEY_FREQUENCY, value.key)
+
+    var checkOnMetered: Boolean
+        get() = storage.getBoolean(KEY_METERED, false)
+        set(value) = storage.putBoolean(KEY_METERED, value)
 
     val ignoredTags: Set<String> get() = storage.getStrings(KEY_IGNORED)
 
@@ -91,21 +139,27 @@ internal class AppUpdateStore(private val storage: Storage, private val clock: (
 
     fun stopIgnoring(tags: Collection<String>) = storage.putStrings(KEY_IGNORED, ignoredTags - tags.toSet())
 
-    fun shouldCheckAutomatically(): Boolean {
-        if (!automaticChecks) return false
+    /**
+     * Whether an automatic check is due on [network]: never without a network or on a metered one unless allowed, so
+     * such a skip keeps the check due for the next screen.
+     * zh-CN: 在 [network] 上是否该自动检查: 无网络时不检查, 计量网络未获允许时也不检查, 这样跳过的检查留待下次打开界面.
+     */
+    fun shouldCheckAutomatically(network: UpdateNetwork): Boolean {
+        val interval = frequency.intervalMillis ?: return false
+        if (network == UpdateNetwork.NONE || network == UpdateNetwork.METERED && !checkOnMetered) return false
         val last = storage.getLong(KEY_LAST_ATTEMPT, 0L)
         val now = clock()
         // A clock set back counts as due as well. zh-CN: 时钟被调回时同样视为到期.
-        return last <= 0L || now < last || now - last >= INTERVAL_MILLIS
+        return last <= 0L || now < last || now - last >= interval
     }
 
     fun recordAutomaticAttempt() = storage.putLong(KEY_LAST_ATTEMPT, clock())
 
     companion object {
-        val INTERVAL_MILLIS: Long = TimeUnit.HOURS.toMillis(12)
         /** The preference file and keys. zh-CN: 偏好文件与键名. */
         internal const val FILE = "app-update-settings"
-        internal const val KEY_AUTOMATIC = "automatic-checks"
+        internal const val KEY_FREQUENCY = "automatic-frequency"
+        internal const val KEY_METERED = "automatic-on-metered"
         private const val KEY_IGNORED = "ignored-tags"
         private const val KEY_LAST_ATTEMPT = "last-automatic-attempt"
 
@@ -113,11 +167,13 @@ internal class AppUpdateStore(private val storage: Storage, private val clock: (
             val preferences = context.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
             return AppUpdateStore(object : Storage {
                 override fun getBoolean(key: String, default: Boolean) = preferences.getBoolean(key, default)
-                override fun putBoolean(key: String, value: Boolean) = preferences.edit().putBoolean(key, value).apply()
+                override fun putBoolean(key: String, value: Boolean) = preferences.edit { putBoolean(key, value) }
                 override fun getLong(key: String, default: Long) = preferences.getLong(key, default)
-                override fun putLong(key: String, value: Long) = preferences.edit().putLong(key, value).apply()
+                override fun putLong(key: String, value: Long) = preferences.edit { putLong(key, value) }
+                override fun getString(key: String): String? = preferences.getString(key, null)
+                override fun putString(key: String, value: String) = preferences.edit { putString(key, value) }
                 override fun getStrings(key: String): Set<String> = preferences.getStringSet(key, emptySet()).orEmpty().toSet()
-                override fun putStrings(key: String, value: Set<String>) = preferences.edit().putStringSet(key, value).apply()
+                override fun putStrings(key: String, value: Set<String>) = preferences.edit { putStringSet(key, value) }
             })
         }
     }
@@ -231,10 +287,10 @@ internal class AppUpdateChecker(private val apiUrl: String = LATEST_RELEASE_API)
 
 /**
  * The update check of the screens (roadmap P3.5, Q16 (a), as in 3-Stone AI): a manual check shows a cancellable progress dialog
- * and every result; an automatic check (home screen, at most every 12 hours) stays silent unless a newer release that
- * is not ignored exists. Compose state, main thread only.
- * zh-CN: 界面的更新检查 (路线图 P3.5, Q16 (a), 与 3-Stone AI 相同): 手动检查显示可取消的进度对话框与每种结果; 自动检查 (首页, 每 12 小时至多一次) 只在存在未被
- * 忽略的新版本时提示. Compose 状态, 仅在主线程使用.
+ * and every result; an automatic check (alarm list, at the chosen frequency, T84) stays silent unless a newer release
+ * that is not ignored exists. Compose state, main thread only.
+ * zh-CN: 界面的更新检查 (路线图 P3.5, Q16 (a), 与 3-Stone AI 相同): 手动检查显示可取消的进度对话框与每种结果; 自动检查 (闹钟列表, 按所选频率, T84) 只在存在
+ * 未被忽略的新版本时提示. Compose 状态, 仅在主线程使用.
  */
 internal class AppUpdateController(
     private val store: AppUpdateStore,
@@ -255,8 +311,9 @@ internal class AppUpdateController(
 
     fun checkManually() = check(manual = true)
 
-    fun checkAutomaticallyIfDue() {
-        if (active != null || !store.shouldCheckAutomatically()) return
+    /** An automatic check when one is due on [network] (T84). zh-CN: 在 [network] 上到期时自动检查 (T84). */
+    fun checkAutomaticallyIfDue(network: UpdateNetwork) {
+        if (active != null || !store.shouldCheckAutomatically(network)) return
         store.recordAutomaticAttempt()
         check(manual = false)
     }

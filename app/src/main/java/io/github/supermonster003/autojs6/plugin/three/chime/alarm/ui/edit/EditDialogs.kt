@@ -57,6 +57,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.R
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.ring.RingDefaults
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.RepeatText
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.components.ChimeDialog
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.components.Choice
@@ -344,12 +345,22 @@ internal fun LabelDialog(label: String?, onDismiss: () -> Unit, onConfirm: (Stri
 }
 
 /**
- * The ringtone: the plugin default, the system default alarm sound, silence, a system or imported ringtone, or the
+ * The ringtone: the plugin default ([fallback], the source it follows; null on the settings screen, which sets that
+ * default and has no such choice, T84), the system default alarm sound, silence, a system or imported ringtone, or the
  * missing one the alarm still names.
- * zh-CN: 铃声: 插件默认, 系统默认闹钟铃声, 静音, 系统或导入的铃声, 或闹钟仍引用但已不存在的铃声.
+ * zh-CN: 铃声: 插件默认 ([fallback] 为其所跟随的铃声; 设置页设置的正是该默认值, 没有这一项, 此时为 null, T84), 系统默认闹钟铃声, 静音, 系统或导入的铃声,
+ * 或闹钟仍引用的已不存在的铃声.
  */
 @Composable
-internal fun SoundDialog(source: String?, ringtones: List<RingtoneSnapshot>, onDismiss: () -> Unit, onConfirm: (String?) -> Unit) {
+internal fun SoundDialog(
+    source: String?,
+    fallback: String?,
+    ringtones: List<RingtoneSnapshot>,
+    onDismiss: () -> Unit,
+    onConfirm: (String?) -> Unit,
+    title: String = stringResource(R.string.edit_sound),
+    tag: String = "chime.edit.soundDialog",
+) {
     val imported = stringResource(R.string.edit_sound_imported)
     val values = ArrayList<String?>()
     val options = ArrayList<Choice>()
@@ -357,20 +368,54 @@ internal fun SoundDialog(source: String?, ringtones: List<RingtoneSnapshot>, onD
         values += value
         options += choice
     }
-    add(null, Choice(stringResource(R.string.edit_default), note = stringResource(R.string.edit_default_note)))
+    if (fallback != null) add(null, Choice(defaultText(soundText(fallback, ringtones)), note = stringResource(R.string.edit_default_note)))
     add(AlarmContract.SOUND_DEFAULT, Choice(stringResource(R.string.edit_sound_system)))
     add(AlarmContract.SOUND_SILENT, Choice(stringResource(R.string.edit_sound_silent)))
     ringtones.forEach { add(it.uri, Choice(it.title.ifEmpty { it.uri }, note = if (it.source == AlarmContract.RINGTONE_IMPORTED) imported else null)) }
     if (source != null && source !in values) add(source, Choice(stringResource(R.string.edit_sound_missing), note = source))
     ChoiceDialog(
-        title = stringResource(R.string.edit_sound),
+        title = title,
         options = options,
         selectedIndex = values.indexOf(source),
         onDismissRequest = onDismiss,
         onConfirm = { onConfirm(values[it]) },
-        tag = "chime.edit.soundDialog",
+        tag = tag,
     )
 }
+
+/** "Default - value": a choice or a summary that follows the plugin settings (T84). zh-CN: "默认 - 值": 跟随插件设置的选项或摘要 (T84). */
+@Composable
+internal fun defaultText(value: String): String = stringResource(R.string.edit_default_value, value)
+
+/**
+ * The name of a sound [source]: the system alarm sound, silence or a ringtone of [ringtones] (empty while they load).
+ * zh-CN: 铃声 [source] 的名称: 系统闹钟铃声, 静音或 [ringtones] 中的铃声 (加载期间为空).
+ */
+@Composable
+internal fun soundText(source: String, ringtones: List<RingtoneSnapshot>?): String = when (source) {
+    AlarmContract.SOUND_DEFAULT -> stringResource(R.string.edit_sound_system)
+    AlarmContract.SOUND_SILENT -> stringResource(R.string.edit_sound_silent)
+    else -> when (val found = ringtones?.firstOrNull { it.uri == source }) {
+        null -> if (ringtones == null) "" else stringResource(R.string.edit_sound_missing)
+        else -> found.title.ifEmpty { source }
+    }
+}
+
+/** "Off" or "Every 10 minutes, at most 3 times". zh-CN: "关闭" 或 "每 10 分钟, 最多 3 次". */
+@Composable
+internal fun snoozeText(enabled: Boolean, minutes: Int, max: Int): String =
+    if (!enabled) {
+        stringResource(R.string.edit_off)
+    } else {
+        stringResource(
+            R.string.edit_snooze_summary,
+            pluralStringResource(R.plurals.edit_snooze_every, minutes, minutes),
+            pluralStringResource(R.plurals.edit_snooze_limit, max, max),
+        )
+    }
+
+@Composable
+internal fun autoSilenceText(minutes: Int): String = pluralStringResource(R.plurals.edit_auto_silence_summary, minutes, minutes)
 
 /**
  * Speech: the text, the engine and when it is spoken; turning it off drops it. The page never speaks.
@@ -424,23 +469,34 @@ internal fun SpeakDialog(speak: AlarmSpeak?, engines: List<SpeechEngine>, onDism
     }
 }
 
-/** Snooze: the plugin default, off, or a length and a maximum count. zh-CN: 贪睡: 插件默认, 关闭, 或自定时长与次数上限. */
+/**
+ * Snooze: the plugin default ([fallback]; null on the settings screen, which has no such choice, T84), off, or a length
+ * and a maximum count. The sliders start at the values of [snooze], else of the default.
+ * zh-CN: 贪睡: 插件默认 ([fallback]; 设置页没有这一项, 此时为 null, T84), 关闭, 或自定时长与次数上限. 滑块初始为 [snooze] 的值, 否则为默认值.
+ */
 @Composable
-internal fun SnoozeDialog(snooze: AlarmSnooze?, onDismiss: () -> Unit, onConfirm: (AlarmSnooze?) -> Unit) {
-    val tag = "chime.edit.snoozeDialog"
+internal fun SnoozeDialog(
+    snooze: AlarmSnooze?,
+    fallback: RingDefaults?,
+    onDismiss: () -> Unit,
+    onConfirm: (AlarmSnooze?) -> Unit,
+    title: String = stringResource(R.string.edit_snooze),
+    tag: String = "chime.edit.snoozeDialog",
+) {
     var choice by rememberSaveable {
         mutableIntStateOf(
             when {
-                snooze == null -> 0
+                snooze == null -> if (fallback != null) 0 else 2
                 !snooze.enabled -> 1
                 else -> 2
             },
         )
     }
-    var minutes by rememberSaveable { mutableFloatStateOf((snooze?.minutes ?: AlarmLimits.DEFAULT_SNOOZE_MINUTES).toFloat()) }
-    var max by rememberSaveable { mutableFloatStateOf((snooze?.max ?: AlarmLimits.DEFAULT_SNOOZE_MAX).toFloat()) }
+    val start = fallback ?: RingDefaults.PROTOCOL
+    var minutes by rememberSaveable { mutableFloatStateOf((snooze?.minutes ?: start.snoozeMinutes).toFloat()) }
+    var max by rememberSaveable { mutableFloatStateOf((snooze?.max ?: start.snoozeMax).toFloat()) }
     ChimeDialog(
-        title = stringResource(R.string.edit_snooze),
+        title = title,
         onDismissRequest = onDismiss,
         confirmText = stringResource(R.string.ui_dialog_confirm),
         onConfirm = {
@@ -455,7 +511,14 @@ internal fun SnoozeDialog(snooze: AlarmSnooze?, onDismiss: () -> Unit, onConfirm
         dismissText = stringResource(R.string.ui_dialog_cancel),
         tag = tag,
     ) {
-        ChoiceRow(Choice(stringResource(R.string.edit_default), note = stringResource(R.string.edit_default_note)), choice == 0, { choice = 0 }, Modifier.testTag("$tag.0"))
+        if (fallback != null) {
+            ChoiceRow(
+                Choice(defaultText(snoozeText(fallback.snoozeEnabled, fallback.snoozeMinutes, fallback.snoozeMax)), note = stringResource(R.string.edit_default_note)),
+                choice == 0,
+                { choice = 0 },
+                Modifier.testTag("$tag.0"),
+            )
+        }
         ChoiceRow(Choice(stringResource(R.string.edit_off)), choice == 1, { choice = 1 }, Modifier.testTag("$tag.1"))
         ChoiceRow(Choice(stringResource(R.string.edit_custom)), choice == 2, { choice = 2 }, Modifier.testTag("$tag.2"))
         if (choice == 2) {
@@ -480,22 +543,34 @@ internal fun SnoozeDialog(snooze: AlarmSnooze?, onDismiss: () -> Unit, onConfirm
     }
 }
 
-/** Auto stop: the plugin default or a number of minutes. zh-CN: 自动停止: 插件默认或指定分钟数. */
+/**
+ * Auto stop: the plugin default ([fallback], in minutes; null on the settings screen, which then shows the slider
+ * only, T84) or a number of minutes.
+ * zh-CN: 自动停止: 插件默认 ([fallback], 以分钟计; 设置页为 null, 此时只显示滑块, T84) 或指定分钟数.
+ */
 @Composable
-internal fun AutoSilenceDialog(minutes: Int?, onDismiss: () -> Unit, onConfirm: (Int?) -> Unit) {
-    val tag = "chime.edit.autoSilenceDialog"
-    var custom by rememberSaveable { mutableStateOf(minutes != null) }
-    var value by rememberSaveable { mutableFloatStateOf((minutes ?: AlarmLimits.DEFAULT_AUTO_SILENCE_MINUTES).toFloat()) }
+internal fun AutoSilenceDialog(
+    minutes: Int?,
+    fallback: Int?,
+    onDismiss: () -> Unit,
+    onConfirm: (Int?) -> Unit,
+    title: String = stringResource(R.string.edit_auto_silence),
+    tag: String = "chime.edit.autoSilenceDialog",
+) {
+    var custom by rememberSaveable { mutableStateOf(minutes != null || fallback == null) }
+    var value by rememberSaveable { mutableFloatStateOf((minutes ?: fallback ?: AlarmLimits.DEFAULT_AUTO_SILENCE_MINUTES).toFloat()) }
     ChimeDialog(
-        title = stringResource(R.string.edit_auto_silence),
+        title = title,
         onDismissRequest = onDismiss,
         confirmText = stringResource(R.string.ui_dialog_confirm),
         onConfirm = { onConfirm(if (custom) value.roundToInt() else null) },
         dismissText = stringResource(R.string.ui_dialog_cancel),
         tag = tag,
     ) {
-        ChoiceRow(Choice(stringResource(R.string.edit_default), note = stringResource(R.string.edit_default_note)), !custom, { custom = false }, Modifier.testTag("$tag.0"))
-        ChoiceRow(Choice(stringResource(R.string.edit_custom)), custom, { custom = true }, Modifier.testTag("$tag.1"))
+        if (fallback != null) {
+            ChoiceRow(Choice(defaultText(autoSilenceText(fallback)), note = stringResource(R.string.edit_default_note)), !custom, { custom = false }, Modifier.testTag("$tag.0"))
+            ChoiceRow(Choice(stringResource(R.string.edit_custom)), custom, { custom = true }, Modifier.testTag("$tag.1"))
+        }
         if (custom) {
             LabeledSlider(
                 title = stringResource(R.string.edit_auto_silence_after),

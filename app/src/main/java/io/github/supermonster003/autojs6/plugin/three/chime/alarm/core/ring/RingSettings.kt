@@ -56,29 +56,32 @@ data class RingSettings(
         private const val MINUTE_MILLIS = 60_000L
 
         /**
-         * The settings of [spec]: `vibrate` omitted vibrates with the default pattern, a `vibratePattern` vibrates with
-         * it (T61); the auto silence default is 30 minutes with a dismiss challenge (1.3.0), 10 otherwise.
-         * zh-CN: [spec] 的响铃设置: 省略 `vibrate` 时按默认节奏振动, 给出 `vibratePattern` 时按其振动 (T61); 自动停止默认 10 分钟, 有关闭挑战 (1.3.0) 时为 30 分钟.
+         * The settings of [spec], an option it leaves unset taking the plugin [defaults] of the settings screen (T84):
+         * a `vibratePattern` vibrates with it (T61), `vibrate` vibrates with the default pattern or not at all, and
+         * `vibrate` omitted follows the default; an omitted `snooze` takes the default snooze, an omitted `minutes` or
+         * `max` the default value; the auto silence default is at least 30 minutes with a dismiss challenge (1.3.0).
+         * zh-CN: [spec] 的响铃设置, 未设置的项取设置页的插件默认值 [defaults] (T84): 给出 `vibratePattern` 时按其振动 (T61), `vibrate` 为 true 按默认节奏
+         * 振动, 为 false 不振动, 省略时跟随默认值; 省略 `snooze` 取默认贪睡, 省略其 `minutes` 或 `max` 取默认值; 有关闭挑战 (1.3.0) 时自动停止默认至少
+         * 30 分钟.
          */
-        fun of(spec: AlarmSpec): RingSettings {
+        fun of(spec: AlarmSpec, defaults: RingDefaults = RingDefaults.PROTOCOL): RingSettings {
             val sound = spec.sound
             val snooze = spec.snooze
             val challenge = spec.dismiss?.challenge?.takeIf { it != AlarmContract.CHALLENGE_NONE }
             return RingSettings(
-                source = sound?.source ?: AlarmContract.SOUND_DEFAULT,
+                source = sound?.source ?: defaults.sound,
                 volume = sound?.volume,
                 rampSeconds = sound?.rampSeconds ?: 0,
                 vibration = when {
                     spec.vibratePattern != null -> spec.vibratePattern
-                    spec.vibrate == false -> null
-                    else -> DEFAULT_VIBRATION
+                    spec.vibrate ?: defaults.vibrate -> DEFAULT_VIBRATION
+                    else -> null
                 },
                 speak = spec.speak?.takeIf { it.text.isNotBlank() },
-                snoozeEnabled = snooze?.enabled != false,
-                snoozeMinutes = snooze?.minutes ?: AlarmLimits.DEFAULT_SNOOZE_MINUTES,
-                snoozeMax = snooze?.max ?: AlarmLimits.DEFAULT_SNOOZE_MAX,
-                autoSilenceMinutes = spec.autoSilenceMinutes
-                    ?: if (challenge != null) AlarmLimits.DEFAULT_CHALLENGE_AUTO_SILENCE_MINUTES else AlarmLimits.DEFAULT_AUTO_SILENCE_MINUTES,
+                snoozeEnabled = snooze?.enabled ?: defaults.snoozeEnabled,
+                snoozeMinutes = snooze?.minutes ?: defaults.snoozeMinutes,
+                snoozeMax = snooze?.max ?: defaults.snoozeMax,
+                autoSilenceMinutes = spec.autoSilenceMinutes ?: defaults.autoSilenceFor(challenge != null),
             )
         }
     }

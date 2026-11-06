@@ -13,6 +13,7 @@ import androidx.test.runner.lifecycle.Stage
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.OpenPluginActivity
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.home.HomeActivity
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.permissions.PermissionsActivity
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.settings.SettingsActivity
 import org.autojs.plugin.alarm.api.AlarmPluginActions
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -25,10 +26,10 @@ import org.junit.runner.RunWith
 /**
  * The `alarms.openPlugin(page)` trampoline of the installed plugin (roadmap T81): the frozen OPEN action resolves to
  * [OpenPluginActivity] alone, without a permission and without a task affinity, and every page opens its screen:
- * `permissions` the permissions page (P3.4); until the settings screen (P3.5) lands, and for the 1.1.0 pages and
- * unknown values, the alarm list.
+ * `permissions` the permissions page (P3.4), `settings` the settings screen (P3.5); the 1.1.0 pages and unknown values
+ * open the alarm list.
  * zh-CN: 已安装插件的 `alarms.openPlugin(page)` 跳板 (路线图 T81): 冻结的 OPEN action 只解析到 [OpenPluginActivity], 不要求权限, 没有任务
- * 亲和性, 每个页面打开对应界面: `permissions` 打开权限页 (P3.4); 在设置页 (P3.5) 落地之前, 以及 1.1.0 的页面与未知值, 都打开闹钟列表.
+ * 亲和性, 每个页面打开对应界面: `permissions` 打开权限页 (P3.4), `settings` 打开设置页 (P3.5); 1.1.0 的页面与未知值打开闹钟列表.
  */
 @RunWith(AndroidJUnit4::class)
 class OpenPluginActivityTest {
@@ -72,6 +73,7 @@ class OpenPluginActivityTest {
                 val trampoline = instrumentation.addMonitor(OpenPluginActivity::class.java.name, null, false).also { monitors += it }
                 val home = instrumentation.addMonitor(HomeActivity::class.java.name, null, false).also { monitors += it }
                 val permissions = instrumentation.addMonitor(PermissionsActivity::class.java.name, null, false).also { monitors += it }
+                val settings = instrumentation.addMonitor(SettingsActivity::class.java.name, null, false).also { monitors += it }
                 val intent = Intent(AlarmPluginActions.OPEN).setPackage(context.packageName).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 page?.let { intent.putExtra(AlarmPluginActions.EXTRA_PAGE, it) }
                 context.startActivity(intent)
@@ -83,12 +85,17 @@ class OpenPluginActivityTest {
                     assertNotNull("page $page opened the permissions page", screen)
                     assertTrue("page $page resumed the permissions page", waitUntil { resumed().any { it is PermissionsActivity } })
                     close(screen)
+                } else if (page == AlarmPluginActions.PAGE_SETTINGS) {
+                    val screen = instrumentation.waitForMonitorWithTimeout(settings, WAIT_MILLIS)
+                    assertNotNull("page $page opened the settings screen", screen)
+                    assertTrue("page $page resumed the settings screen", waitUntil { resumed().any { it is SettingsActivity } })
+                    close(screen)
                 } else {
                     if (list == null) list = instrumentation.waitForMonitorWithTimeout(home, WAIT_MILLIS)
                     assertNotNull("page $page opened the alarm list", list)
                     assertTrue("page $page resumed the alarm list", waitUntil { resumed().any { it is HomeActivity } })
                 }
-                listOf(trampoline, home, permissions).forEach { instrumentation.removeMonitor(it); monitors -= it }
+                listOf(trampoline, home, permissions, settings).forEach { instrumentation.removeMonitor(it); monitors -= it }
             }
         } finally {
             list?.let(::close)

@@ -51,6 +51,7 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.AlarmRuntime
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.R
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmException
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmRecord
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.ring.RingDefaults
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.RepeatText
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.intent.ClockActions
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.intent.ClockIntentActivity
@@ -211,6 +212,7 @@ private fun EditScreen(mode: EditMode, onDirtyChange: (Boolean) -> Unit, onClose
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var missing by remember { mutableStateOf(emptyList<PermissionRow>()) }
     var ringtones by remember { mutableStateOf<List<RingtoneSnapshot>?>(null) }
+    var defaults by remember { mutableStateOf(RingDefaults.PROTOCOL) }
     var engines by remember { mutableStateOf(emptyList<SpeechEngine>()) }
 
     LaunchedEffect(Unit) {
@@ -227,12 +229,13 @@ private fun EditScreen(mode: EditMode, onDirtyChange: (Boolean) -> Unit, onClose
         draft = loaded
     }
     LaunchedEffect(Unit) {
-        val (tones, speech) = withContext(Dispatchers.IO) {
+        val (tones, speech, plugin) = withContext(Dispatchers.IO) {
             val runtime = AlarmRuntime.get(context)
-            (SystemRingtones.list(context) + runtime.ringtones.list()) to speechEngines(context)
+            Triple(SystemRingtones.list(context) + runtime.ringtones.list(), speechEngines(context), runtime.defaults.get())
         }
         ringtones = tones
         engines = speech
+        defaults = plugin
     }
     LaunchedEffect(Unit) {
         while (true) {
@@ -302,7 +305,7 @@ private fun EditScreen(mode: EditMode, onDirtyChange: (Boolean) -> Unit, onClose
             if (missing.isNotEmpty()) {
                 PermissionBanner(missing, { context.startActivity(Intent(context, PermissionsActivity::class.java)) }, "chime.edit.permissionBanner")
             }
-            EditContent(current, ringtones, now, deviceZone, onDialog = { dialog = it }, onChange = { draft = it })
+            EditContent(current, ringtones, defaults, now, deviceZone, onDialog = { dialog = it }, onChange = { draft = it })
         }
     }
 
@@ -344,10 +347,10 @@ private fun EditScreen(mode: EditMode, onDirtyChange: (Boolean) -> Unit, onClose
         }
         EditDialogs.ZONE -> ZoneDialog(current.spec.timeZone, deviceZone, close) { apply(current.withTimeZone(it, deviceZone)) }
         EditDialogs.LABEL -> LabelDialog(current.spec.label, close) { apply(current.withLabel(it)) }
-        EditDialogs.SOUND -> SoundDialog(current.spec.sound?.source, ringtones.orEmpty(), close) { apply(current.withSound(it)) }
+        EditDialogs.SOUND -> SoundDialog(current.spec.sound?.source, defaults.sound, ringtones.orEmpty(), close, { apply(current.withSound(it)) })
         EditDialogs.SPEAK -> SpeakDialog(current.spec.speak, engines, close) { apply(current.withSpeak(it)) }
-        EditDialogs.SNOOZE -> SnoozeDialog(current.spec.snooze, close) { apply(current.withSnooze(it)) }
-        EditDialogs.AUTO_SILENCE -> AutoSilenceDialog(current.spec.autoSilenceMinutes, close) { apply(current.withAutoSilence(it)) }
+        EditDialogs.SNOOZE -> SnoozeDialog(current.spec.snooze, defaults, close, { apply(current.withSnooze(it)) })
+        EditDialogs.AUTO_SILENCE -> AutoSilenceDialog(current.spec.autoSilenceMinutes, defaults.autoSilenceFor(current.hasChallenge), close, { apply(current.withAutoSilence(it)) })
         EditDialogs.DISCARD -> MessageDialog(
             title = stringResource(R.string.edit_discard_title),
             message = stringResource(R.string.edit_discard_message),
@@ -368,6 +371,7 @@ private fun EditScreen(mode: EditMode, onDirtyChange: (Boolean) -> Unit, onClose
 private fun EditContent(
     draft: AlarmDraft,
     ringtones: List<RingtoneSnapshot>?,
+    defaults: RingDefaults,
     now: Long,
     deviceZone: ZoneId,
     onDialog: (String) -> Unit,
@@ -445,14 +449,14 @@ private fun EditContent(
     )
     SettingsRow(
         title = stringResource(R.string.edit_sound),
-        summary = soundSummary(spec.sound?.source, ringtones),
+        summary = spec.sound?.source?.let { soundText(it, ringtones) } ?: defaultText(soundText(defaults.sound, ringtones)),
         icon = R.drawable.ic_music_note_24,
         modifier = Modifier.testTag("chime.edit.sound"),
         onClick = { onDialog(EditDialogs.SOUND) },
     )
     SwitchRow(
         title = stringResource(R.string.edit_vibrate),
-        checked = spec.vibrate ?: true,
+        checked = spec.vibrate ?: defaults.vibrate,
         onToggle = { onChange(draft.withVibrate(it)) },
         icon = R.drawable.ic_vibration_24,
         modifier = Modifier.testTag("chime.edit.vibrate"),
@@ -467,18 +471,9 @@ private fun EditContent(
     val snooze = spec.snooze
     SettingsRow(
         title = stringResource(R.string.edit_snooze),
-        summary = when {
-            snooze == null -> stringResource(R.string.edit_default)
-            !snooze.enabled -> stringResource(R.string.edit_off)
-            else -> {
-                val minutes = snooze.minutes ?: AlarmLimits.DEFAULT_SNOOZE_MINUTES
-                val max = snooze.max ?: AlarmLimits.DEFAULT_SNOOZE_MAX
-                stringResource(
-                    R.string.edit_snooze_summary,
-                    pluralStringResource(R.plurals.edit_snooze_every, minutes, minutes),
-                    pluralStringResource(R.plurals.edit_snooze_limit, max, max),
-                )
-            }
+        summary = when (snooze) {
+            null -> defaultText(snoozeText(defaults.snoozeEnabled, defaults.snoozeMinutes, defaults.snoozeMax))
+            else -> snoozeText(snooze.enabled, snooze.minutes ?: defaults.snoozeMinutes, snooze.max ?: defaults.snoozeMax)
         },
         icon = R.drawable.ic_snooze_24,
         modifier = Modifier.testTag("chime.edit.snooze"),
@@ -486,7 +481,7 @@ private fun EditContent(
     )
     SettingsRow(
         title = stringResource(R.string.edit_auto_silence),
-        summary = spec.autoSilenceMinutes?.let { pluralStringResource(R.plurals.edit_auto_silence_summary, it, it) } ?: stringResource(R.string.edit_default),
+        summary = spec.autoSilenceMinutes?.let { autoSilenceText(it) } ?: defaultText(autoSilenceText(defaults.autoSilenceFor(draft.hasChallenge))),
         icon = R.drawable.ic_timer_24,
         modifier = Modifier.testTag("chime.edit.autoSilence"),
         onClick = { onDialog(EditDialogs.AUTO_SILENCE) },
@@ -500,17 +495,6 @@ private fun repeatSummary(repeat: String?, start: LocalDate): String {
     repeat ?: return stringResource(R.string.home_once)
     val locale = LocalConfiguration.current.locales[0]
     return remember(repeat, start, locale) { runCatching { RepeatText.of(repeat, start, locale) }.getOrDefault(repeat) }
-}
-
-@Composable
-private fun soundSummary(source: String?, ringtones: List<RingtoneSnapshot>?): String = when (source) {
-    null -> stringResource(R.string.edit_default)
-    AlarmContract.SOUND_DEFAULT -> stringResource(R.string.edit_sound_system)
-    AlarmContract.SOUND_SILENT -> stringResource(R.string.edit_sound_silent)
-    else -> when (val found = ringtones?.firstOrNull { it.uri == source }) {
-        null -> if (ringtones == null) "" else stringResource(R.string.edit_sound_missing)
-        else -> found.title.ifEmpty { source }
-    }
 }
 
 /** "Today", "Tomorrow" or the date. zh-CN: "今天", "明天" 或日期. */

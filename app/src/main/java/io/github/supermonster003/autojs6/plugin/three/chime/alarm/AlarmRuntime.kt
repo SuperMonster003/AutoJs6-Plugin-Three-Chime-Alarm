@@ -14,6 +14,7 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.ring.Ring
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.schedule.AlarmPlanner
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.schedule.AlarmSchedule
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ring.AlarmStreamVolume
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ring.RingDefaultsStore
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ring.RingService
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ring.StoredVolumeMemory
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.schedule.AndroidAlarmSchedulePort
@@ -58,8 +59,11 @@ class AlarmRuntime private constructor(context: Context) {
 
     val schedule: AlarmSchedule = AlarmSchedule(repository, port, events)
 
+    /** The plugin defaults of the settings screen (T84). zh-CN: 设置页的插件默认值 (T84). */
+    val defaults = RingDefaultsStore(this.context)
+
     /** The ringing state (roadmap P2.4). zh-CN: 响铃状态 (路线图 P2.4). */
-    val rings: RingCoordinator = RingCoordinator(repository, schedule, events)
+    val rings: RingCoordinator = RingCoordinator(repository, schedule, events, defaults = defaults::get)
 
     /** The independent volume of rings (T14, T68). zh-CN: 响铃的独立音量 (T14, T68). */
     val volume: RingVolume = RingVolume(AlarmStreamVolume(this.context), StoredVolumeMemory(this.context))

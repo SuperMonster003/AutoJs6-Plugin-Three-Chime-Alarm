@@ -21,6 +21,13 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SYSTEM_EXEMPTED" />
 
+    <!--
+        Roadmap Q16 (a), T4: only the update check of the settings screen (roadmap P3.5) and, from 1.2.0, the holiday data
+        refresh use the network; ringing, scheduling and the host link never do.
+    -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
     <!-- The host (alarm events and bindings, roadmap P1) and the text-to-speech engines of the ringing voice (roadmap P2.3). -->
     <queries>
         <package android:name="org.autojs.autojs6" />
@@ -135,6 +142,23 @@
             android:name=".ui.permissions.PermissionsActivity"
             android:exported="false"
             android:launchMode="singleTop" />
+
+        <!--
+            The settings screen (roadmap P3.5, T84), reached from the alarm list and the OPEN trampoline, with the release
+            history and the notices it opens.
+        -->
+        <activity
+            android:name=".ui.settings.SettingsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.release.ReleaseHistoryActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.about.NoticesActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.about.LegalDocumentActivity"
+            android:exported="false" />
 
         <!--
             The edit page (roadmap P3.1, T83): a new or a stored alarm from the alarm list. ClockDraftActivity is the same

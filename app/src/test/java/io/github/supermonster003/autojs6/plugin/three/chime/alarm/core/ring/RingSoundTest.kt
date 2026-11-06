@@ -52,6 +52,38 @@ class RingSoundTest {
     }
 
     @Test
+    fun `options an alarm leaves out follow the settings defaults (T84)`() {
+        val defaults = RingDefaults(sound = "silent", vibrate = false, snoozeEnabled = true, snoozeMinutes = 7, snoozeMax = 5, autoSilenceMinutes = 4)
+        fun of(vararg extra: Pair<String, Any?>) = RingSettings.of(validator.options(optionsOf(7, 0, *extra)), defaults)
+
+        val plain = of()
+        assertEquals("silent", plain.source)
+        assertNull(plain.vibration)
+        assertEquals(Triple(true, 7, 5), Triple(plain.snoozeEnabled, plain.snoozeMinutes, plain.snoozeMax))
+        assertEquals(4 * MINUTE, plain.autoSilenceMillis)
+
+        // What the alarm sets wins, field by field. zh-CN: 闹钟自己设置的值逐项优先.
+        assertEquals(RingSettings.DEFAULT_VIBRATION, of("vibrate" to true).vibration)
+        val partial = of("snooze" to mapOf("minutes" to 3), "sound" to mapOf("source" to "default"), "autoSilenceMinutes" to 20)
+        assertEquals("default", partial.source)
+        assertEquals(Triple(true, 3, 5), Triple(partial.snoozeEnabled, partial.snoozeMinutes, partial.snoozeMax))
+        assertEquals(20 * MINUTE, partial.autoSilenceMillis)
+        assertFalse(RingSettings.of(validator.options(optionsOf(7, 0)), defaults.copy(snoozeEnabled = false)).snoozeEnabled)
+        assertEquals(true, of("snooze" to mapOf("enabled" to true)).snoozeEnabled)
+    }
+
+    @Test
+    fun `stored defaults are clamped to the protocol limits (T84)`() {
+        val wild = RingDefaults(sound = " ", snoozeMinutes = 0, snoozeMax = 99, autoSilenceMinutes = 600).sanitized()
+        assertEquals(RingDefaults.PROTOCOL.sound, wild.sound)
+        assertEquals(Triple(1, 10, 60), Triple(wild.snoozeMinutes, wild.snoozeMax, wild.autoSilenceMinutes))
+        assertEquals(RingDefaults.PROTOCOL, RingDefaults.PROTOCOL.sanitized())
+        assertEquals(30, RingDefaults(autoSilenceMinutes = 5).autoSilenceFor(challenge = true))
+        assertEquals(45, RingDefaults(autoSilenceMinutes = 45).autoSilenceFor(challenge = true))
+        assertEquals(5, RingDefaults(autoSilenceMinutes = 5).autoSilenceFor(challenge = false))
+    }
+
+    @Test
     fun `a ring without sound of its own plays one when speech fails`() {
         val silent = settings("sound" to mapOf("source" to "silent"), "speak" to mapOf("text" to "hi"))
         assertNull(silent.soundSource(false))

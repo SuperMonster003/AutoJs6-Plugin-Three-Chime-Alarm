@@ -34,6 +34,7 @@ class RingCoordinator(
     private val schedule: AlarmSchedule,
     private val events: AlarmEventBus,
     private val clock: () -> Long = System::currentTimeMillis,
+    private val defaults: () -> RingDefaults = { RingDefaults.PROTOCOL },
 ) {
 
     /**
@@ -96,7 +97,7 @@ class RingCoordinator(
      */
     fun offer(record: AlarmRecord, request: AlarmPlanner.RingRequest) {
         act { batch ->
-            val ring = Ring(record, request, RingSettings.of(record.spec), record.state.ringSince ?: request.firedAt)
+            val ring = Ring(record, request, RingSettings.of(record.spec, defaults()), record.state.ringSince ?: request.firedAt)
             val sounding = current
             if (sounding != null && sounding.alarmId == ring.alarmId) {
                 if (sounding.occurrence != ring.occurrence) start(ring, batch)
@@ -197,7 +198,7 @@ class RingCoordinator(
         for (record in schedule.interrupted()) {
             if (active(record.id).isNotEmpty()) continue
             val ringingAt = record.state.ringingAt ?: continue
-            if (now - ringingAt < RingSettings.of(record.spec).autoSilenceMillis) {
+            if (now - ringingAt < RingSettings.of(record.spec, defaults()).autoSilenceMillis) {
                 val occurrence = record.state.occurrence ?: AlarmPlanner.occurrenceOf(record.id, ringingAt, record.state.snoozeCount)
                 offer(record, AlarmPlanner.RingRequest(record.id, ringingAt, now, occurrence, record.state.snoozeCount))
                 resumed++
