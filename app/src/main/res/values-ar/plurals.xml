@@ -72,6 +72,22 @@
         <item quantity="many">تم إلغاء ربط %1$d برنامجا نصيا</item>
         <item quantity="other">تم إلغاء ربط %1$d برنامج نصي</item>
     </plurals>
+    <plurals name="ringtones_delete_used">
+        <item quantity="zero">لا يستخدمه أي منبه.</item>
+        <item quantity="one">يستخدمه منبه واحد, وسيرن بصوت منبه النظام بدلا منه.</item>
+        <item quantity="two">يستخدمه منبهان, وسيرنان بصوت منبه النظام بدلا منه.</item>
+        <item quantity="few">يستخدمه %1$d منبهات, وسترن بصوت منبه النظام بدلا منه.</item>
+        <item quantity="many">يستخدمه %1$d منبها, وسترن بصوت منبه النظام بدلا منه.</item>
+        <item quantity="other">يستخدمه %1$d منبه, وسترن بصوت منبه النظام بدلا منه.</item>
+    </plurals>
+    <plurals name="ringtones_import_full">
+        <item quantity="zero">لا يمكن استيراد أي صوت</item>
+        <item quantity="one">يمكن استيراد صوت واحد على الأكثر. احذفه أولا</item>
+        <item quantity="two">يمكن استيراد صوتين على الأكثر. احذف أحدهما أولا</item>
+        <item quantity="few">يمكن استيراد %1$d أصوات على الأكثر. احذف أحدها أولا</item>
+        <item quantity="many">يمكن استيراد %1$d صوتا على الأكثر. احذف أحدها أولا</item>
+        <item quantity="other">يمكن استيراد %1$d صوت على الأكثر. احذف أحدها أولا</item>
+    </plurals>
     <plurals name="update_ignored_count">
         <item quantity="zero">لا إصدارات متجاهلة</item>
         <item quantity="one">إصدار واحد متجاهل</item>

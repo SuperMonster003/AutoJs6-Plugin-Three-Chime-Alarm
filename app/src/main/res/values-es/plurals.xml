@@ -45,6 +45,16 @@
         <item quantity="many">Se desvincularon %1$d scripts</item>
         <item quantity="other">Se desvincularon %1$d scripts</item>
     </plurals>
+    <plurals name="ringtones_delete_used">
+        <item quantity="one">%1$d alarma lo usa y sonará con el sonido de alarma del sistema.</item>
+        <item quantity="many">%1$d alarmas lo usan y sonarán con el sonido de alarma del sistema.</item>
+        <item quantity="other">%1$d alarmas lo usan y sonarán con el sonido de alarma del sistema.</item>
+    </plurals>
+    <plurals name="ringtones_import_full">
+        <item quantity="one">Como máximo se puede importar %1$d sonido. Elimina uno primero</item>
+        <item quantity="many">Como máximo se pueden importar %1$d sonidos. Elimina uno primero</item>
+        <item quantity="other">Como máximo se pueden importar %1$d sonidos. Elimina uno primero</item>
+    </plurals>
     <plurals name="update_ignored_count">
         <item quantity="one">%1$d versión ignorada</item>
         <item quantity="many">%1$d versiones ignoradas</item>

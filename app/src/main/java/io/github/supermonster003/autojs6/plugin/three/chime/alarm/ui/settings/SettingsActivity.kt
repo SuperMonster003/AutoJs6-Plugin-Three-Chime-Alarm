@@ -53,13 +53,14 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.components.
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.components.ThemeColorDialog
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.edit.AutoSilenceDialog
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.edit.SnoozeDialog
-import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.edit.SoundDialog
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.edit.autoSilenceText
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.edit.snoozeText
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.edit.soundText
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.format.TimeFormat
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.format.TimeFormats
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.release.ReleaseHistoryActivity
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.ringtones.RingtonePicker
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.ringtones.RingtoneRequest
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.update.AppUpdateController
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.update.AppUpdateStore
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.update.UpdateDialogs
@@ -85,7 +86,7 @@ import java.util.Locale
  */
 class SettingsActivity : StandaloneActivity() {
 
-    private enum class Dialog { LANGUAGE, DARK_MODE, THEME_COLOR, LAUNCHER_ICON, SOUND, SNOOZE, AUTO_SILENCE, TIME_FORMAT, FREQUENCY, IGNORED }
+    private enum class Dialog { LANGUAGE, DARK_MODE, THEME_COLOR, LAUNCHER_ICON, SNOOZE, AUTO_SILENCE, TIME_FORMAT, FREQUENCY, IGNORED }
 
     private lateinit var store: AppUpdateStore
     private lateinit var updates: AppUpdateController
@@ -99,6 +100,16 @@ class SettingsActivity : StandaloneActivity() {
     private val snackbar = SnackbarHostState()
     private var pendingMessage by mutableStateOf<String?>(null)
     private var dialog by mutableStateOf<Dialog?>(null)
+
+    /**
+     * The ringtone page without "Default" (T85); the choice is applied to the stored defaults, which the page may have
+     * changed by deleting the default ringtone.
+     * zh-CN: 不带 "默认" 的铃声页 (T85); 所选项写入存储的默认值, 铃声页删除默认铃声时可能已改动过它.
+     */
+    private val soundPicker = registerForActivityResult(RingtonePicker()) { choice ->
+        val source = choice?.source ?: return@registerForActivityResult
+        saveDefaults(ringDefaults.get().copy(sound = source))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         store = AppUpdateStore.of(this)
@@ -181,7 +192,8 @@ class SettingsActivity : StandaloneActivity() {
         val current = loaded ?: RingDefaults.PROTOCOL
         SectionHeader(stringResource(R.string.settings_alarm_defaults))
         SettingsRow(stringResource(R.string.edit_sound), summary = soundText(current.sound, ringtones), icon = R.drawable.ic_music_note_24,
-            enabled = loaded != null && ringtones != null, onClick = { dialog = Dialog.SOUND }, modifier = Modifier.testTag("chime.settings.sound"))
+            enabled = loaded != null && ringtones != null, onClick = { soundPicker.launch(RingtoneRequest(current.sound, null)) },
+            modifier = Modifier.testTag("chime.settings.sound"))
         Hairline()
         SwitchRow(stringResource(R.string.edit_vibrate), current.vibrate, { saveDefaults(current.copy(vibrate = it)) }, icon = R.drawable.ic_vibration_24,
             enabled = loaded != null, modifier = Modifier.testTag("chime.settings.vibrate"))
@@ -294,12 +306,6 @@ class SettingsActivity : StandaloneActivity() {
                 },
                 tag = "chime.dialog.icon",
             )
-            Dialog.SOUND -> defaults?.let { current ->
-                SoundDialog(current.sound, null, ringtones.orEmpty(), close, { source ->
-                    close()
-                    if (source != null) saveDefaults(current.copy(sound = source))
-                }, tag = "chime.settings.soundDialog")
-            }
             Dialog.SNOOZE -> defaults?.let { current ->
                 SnoozeDialog(AlarmSnooze(current.snoozeEnabled, current.snoozeMinutes, current.snoozeMax), null, close, { snooze ->
                     close()

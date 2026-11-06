@@ -54,6 +54,18 @@
         <item quantity="many">Отвязано %1$d скриптов</item>
         <item quantity="other">Отвязано %1$d скрипта</item>
     </plurals>
+    <plurals name="ringtones_delete_used">
+        <item quantity="one">Её использует %1$d будильник, он будет звонить системной мелодией.</item>
+        <item quantity="few">Её используют %1$d будильника, они будут звонить системной мелодией.</item>
+        <item quantity="many">Её используют %1$d будильников, они будут звонить системной мелодией.</item>
+        <item quantity="other">Её используют %1$d будильника, они будут звонить системной мелодией.</item>
+    </plurals>
+    <plurals name="ringtones_import_full">
+        <item quantity="one">Можно импортировать не более %1$d мелодии. Сначала удалите одну</item>
+        <item quantity="few">Можно импортировать не более %1$d мелодий. Сначала удалите одну</item>
+        <item quantity="many">Можно импортировать не более %1$d мелодий. Сначала удалите одну</item>
+        <item quantity="other">Можно импортировать не более %1$d мелодии. Сначала удалите одну</item>
+    </plurals>
     <plurals name="update_ignored_count">
         <item quantity="one">Игнорируется %1$d выпуск</item>
         <item quantity="few">Игнорируется %1$d выпуска</item>

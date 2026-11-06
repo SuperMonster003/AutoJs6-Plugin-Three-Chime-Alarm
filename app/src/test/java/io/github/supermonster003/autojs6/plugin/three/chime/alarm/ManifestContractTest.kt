@@ -119,6 +119,7 @@ class ManifestContractTest {
                 ".ui.about.LegalDocumentActivity",
                 ".ui.edit.EditAlarmActivity",
                 ".ui.edit.ClockDraftActivity",
+                ".ui.ringtones.RingtonesActivity",
                 ".ui.OpenPluginActivity",
                 ".intent.ClockIntentActivity",
                 ".intent.ClockDialogActivity",
@@ -149,6 +150,8 @@ class ManifestContractTest {
         assertEquals("false", draft.android("exported"))
         assertEquals("true", draft.android("excludeFromRecents"))
         assertEquals("", draft.android("taskAffinity"))
+        // Roadmap P3.3: the ringtone page opens from the edit page and the settings screen only.
+        assertEquals("false", activity(".ui.ringtones.RingtonesActivity").android("exported"))
         // The chooser of the clock intents (roadmap P2.6) opens only from ClockIntentActivity.
         val dialog = activity(".intent.ClockDialogActivity")
         assertEquals("false", dialog.android("exported"))

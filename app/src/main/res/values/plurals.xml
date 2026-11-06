@@ -36,6 +36,14 @@
         <item quantity="one">Removed %1$d script binding</item>
         <item quantity="other">Removed %1$d script bindings</item>
     </plurals>
+    <plurals name="ringtones_delete_used">
+        <item quantity="one">%1$d alarm uses it and will ring the system alarm sound instead.</item>
+        <item quantity="other">%1$d alarms use it and will ring the system alarm sound instead.</item>
+    </plurals>
+    <plurals name="ringtones_import_full">
+        <item quantity="one">At most %1$d sound can be imported. Delete one first</item>
+        <item quantity="other">At most %1$d sounds can be imported. Delete one first</item>
+    </plurals>
     <plurals name="update_ignored_count">
         <item quantity="one">%1$d ignored release</item>
         <item quantity="other">%1$d ignored releases</item>

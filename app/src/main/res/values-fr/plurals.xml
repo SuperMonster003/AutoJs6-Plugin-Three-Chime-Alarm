@@ -45,6 +45,16 @@
         <item quantity="many">%1$d scripts déliés</item>
         <item quantity="other">%1$d scripts déliés</item>
     </plurals>
+    <plurals name="ringtones_delete_used">
+        <item quantity="one">%1$d alarme l\'utilise et sonnera avec le son d\'alarme du système.</item>
+        <item quantity="many">%1$d alarmes l\'utilisent et sonneront avec le son d\'alarme du système.</item>
+        <item quantity="other">%1$d alarmes l\'utilisent et sonneront avec le son d\'alarme du système.</item>
+    </plurals>
+    <plurals name="ringtones_import_full">
+        <item quantity="one">%1$d son au maximum peut être importé. Supprimez-en un d\'abord</item>
+        <item quantity="many">%1$d sons au maximum peuvent être importés. Supprimez-en un d\'abord</item>
+        <item quantity="other">%1$d sons au maximum peuvent être importés. Supprimez-en un d\'abord</item>
+    </plurals>
     <plurals name="update_ignored_count">
         <item quantity="one">%1$d version ignorée</item>
         <item quantity="many">%1$d versions ignorées</item>

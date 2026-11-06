@@ -177,6 +177,14 @@
             android:windowSoftInputMode="adjustResize" />
 
         <!--
+            The ringtone page (roadmap P3.3, T85): the sound of an alarm from the edit page and the default sound from the
+            settings screen, with the import and deletion of ringtones. It opens in the task of the page that asks.
+        -->
+        <activity
+            android:name=".ui.ringtones.RingtonesActivity"
+            android:exported="false" />
+
+        <!--
             `alarms.openPlugin(page)` (roadmap T81, appendix A section 9): the frozen OPEN action with the optional `page`
             extra. Exported without a permission, as it only shows the plugin's own screens. No task affinity: the host
             starts it with FLAG_ACTIVITY_NEW_TASK, and as the root of the plugin's task it would only bring that task to

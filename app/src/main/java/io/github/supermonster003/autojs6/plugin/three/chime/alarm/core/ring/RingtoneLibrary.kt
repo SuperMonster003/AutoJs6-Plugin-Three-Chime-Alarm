@@ -101,6 +101,30 @@ class RingtoneLibrary(
             .map { (id, entry) -> snapshotOf(id, entry) }
     }
 
+    /**
+     * Deletes the imported ringtone [uri] from the ringtone page (roadmap P3.3, T85): the copy first, then its title; false
+     * when [uri] names no stored copy. Alarms that still name it ring the default alarm sound (T70). A title left behind
+     * by a failed index write is harmless: only stored copies are listed, and importing the content again writes a new
+     * title.
+     * zh-CN: 在铃声页删除导入的铃声 [uri] (路线图 P3.3, T85): 先删副本, 再删标题; [uri] 没有对应的副本时返回 false. 仍指向它的闹钟改响默认闹钟铃声 (T70).
+     * 索引写入失败而残留的标题无害: 列表只列存在的副本, 再次导入同一内容时会写入新标题.
+     */
+    fun delete(uri: String): Boolean = synchronized(lock) {
+        val id = ImportedRingtones.idOf(uri) ?: return false
+        val file = File(directory, id)
+        if (!file.isFile) return false
+        if (!file.delete()) throw AlarmException.ioFailed("cannot delete the ringtone")
+        val index = loadIndex()
+        if (index.remove(id) != null) {
+            try {
+                saveIndex(index)
+            } catch (_: IOException) {
+                // zh-CN: 见上文, 残留的标题无害.
+            }
+        }
+        true
+    }
+
     private fun stored(): List<File> = directory.listFiles { f -> f.isFile && ImportedRingtones.isId(f.name) }?.toList().orEmpty()
 
     private fun snapshotOf(id: String, entry: Entry) = RingtoneSnapshot(ImportedRingtones.uriOf(id), entry.title, AlarmContract.RINGTONE_IMPORTED, false)

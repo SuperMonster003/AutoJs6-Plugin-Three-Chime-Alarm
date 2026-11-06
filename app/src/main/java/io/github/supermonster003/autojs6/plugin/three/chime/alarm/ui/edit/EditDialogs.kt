@@ -344,45 +344,6 @@ internal fun LabelDialog(label: String?, onDismiss: () -> Unit, onConfirm: (Stri
     LaunchedEffect(Unit) { focus.requestFocus() }
 }
 
-/**
- * The ringtone: the plugin default ([fallback], the source it follows; null on the settings screen, which sets that
- * default and has no such choice, T84), the system default alarm sound, silence, a system or imported ringtone, or the
- * missing one the alarm still names.
- * zh-CN: 铃声: 插件默认 ([fallback] 为其所跟随的铃声; 设置页设置的正是该默认值, 没有这一项, 此时为 null, T84), 系统默认闹钟铃声, 静音, 系统或导入的铃声,
- * 或闹钟仍引用的已不存在的铃声.
- */
-@Composable
-internal fun SoundDialog(
-    source: String?,
-    fallback: String?,
-    ringtones: List<RingtoneSnapshot>,
-    onDismiss: () -> Unit,
-    onConfirm: (String?) -> Unit,
-    title: String = stringResource(R.string.edit_sound),
-    tag: String = "chime.edit.soundDialog",
-) {
-    val imported = stringResource(R.string.edit_sound_imported)
-    val values = ArrayList<String?>()
-    val options = ArrayList<Choice>()
-    fun add(value: String?, choice: Choice) {
-        values += value
-        options += choice
-    }
-    if (fallback != null) add(null, Choice(defaultText(soundText(fallback, ringtones)), note = stringResource(R.string.edit_default_note)))
-    add(AlarmContract.SOUND_DEFAULT, Choice(stringResource(R.string.edit_sound_system)))
-    add(AlarmContract.SOUND_SILENT, Choice(stringResource(R.string.edit_sound_silent)))
-    ringtones.forEach { add(it.uri, Choice(it.title.ifEmpty { it.uri }, note = if (it.source == AlarmContract.RINGTONE_IMPORTED) imported else null)) }
-    if (source != null && source !in values) add(source, Choice(stringResource(R.string.edit_sound_missing), note = source))
-    ChoiceDialog(
-        title = title,
-        options = options,
-        selectedIndex = values.indexOf(source),
-        onDismissRequest = onDismiss,
-        onConfirm = { onConfirm(values[it]) },
-        tag = tag,
-    )
-}
-
 /** "Default - value": a choice or a summary that follows the plugin settings (T84). zh-CN: "默认 - 值": 跟随插件设置的选项或摘要 (T84). */
 @Composable
 internal fun defaultText(value: String): String = stringResource(R.string.edit_default_value, value)

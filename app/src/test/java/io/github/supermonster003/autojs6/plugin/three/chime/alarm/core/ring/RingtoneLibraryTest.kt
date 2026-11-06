@@ -99,6 +99,31 @@ class RingtoneLibraryTest {
     }
 
     @Test
+    fun `a deleted ringtone leaves the list and can be imported again`() {
+        val library = library()
+        val first = library.import(ByteArrayInputStream(audio("one")), "one.ogg")
+        now += 1
+        val second = library.import(ByteArrayInputStream(audio("two")), "two.ogg")
+
+        assertTrue(library.delete(first.uri))
+        assertFalse(ImportedRingtones.fileOf(temp.root, first.uri)!!.exists())
+        assertEquals(listOf(second), library.list())
+        assertEquals("the title leaves the index", listOf(second), library().list())
+        assertFalse("deleting again", library.delete(first.uri))
+        assertFalse("not an imported ringtone", library.delete("content://media/internal/audio/media/1"))
+        assertFalse("outside the directory", library.delete("chime-ringtone://imported/../index.json"))
+        assertFalse("the index is no ringtone", library.delete("chime-ringtone://imported/index"))
+        assertTrue(File(library.directory, RingtoneLibrary.INDEX_FILE).isFile)
+
+        now += 1
+        val again = library.import(ByteArrayInputStream(audio("one")), "one again.ogg")
+        assertEquals("the same content has the same uri", first.uri, again.uri)
+        assertEquals("one again", again.title)
+        assertEquals(listOf(second, again), library.list())
+        assertTrue(leftovers(library.directory).isEmpty())
+    }
+
+    @Test
     fun `titles drop the path and the extension and fit the label limit`() {
         assertEquals("Morning", RingtoneLibrary.titleOf("/sdcard/Music/Morning.mp3"))
         assertEquals("Morning", RingtoneLibrary.titleOf("C:\\Music\\Morning.mp3"))

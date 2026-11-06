@@ -8,6 +8,7 @@ import android.speech.tts.TextToSpeech
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -68,6 +69,8 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.home.Permis
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.permissions.PermissionRow
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.permissions.Permissions
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.permissions.PermissionsActivity
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.ringtones.RingtonePicker
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.ringtones.RingtoneRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -228,25 +231,28 @@ private fun EditScreen(mode: EditMode, onDirtyChange: (Boolean) -> Unit, onClose
         start = loaded
         draft = loaded
     }
-    LaunchedEffect(Unit) {
-        val (tones, speech, plugin) = withContext(Dispatchers.IO) {
-            val runtime = AlarmRuntime.get(context)
-            Triple(SystemRingtones.list(context) + runtime.ringtones.list(), speechEngines(context), runtime.defaults.get())
-        }
-        ringtones = tones
-        engines = speech
-        defaults = plugin
-    }
+    LaunchedEffect(Unit) { engines = withContext(Dispatchers.IO) { speechEngines(context) } }
     LaunchedEffect(Unit) {
         while (true) {
             delay(60_000L - System.currentTimeMillis() % 60_000L)
             now = System.currentTimeMillis()
         }
     }
+    // The ringtone page may import or delete ringtones and change the plugin default sound, so both are read at every
+    // resume. zh-CN: 铃声页可能导入或删除铃声并改变插件的默认铃声, 因此每次恢复时重新读取两者.
     OnResume {
         now = System.currentTimeMillis()
         scope.launch { missing = withContext(Dispatchers.IO) { Permissions.read(context).missing.filter { it in BANNER_ROWS } } }
+        scope.launch(Dispatchers.Main.immediate) {
+            val (tones, plugin) = withContext(Dispatchers.IO) {
+                val runtime = AlarmRuntime.get(context)
+                (SystemRingtones.list(context) + runtime.ringtones.list()) to runtime.defaults.get()
+            }
+            ringtones = tones
+            defaults = plugin
+        }
     }
+    val picker = rememberLauncherForActivityResult(RingtonePicker()) { choice -> if (choice != null) draft = draft?.withSound(choice.source) }
 
     val dirty = draft != null && draft != start
     SideEffect { onDirtyChange(dirty) }
@@ -305,7 +311,10 @@ private fun EditScreen(mode: EditMode, onDirtyChange: (Boolean) -> Unit, onClose
             if (missing.isNotEmpty()) {
                 PermissionBanner(missing, { context.startActivity(Intent(context, PermissionsActivity::class.java)) }, "chime.edit.permissionBanner")
             }
-            EditContent(current, ringtones, defaults, now, deviceZone, onDialog = { dialog = it }, onChange = { draft = it })
+            EditContent(current, ringtones, defaults, now, deviceZone, onDialog = { which ->
+                // The sound is chosen on the ringtone page (T85). zh-CN: 铃声在铃声页选择 (T85).
+                if (which == EditDialogs.SOUND) picker.launch(RingtoneRequest(current.spec.sound?.source, defaults.sound)) else dialog = which
+            }, onChange = { draft = it })
         }
     }
 
@@ -347,7 +356,6 @@ private fun EditScreen(mode: EditMode, onDirtyChange: (Boolean) -> Unit, onClose
         }
         EditDialogs.ZONE -> ZoneDialog(current.spec.timeZone, deviceZone, close) { apply(current.withTimeZone(it, deviceZone)) }
         EditDialogs.LABEL -> LabelDialog(current.spec.label, close) { apply(current.withLabel(it)) }
-        EditDialogs.SOUND -> SoundDialog(current.spec.sound?.source, defaults.sound, ringtones.orEmpty(), close, { apply(current.withSound(it)) })
         EditDialogs.SPEAK -> SpeakDialog(current.spec.speak, engines, close) { apply(current.withSpeak(it)) }
         EditDialogs.SNOOZE -> SnoozeDialog(current.spec.snooze, defaults, close, { apply(current.withSnooze(it)) })
         EditDialogs.AUTO_SILENCE -> AutoSilenceDialog(current.spec.autoSilenceMinutes, defaults.autoSilenceFor(current.hasChallenge), close, { apply(current.withAutoSilence(it)) })
