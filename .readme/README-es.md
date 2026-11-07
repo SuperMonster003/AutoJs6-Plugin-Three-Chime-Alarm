@@ -8,7 +8,7 @@
     </picture>
   </p>
 
-  <p>Alarma con reglas de repetición de calendario, lectura en voz alta y scripts de AutoJs6 al sonar la alarma</p>
+  <p>Alarma con reglas de repetición de calendario, lectura en voz alta y scripts al sonar la alarma</p>
 
   <p>
     <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/releases"><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm?label=Release"/></a>

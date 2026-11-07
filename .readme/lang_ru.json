@@ -1,7 +1,7 @@
 {
   "$name": "Русский",
   "text_current_lowercase": "текущий",
-  "text_plugin_synopsis": "Будильник с календарными правилами повтора, озвучиванием и запуском скриптов AutoJs6 при звонке",
+  "text_plugin_synopsis": "Будильник с календарными правилами повтора, озвучиванием и запуском скриптов при звонке",
   "h3_languages_with_ascii": "Языки (Languages)",
   "p_languages_all_supported_for_readme": "Текущий README.md поддерживает следующие языки",
   "h3_introduction": "Введение",

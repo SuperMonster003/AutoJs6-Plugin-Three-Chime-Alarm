@@ -192,7 +192,7 @@
     <string name="permissions_title">Autorisations et arrière-plan</string>
     <string name="permissions_vendor_banner">Notifications en bannière</string>
     <string name="permissions_vendor_banner_guide">Le système n\'indique pas cet état. Activez \"Bannière\" dans les réglages de notification de ce plugin, sinon l\'écran de sonnerie ne s\'ouvre pas seul sur l\'écran de verrouillage, sauf si l\'affichage par-dessus les autres applis est autorisé.</string>
-    <string name="plugin_description">Réveil avec règles de répétition de calendrier, sonnerie parlée et scripts AutoJs6 déclenchés à la sonnerie</string>
+    <string name="plugin_description">Réveil avec règles de répétition de calendrier, sonnerie parlée et scripts déclenchés à la sonnerie</string>
     <string name="release_history_title">Historique des versions</string>
     <string name="release_history_unavailable">Impossible de charger l\'historique des versions</string>
     <string name="ring_action_dismiss">Arrêter</string>

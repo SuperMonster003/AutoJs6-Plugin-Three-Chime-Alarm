@@ -8,7 +8,7 @@
     </picture>
   </p>
 
-  <p>カレンダー形式の繰り返しルール, 読み上げ付きの鳴動, 鳴動時の AutoJs6 スクリプト連携に対応したアラーム</p>
+  <p>カレンダー形式の繰り返しルール, 読み上げ付きの鳴動, 鳴動時のスクリプト連携に対応したアラーム</p>
 
   <p>
     <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/releases"><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm?label=Release"/></a>

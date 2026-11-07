@@ -8,7 +8,7 @@
     </picture>
   </p>
 
-  <p>鬧鐘應用程式, 支援日曆重複規則, 朗讀響鈴與響鈴時聯動 AutoJs6 腳本</p>
+  <p>鬧鐘應用程式, 支援日曆重複規則, 朗讀響鈴與響鈴時聯動腳本</p>
 
   <p>
     <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/releases"><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm?label=Release"/></a>

@@ -1,7 +1,7 @@
 {
   "$name": "简体中文",
   "text_current_lowercase": "当前",
-  "text_plugin_synopsis": "闹钟应用, 支持日历重复规则, 朗读响铃与响铃时联动 AutoJs6 脚本",
+  "text_plugin_synopsis": "闹钟应用, 支持日历重复规则, 朗读响铃与响铃时联动脚本",
   "h3_languages_with_ascii": "语言 (Languages)",
   "p_languages_all_supported_for_readme": "当前 README.md 支持以下语言",
   "h3_introduction": "简介",

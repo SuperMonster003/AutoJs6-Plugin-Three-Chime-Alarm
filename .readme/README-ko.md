@@ -8,7 +8,7 @@
     </picture>
   </p>
 
-  <p>달력 반복 규칙, 음성 읽기 알람, 알람이 울릴 때 AutoJs6 스크립트 연동을 지원하는 알람 앱</p>
+  <p>달력 반복 규칙, 음성 읽기 알람, 알람이 울릴 때 스크립트 연동을 지원하는 알람 앱</p>
 
   <p>
     <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/releases"><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm?label=Release"/></a>

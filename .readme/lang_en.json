@@ -1,7 +1,7 @@
 {
   "$name": "English",
   "text_current_lowercase": "current",
-  "text_plugin_synopsis": "Alarm clock with calendar recurrence rules, spoken ringing and AutoJs6 script hooks when an alarm rings",
+  "text_plugin_synopsis": "Alarm clock with calendar recurrence rules, spoken ringing and script hooks when an alarm rings",
   "h3_languages_with_ascii": "Languages",
   "p_languages_all_supported_for_readme": "The README.md file is currently available in the following languages",
   "h3_introduction": "Introduction",

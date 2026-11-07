@@ -8,7 +8,7 @@
     </picture>
   </p>
 
-  <p>منبه بقواعد تكرار تقويمية وقراءة صوتية وتشغيل سكربتات AutoJs6 عند الرنين</p>
+  <p>منبه بقواعد تكرار تقويمية وقراءة صوتية وتشغيل السكربتات عند الرنين</p>
 
   <p>
     <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/releases"><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm?label=Release"/></a>

@@ -8,7 +8,7 @@
     </picture>
   </p>
 
-  <p>Réveil avec règles de répétition de calendrier, sonnerie parlée et scripts AutoJs6 déclenchés à la sonnerie</p>
+  <p>Réveil avec règles de répétition de calendrier, sonnerie parlée et scripts déclenchés à la sonnerie</p>
 
   <p>
     <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/releases"><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm?label=Release"/></a>

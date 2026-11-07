@@ -8,7 +8,7 @@
     </picture>
   </p>
 
-  <p>Alarm clock with calendar recurrence rules, spoken ringing and AutoJs6 script hooks when an alarm rings</p>
+  <p>Alarm clock with calendar recurrence rules, spoken ringing and script hooks when an alarm rings</p>
 
   <p>
     <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/releases"><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm?label=Release"/></a>

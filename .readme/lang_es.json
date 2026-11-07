@@ -1,7 +1,7 @@
 {
   "$name": "Español",
   "text_current_lowercase": "actual",
-  "text_plugin_synopsis": "Alarma con reglas de repetición de calendario, lectura en voz alta y scripts de AutoJs6 al sonar la alarma",
+  "text_plugin_synopsis": "Alarma con reglas de repetición de calendario, lectura en voz alta y scripts al sonar la alarma",
   "h3_languages_with_ascii": "Idiomas (Languages)",
   "p_languages_all_supported_for_readme": "El README.md actual admite los siguientes idiomas",
   "h3_introduction": "Introducción",
