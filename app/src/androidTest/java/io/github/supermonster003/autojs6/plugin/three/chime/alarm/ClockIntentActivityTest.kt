@@ -16,6 +16,8 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
+import androidx.test.runner.lifecycle.Stage
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmRecord
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.intent.ClockActions
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.intent.ClockDialogActivity
@@ -249,6 +251,7 @@ class ClockIntentActivityTest {
 
     /** Starts [ClockIntentActivity] with [action] and [extras] and answers its outcome line. zh-CN: 启动并返回结果行. */
     private fun send(action: String, vararg extras: Pair<String, Any>): String {
+        awaitNoClockIntentActivity()
         ClockActions.lastOutcome = null
         val intent = Intent(action).setClass(context, ClockIntentActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         for ((key, value) in extras) {
@@ -262,6 +265,26 @@ class ClockIntentActivityTest {
         }
         context.startActivity(intent)
         return outcome()
+    }
+
+    /**
+     * Waits until the [ClockIntentActivity] of the previous [send] is destroyed. The outcome line is set inside its
+     * `onCreate`, before `finish()`; a `FLAG_ACTIVITY_NEW_TASK` start of the same action in that window finds the task it
+     * still roots and only brings that task to the front, so no activity and no outcome follow (CI API 33, 2026-11-07:
+     * the second `send` of two tests). zh-CN: 等上一次 [send] 的 [ClockIntentActivity] 销毁. 结果行在其 `onCreate` 里, `finish()` 之前写入;
+     * 在这段时间内以 `FLAG_ACTIVITY_NEW_TASK` 启动同一 action, 会找到它仍作为根的任务并只把该任务移到前台, 不会创建 activity, 也没有结果行
+     * (CI API 33, 2026-11-07: 两个用例的第二次 `send`).
+     */
+    private fun awaitNoClockIntentActivity() {
+        val live = Stage.values().filter { it != Stage.DESTROYED }
+        waitFor("the previous ClockIntentActivity is destroyed", WAIT_MILLIS) {
+            var alive = false
+            instrumentation.runOnMainSync {
+                val registry = ActivityLifecycleMonitorRegistry.getInstance()
+                alive = live.any { stage -> registry.getActivitiesInStage(stage).any { it is ClockIntentActivity } }
+            }
+            !alive
+        }
     }
 
     private fun outcome(): String {
@@ -306,8 +329,10 @@ class ClockIntentActivityTest {
 
         /**
          * The wait for a skip-UI answer: the first local run on AVD_API_33 (roadmap P5.1) missed the 10 s wait three times
-         * in a row and passed in the two runs after it, so the CI job gets more room. zh-CN: 等待跳过界面的应答: AVD_API_33 的首次本地运行
-         * (路线图 P5.1) 连续三次超过 10 s, 之后两次通过, 因此为 CI 留出更多余量.
+         * in a row and passed in the two runs after it, so the CI job gets more room. Those misses were most likely the
+         * start race [awaitNoClockIntentActivity] now waits out; the wait stays generous for slow emulators.
+         * zh-CN: 等待跳过界面的应答: AVD_API_33 的首次本地运行 (路线图 P5.1) 连续三次超过 10 s, 之后两次通过, 因此为 CI 留出更多余量. 那几次超时
+         * 多半就是 [awaitNoClockIntentActivity] 现在等过的启动竞态; 等待时间仍为慢速模拟器保持宽裕.
          */
         private const val OUTCOME_WAIT_MILLIS = 30_000L
         private const val HOUR = 60 * 60 * 1000L
