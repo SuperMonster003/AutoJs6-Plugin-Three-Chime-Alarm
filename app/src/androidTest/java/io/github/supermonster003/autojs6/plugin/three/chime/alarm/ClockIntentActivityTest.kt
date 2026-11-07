@@ -1,6 +1,7 @@
 package io.github.supermonster003.autojs6.plugin.three.chime.alarm
 
 import android.app.Activity
+import android.app.ActivityManager
 import android.app.AlertDialog
 import android.app.Instrumentation
 import android.content.Context
@@ -302,10 +303,17 @@ class ClockIntentActivityTest {
         waitFor("the previous ClockIntentActivity is destroyed", WAIT_MILLIS) { liveActivities().none { it is ClockIntentActivity } }
     }
 
-    /** Finishes every activity of the plugin with its task, so no task of the plugin is left. zh-CN: 结束插件的全部 activity 及其任务. */
+    /**
+     * Finishes every activity of the plugin and removes its tasks, then waits until the system lists no task of the plugin:
+     * a task still being removed (CI API 24: the draft page of the previous test) could otherwise take the front back from
+     * the new ones. zh-CN: 结束插件的全部 activity 并移除其任务, 再等到系统不再列出插件的任务: 否则仍在移除的任务 (CI API 24: 上一个用例的草稿页)
+     * 可能把前台从新任务那里抢回去.
+     */
     private fun finishAllActivities() {
         instrumentation.runOnMainSync { liveActivitiesOnMain().forEach { it.finishAndRemoveTask() } }
-        waitFor("the plugin's activities are destroyed", WAIT_MILLIS) { liveActivities().isEmpty() }
+        val manager = context.getSystemService(ActivityManager::class.java)
+        manager.appTasks.forEach { task -> runCatching { task.finishAndRemoveTask() } }
+        waitFor("the plugin's activities and tasks are gone", WAIT_MILLIS) { liveActivities().isEmpty() && manager.appTasks.isEmpty() }
     }
 
     private fun liveActivities(): List<Activity> {
