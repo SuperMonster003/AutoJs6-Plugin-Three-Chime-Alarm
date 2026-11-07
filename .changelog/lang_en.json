@@ -5,6 +5,12 @@
   "changelog_label_improvement": "Improvement",
   "changelog_label_dependency": "Dependency",
   "$data": {
+    "v1.0.1": {
+      "released_date": "2026/11/07",
+      "fix": [
+        "When another app or an AutoJs6 script sent two alarm requests of the same kind in quick succession (for example two new alarms in a row, or two calls of alarms.system.setAlarm aimed at this plugin) while no plugin screen was open, the second request was ignored without any message and its alarm was never created; every request is now handled"
+      ]
+    },
     "v1.0.0": {
       "released_date": "2026/11/07",
       "hint": [

@@ -253,6 +253,12 @@ Plans, design decisions and progress are tracked as a checklist in ROADMAP.md. U
 
 ******
 
+#### v1.0.1
+
+_2026/11/07_
+
+- `Fix` When another app or an AutoJs6 script sent two alarm requests of the same kind in quick succession (for example two new alarms in a row, or two calls of alarms.system.setAlarm aimed at this plugin) while no plugin screen was open, the second request was ignored without any message and its alarm was never created; every request is now handled
+
 #### v1.0.0
 
 _2026/11/07_

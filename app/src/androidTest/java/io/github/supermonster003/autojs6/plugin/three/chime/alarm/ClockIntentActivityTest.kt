@@ -48,7 +48,7 @@ import java.util.UUID
  * T83), which saves with source `intent` or closes without saving; `SHOW_ALARMS` opens the alarm list; `DISMISS_ALARM` skips a ring within a day, refuses one further away, finds
  * nothing for an unknown label and lets the user choose among several matches; `SNOOZE_ALARM` without a ringing alarm
  * and the refused extras; a ringing alarm is snoozed for one minute by `SNOOZE_ALARM` and its round ended by
- * `DISMISS_ALARM` without a search mode.
+ * `DISMISS_ALARM` without a search mode; two `SET_ALARM` sent back to back are both answered (roadmap Q25).
  *
  * Every alarm here carries the label prefix `p26-probe`; [cleanUp] removes them, so a run leaves the alarm list as
  * it found it. Nothing here touches the device's other alarms (no `all` search on a device).
@@ -56,7 +56,7 @@ import java.util.UUID
  * zh-CN: 已安装插件的系统时钟 Intent (路线图 P2.6, D21, T79, T80), 以 Intent 启动 [ClockIntentActivity], 再从其结果行与闹钟列表读回: `SET_ALARM`
  * 只保存一次, 第二次改为启用同一闹钟 (来源 `intent`), 没有 `EXTRA_SKIP_UI` 或时间时打开编辑页 (路线图 P3.1, T83), 以来源 `intent` 保存或不保存直接关闭; `SHOW_ALARMS` 打开闹钟列表; `DISMISS_ALARM`
  * 跳过一天之内的响铃, 拒绝更远的, 未知标签找不到闹钟, 多个匹配时由用户选择; `SNOOZE_ALARM` 在没有闹钟响铃时的结果与被拒的 extras; 正在响的闹钟经
- * `SNOOZE_ALARM` 贪睡一分钟, 再由不带搜索模式的 `DISMISS_ALARM` 结束本轮. 这里的闹钟都带标签前缀 `p26-probe`; [cleanUp] 删除它们, 运行后闹钟
+ * `SNOOZE_ALARM` 贪睡一分钟, 再由不带搜索模式的 `DISMISS_ALARM` 结束本轮; 背靠背发送的两个 `SET_ALARM` 都得到应答 (路线图 Q25). 这里的闹钟都带标签前缀 `p26-probe`; [cleanUp] 删除它们, 运行后闹钟
  * 列表保持原样. 不触碰设备上的其他闹钟 (设备上不做 `all` 搜索).
  */
 @RunWith(AndroidJUnit4::class)
@@ -115,6 +115,24 @@ class ClockIntentActivityTest {
         val other = send(AlarmClock.ACTION_SET_ALARM, *extras, AlarmClock.EXTRA_MESSAGE to "$label-other")
         assertTrue(other, other.startsWith("setAlarm added="))
         assertEquals(2, probes(label).size)
+    }
+
+    /**
+     * Two `SET_ALARM` sent back to back while the plugin has no task: in 1.0.0 the second arrived while the first
+     * [ClockIntentActivity] still rooted the new task, was only queued for that instance, which finishes in `onCreate`
+     * without resuming, and was lost; `documentLaunchMode="always"` gives each request a task of its own (roadmap Q25,
+     * T104). zh-CN: 插件没有任务时背靠背发送两个 `SET_ALARM`: 1.0.0 中第二个到达时第一个 [ClockIntentActivity] 仍是新任务的根, 请求只为该实例排队,
+     * 而它在 `onCreate` 里结束, 不会 resume, 请求因此丢失; `documentLaunchMode="always"` 让每个请求有自己的任务 (路线图 Q25, T104).
+     */
+    @Test
+    fun backToBackRequestsAreBothAnswered() {
+        finishAllActivities()
+        val extras = arrayOf<Pair<String, Any>>(AlarmClock.EXTRA_HOUR to 6, AlarmClock.EXTRA_MINUTES to 42, AlarmClock.EXTRA_SKIP_UI to true)
+        start(AlarmClock.ACTION_SET_ALARM, *extras, AlarmClock.EXTRA_MESSAGE to "$label-a")
+        start(AlarmClock.ACTION_SET_ALARM, *extras, AlarmClock.EXTRA_MESSAGE to "$label-b")
+        waitFor("both requests are answered", OUTCOME_WAIT_MILLIS) { probes(label).size == 2 }
+        assertEquals(setOf("$label-a", "$label-b"), probes(label).map { it.spec.label }.toSet())
+        assertTrue(probes(label).all { it.source == AlarmContract.SOURCE_INTENT })
     }
 
     @Test
@@ -253,6 +271,12 @@ class ClockIntentActivityTest {
     private fun send(action: String, vararg extras: Pair<String, Any>): String {
         awaitNoClockIntentActivity()
         ClockActions.lastOutcome = null
+        start(action, *extras)
+        return outcome()
+    }
+
+    /** Starts [ClockIntentActivity] with [action] and [extras] as an outside caller does. zh-CN: 像外部调用方那样启动. */
+    private fun start(action: String, vararg extras: Pair<String, Any>) {
         val intent = Intent(action).setClass(context, ClockIntentActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         for ((key, value) in extras) {
             when (value) {
@@ -264,27 +288,35 @@ class ClockIntentActivityTest {
             }
         }
         context.startActivity(intent)
-        return outcome()
     }
 
     /**
-     * Waits until the [ClockIntentActivity] of the previous [send] is destroyed. The outcome line is set inside its
-     * `onCreate`, before `finish()`; a `FLAG_ACTIVITY_NEW_TASK` start of the same action in that window finds the task it
-     * still roots and only brings that task to the front, so no activity and no outcome follow (CI API 33, 2026-11-07:
-     * the second `send` of two tests). zh-CN: 等上一次 [send] 的 [ClockIntentActivity] 销毁. 结果行在其 `onCreate` 里, `finish()` 之前写入;
-     * 在这段时间内以 `FLAG_ACTIVITY_NEW_TASK` 启动同一 action, 会找到它仍作为根的任务并只把该任务移到前台, 不会创建 activity, 也没有结果行
-     * (CI API 33, 2026-11-07: 两个用例的第二次 `send`).
+     * Waits until the [ClockIntentActivity] of the previous [send] is destroyed, so each [send] reads its own outcome. The
+     * outcome line is set inside `onCreate`, before `finish()`; in 1.0.0 a start of the same action in that window was lost
+     * (CI API 33, 2026-11-07: the second `send` of two tests got no outcome; roadmap Q25, covered by
+     * [backToBackRequestsAreBothAnswered]). zh-CN: 等上一次 [send] 的 [ClockIntentActivity] 销毁, 使每次 [send] 读到自己的结果行. 结果行在
+     * `onCreate` 里, `finish()` 之前写入; 1.0.0 中在这段时间内启动同一 action 会丢失 (CI API 33, 2026-11-07: 两个用例的第二次 `send` 没有结果行;
+     * 路线图 Q25, 由 [backToBackRequestsAreBothAnswered] 覆盖).
      */
     private fun awaitNoClockIntentActivity() {
-        val live = Stage.values().filter { it != Stage.DESTROYED }
-        waitFor("the previous ClockIntentActivity is destroyed", WAIT_MILLIS) {
-            var alive = false
-            instrumentation.runOnMainSync {
-                val registry = ActivityLifecycleMonitorRegistry.getInstance()
-                alive = live.any { stage -> registry.getActivitiesInStage(stage).any { it is ClockIntentActivity } }
-            }
-            !alive
-        }
+        waitFor("the previous ClockIntentActivity is destroyed", WAIT_MILLIS) { liveActivities().none { it is ClockIntentActivity } }
+    }
+
+    /** Finishes every activity of the plugin with its task, so no task of the plugin is left. zh-CN: 结束插件的全部 activity 及其任务. */
+    private fun finishAllActivities() {
+        instrumentation.runOnMainSync { liveActivitiesOnMain().forEach { it.finishAndRemoveTask() } }
+        waitFor("the plugin's activities are destroyed", WAIT_MILLIS) { liveActivities().isEmpty() }
+    }
+
+    private fun liveActivities(): List<Activity> {
+        var live = emptyList<Activity>()
+        instrumentation.runOnMainSync { live = liveActivitiesOnMain() }
+        return live
+    }
+
+    private fun liveActivitiesOnMain(): List<Activity> {
+        val registry = ActivityLifecycleMonitorRegistry.getInstance()
+        return Stage.values().filter { it != Stage.DESTROYED }.flatMap { registry.getActivitiesInStage(it) }
     }
 
     private fun outcome(): String {

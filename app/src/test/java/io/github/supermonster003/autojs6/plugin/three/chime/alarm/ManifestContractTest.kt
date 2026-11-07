@@ -194,6 +194,8 @@ class ManifestContractTest {
         assertEquals("true", clock.android("exported"))
         assertEquals(SET_ALARM_PERMISSION, clock.android("permission"))
         assertEquals("@android:style/Theme.NoDisplay", clock.android("theme"))
+        // Roadmap Q25 / T104: every request gets a task of its own, so back to back requests are not queued for an instance that never resumes.
+        assertEquals("always", clock.android("documentLaunchMode"))
         val filters = clock.children("intent-filter")
         assertEquals(
             listOf(

@@ -211,9 +211,13 @@
         <!--
             The system clock intents (roadmap D21; SET_TIMER, SHOW_TIMERS and DISMISS_TIMER join in 1.1.0). Callers hold
             com.android.alarm.permission.SET_ALARM, as for the AOSP clock; roadmap P2 implements the actions.
+            documentLaunchMode "always" gives every request a task of its own (roadmap Q25, T104): callers start it with
+            FLAG_ACTIVITY_NEW_TASK, and a request with the same action that arrived while the previous instance still rooted
+            its task was only queued for that instance, which finishes in onCreate without resuming, so it was lost.
         -->
         <activity
             android:name=".intent.ClockIntentActivity"
+            android:documentLaunchMode="always"
             android:excludeFromRecents="true"
             android:exported="true"
             android:permission="com.android.alarm.permission.SET_ALARM"

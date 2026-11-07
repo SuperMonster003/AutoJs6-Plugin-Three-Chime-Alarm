@@ -4,6 +4,12 @@
 
 ******
 
+# v1.0.1
+
+###### 2026/11/07
+
+* `Correctif` Quand une autre application ou un script AutoJs6 envoyait coup sur coup deux demandes d'alarme du même type (par exemple deux nouvelles alarmes de suite, ou deux appels d'alarms.system.setAlarm visant ce plugin) alors qu'aucun écran du plugin n'était ouvert, la seconde demande était ignorée sans aucun message et son alarme n'était pas créée; chaque demande est désormais traitée
+
 # v1.0.0
 
 ###### 2026/11/07

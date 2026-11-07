@@ -253,6 +253,12 @@ native libraries: libandroidx.graphics.path.so only (Compose graphics-path, 4 AB
 
 ******
 
+#### v1.0.1
+
+_2026/11/07_
+
+- `修復` 其他應用程式或 AutoJs6 腳本很快地連續發出兩個同類的鬧鐘要求 (例如連續兩次新增鬧鐘, 或連續呼叫 alarms.system.setAlarm 並指定本插件) 時, 如果插件當時沒有開啟的介面, 第二個要求會被忽略, 鬧鐘沒有建立, 也沒有任何提示; 現在每個要求都會處理
+
 #### v1.0.0
 
 _2026/11/07_

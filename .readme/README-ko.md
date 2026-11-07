@@ -253,6 +253,12 @@ native libraries: libandroidx.graphics.path.so only (Compose graphics-path, 4 AB
 
 ******
 
+#### v1.0.1
+
+_2026/11/07_
+
+- `수정` 다른 앱이나 AutoJs6 스크립트가 같은 종류의 알람 요청을 짧은 간격으로 연달아 보내면 (예: 알람 두 개를 연달아 추가하거나, 이 플러그인을 지정해 alarms.system.setAlarm을 연달아 호출) 플러그인 화면이 열려 있지 않을 때 두 번째 요청이 아무 안내 없이 무시되어 알람이 만들어지지 않았습니다. 이제 모든 요청을 처리합니다
+
 #### v1.0.0
 
 _2026/11/07_
