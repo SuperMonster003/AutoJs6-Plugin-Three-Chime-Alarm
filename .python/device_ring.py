@@ -1,6 +1,7 @@
 """Ringing checks of 3-Chime Alarm on one device (roadmap P2.4).
 
     py .python/device_ring.py <serial> run [--no-install] [--cases nonotify,lock,degraded,speech,dnd] [--macaw]
+    py .python/device_ring.py <serial> run --no-install --cases lock --silent
     py .python/device_ring.py <serial> clear
 
 run: installs the debug APK (its debug-only RingDebugReceiver is the hook: `am instrument` would force-stop the ring
@@ -42,6 +43,7 @@ MACAW = "io.github.supermonster003.autojs6.plugin.three.macaw.speech"
 TAGS = ("ChimeRing", "ChimeRingDebug", "ChimeSchedule")
 ROOT = Path(__file__).resolve().parent.parent
 LINE = re.compile(r"^(\d\d-\d\d \d\d:\d\d:\d\d\.\d+)\s+\w/(\w+)\(\s*\d+\):\s?(.*)$")
+SILENT = False
 
 
 def adb(serial, *args, check=True, timeout=120):
@@ -249,6 +251,10 @@ def case_lock(device, report, saved):
     else:
         target_volume = 0.3
     options = {"sound": {"volume": target_volume}, "snooze": {"minutes": 1, "max": 3}}
+    if SILENT:
+        # --silent: no sound and no vibration (the device must stay quiet); the sound, volume and vibration checks are
+        # skipped, the screen, notification, wake lock, snooze and dismiss checks run as usual.
+        options = {"sound": {"source": "silent"}, "vibrate": False, "snooze": {"minutes": 1, "max": 3}}
     alarm_id, session = ring(device, report, "p24-probe-lock", options, screen_off=True)
     if not alarm_id:
         return
@@ -257,9 +263,14 @@ def case_lock(device, report, saved):
     state = device.hook("state")
     report.check("screen turned on", state.get("interactive") == "true")
     report.check("ringing screen over the lock screen", device.resumed_ring_screen() and state.get("keyguard") == "true", f"resumed={device.resumed_ring_screen()} keyguard={state.get('keyguard')}")
-    report.check("alarm player active", playing(state), f"alarmPlayers={state.get('alarmPlayers')} {session.split(' player=')[-1].split(' ')[0]}")
-    report.check("independent volume", state.get("volume") == str(target) and state.get("saved") == str(user_volume), f"volume={state.get('volume')} (want {target} of {low} - {high}) saved={state.get('saved')} (user {user_volume})")
-    if device.has_vibrator():
+    if SILENT:
+        Report.skip("lock: alarm player, independent volume, vibration", "--silent")
+    else:
+        report.check("alarm player active", playing(state), f"alarmPlayers={state.get('alarmPlayers')} {session.split(' player=')[-1].split(' ')[0]}")
+        report.check("independent volume", state.get("volume") == str(target) and state.get("saved") == str(user_volume), f"volume={state.get('volume')} (want {target} of {low} - {high}) saved={state.get('saved')} (user {user_volume})")
+    if SILENT:
+        pass
+    elif device.has_vibrator():
         report.check("vibrating", device.vibrating())
     else:
         skipped = wait_log(device, lambda tag, m: tag == "ChimeRing" and m == "vibration skipped: no vibrator", 5)
@@ -393,6 +404,10 @@ def run(serial, args):
     state = device.hook("state")
     print(f"INFO api={device.sdk} volume={state.get('volume')} of {state.get('volumeMin')} - {state.get('volumeMax')} zen={device.zen()} notifications={state.get('notifications')} fullScreen={state.get('fullScreen')}")
     cases = args.cases.split(",")
+    global SILENT
+    SILENT = args.silent
+    if SILENT and set(cases) - {"lock"}:
+        raise SystemExit("--silent only supports --cases lock (the other cases check the sound)")
     try:
         if "lock" in cases:
             case_lock(device, report, saved)
@@ -440,6 +455,7 @@ def main(argv=None):
     run_parser.add_argument("--no-install", action="store_true")
     run_parser.add_argument("--cases", default="nonotify,lock,degraded,speech,dnd")
     run_parser.add_argument("--macaw", action="store_true", help="also speak with the 3-Macaw Speech engine")
+    run_parser.add_argument("--silent", action="store_true", help="lock case only: a silent probe without vibration; the sound checks are skipped")
     sub.add_parser("clear")
     args = parser.parse_args(argv)
     failed = {"run": run, "clear": clear}[args.command](args.serial, args)

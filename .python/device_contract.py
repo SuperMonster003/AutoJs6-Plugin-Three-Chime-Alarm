@@ -440,8 +440,17 @@ function modeUi() {
     save();
 }
 
+function modeSwitch(on) {
+    var before = Store.isEnabled(context, cfg.pkg, false);
+    Store.setEnabled(context, cfg.pkg, on);
+    var now = Store.isEnabled(context, cfg.pkg, !on);
+    record('Plugin Center switch ' + (on ? 'on' : 'off'), now === on ? 'PASS' : 'FAIL', 'was ' + before + ', now ' + now);
+    save();
+}
+
 try {
-    if (cfg.mode === 'unavailable') modeUnavailable();
+    if (cfg.mode === 'switch-on' || cfg.mode === 'switch-off') modeSwitch(cfg.mode === 'switch-on');
+    else if (cfg.mode === 'unavailable') modeUnavailable();
     else if (cfg.mode === 'incompatible') modeIncompatible();
     else if (cfg.mode === 'permission') modePermission();
     else if (cfg.mode === 'cleanup') modeCleanup();
@@ -632,7 +641,9 @@ def after_smoke(serial, args, report, apk):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("serial")
-    parser.add_argument("--modes", default="full,permission", help="comma-separated: unavailable, full, permission, ui (default: full,permission)")
+    parser.add_argument("--modes", default="full,permission",
+                        help="comma-separated: unavailable, full, permission, ui, switch-on / switch-off (the plugin's Plugin Center switch, "
+                             "as the switch on the screen sets it) (default: full,permission)")
     parser.add_argument("--incompatible-apk", metavar="FILE", help="a build whose requiresHostVersion is above the host's versionCode")
     parser.add_argument("--apk", help="the normal APK installed again after --incompatible-apk (default: the newest debug APK)")
     parser.add_argument("--cleanup", action="store_true", help="only remove the alarms an interrupted run left")

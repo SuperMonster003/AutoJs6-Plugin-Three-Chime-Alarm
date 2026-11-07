@@ -265,12 +265,12 @@ class ClockIntentActivityTest {
     }
 
     private fun outcome(): String {
-        val deadline = SystemClock.uptimeMillis() + WAIT_MILLIS
+        val deadline = SystemClock.uptimeMillis() + OUTCOME_WAIT_MILLIS
         while (SystemClock.uptimeMillis() < deadline) {
             ClockActions.lastOutcome?.let { return it }
             SystemClock.sleep(50)
         }
-        throw AssertionError("no outcome within $WAIT_MILLIS ms")
+        throw AssertionError("no outcome within $OUTCOME_WAIT_MILLIS ms")
     }
 
     private fun monitor(type: Class<out Activity>): Instrumentation.ActivityMonitor =
@@ -303,6 +303,13 @@ class ClockIntentActivityTest {
     companion object {
         const val LABEL_PREFIX = "p26-probe"
         private const val WAIT_MILLIS = 10_000L
+
+        /**
+         * The wait for a skip-UI answer: the first local run on AVD_API_33 (roadmap P5.1) missed the 10 s wait three times
+         * in a row and passed in the two runs after it, so the CI job gets more room. zh-CN: 等待跳过界面的应答: AVD_API_33 的首次本地运行
+         * (路线图 P5.1) 连续三次超过 10 s, 之后两次通过, 因此为 CI 留出更多余量.
+         */
+        private const val OUTCOME_WAIT_MILLIS = 30_000L
         private const val HOUR = 60 * 60 * 1000L
         private const val RING_SECONDS = 12
         private const val RING_WAIT_MILLIS = 90_000L
