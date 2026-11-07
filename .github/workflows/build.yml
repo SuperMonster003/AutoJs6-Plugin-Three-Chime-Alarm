@@ -141,8 +141,12 @@ jobs:
           disable-animations: true
           # The emulator runner executes every script line as a separate shell command, so a backslash continuation would
           # become a literal Gradle task name; keep each command on one line (3-Block Compose lesson).
+          # The per-test logcat of the reports holds the main buffer only; the system buffer (ActivityManager START lines,
+          # refused or deferred starts) is kept in ci-logcat/ for runs whose activity starts need explaining (roadmap Q25).
           script: |
             chmod +x gradlew
+            mkdir -p ci-logcat
+            nohup adb logcat -b main -b system -v threadtime > ci-logcat/main-system.txt 2>&1 &
             ./gradlew :app:connectedDebugAndroidTest -Pautojs.gradle.build.number.auto.increment.enabled=false -Pautojs.gradle.build.time.update.enabled=false --console=plain --stacktrace
 
       - name: Upload instrumentation reports
@@ -153,5 +157,6 @@ jobs:
           path: |
             app/build/reports/androidTests/
             app/build/outputs/androidTest-results/connected/
+            ci-logcat/
           if-no-files-found: ignore
           retention-days: 7
