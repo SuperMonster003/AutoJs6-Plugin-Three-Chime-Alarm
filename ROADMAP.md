@@ -153,6 +153,10 @@ T1 - T18 来自设计稿 (2026-11-03), T19 - T25 为立项时补充, T26 起由�
 | T93 | `alarm_update`: 省略的选项保持原值, `sound` / `speak` / `snooze` 只改给出的成员 (与已存分组合并, 同宿主的 T29), `clear` 数组把 `repeat`, `exclude`, `timeZone`, `label`, `tag`, `sound`, `speak`, `snooze`, `autoSilenceMinutes` 恢复默认 (宿主把 JSON null 视为缺省, 工具无法用 null 清除), 同一选项既给出又清除报 `INVALID_OPTIONS`, 无改动报 `INVALID_OPTIONS`; `alarm_skip_next` 加 `cancel: true` 撤销跳过 (脚本 API 的 `cancelSkip`), 不另设工具 | 附录 A 第 10 节的工具集合不变, 又能表达脚本 API 的全部修改 | 已固定 (P4.1, chime-p4) |
 | T94 | 错误映射: `INVALID_OPTIONS` / `INVALID_RULE` / `NOT_FOUND` / `UNSUPPORTED` -> `INVALID_ARGUMENTS`, `LIMIT_EXCEEDED` -> `LIMIT_EXCEEDED`, `PERMISSION_REQUIRED` -> `NOT_READY` (信息补充 "用户可在权限页允许, 或传 enabled false"), 其余 (`IO_FAILED`, `INTERNAL`) -> `FAILED`; 信息为 `CODE: detail`, 保留闹钟错误码; `alarm_remove` 未知 id 返回 `removed: false`, `alarm_dismiss` / `alarm_snooze` 无可处理的响铃返回 `handled: false` (T75), 都不算错误 | 工具协议只有十个错误码, 闹钟码放在信息开头让模型能区分规则错误与 id 错误 | 已固定 (P4.1, chime-p4) |
 | T95 | 工具结果以 `AlarmOptions` 形式描述闹钟: `time` 为 `HH:mm` (有秒时 `HH:mm:ss`), `vibrate` 为布尔或节奏, `snooze` 为 false 或其成员, 未设置的成员略去, `enabled` 总是给出; 另有 `source` / `updatedBy` / `createdAt` / `updatedAt` / `repeatText` / `skipping` / `hasBindings`, 时刻 `nextTrigger` 与 `at` 另给出闹钟时区的 ISO 8601 文本 `nextTriggerTime` / `atTime`; 风险: `alarm_list` / `alarm_upcoming` 为 readonly, `alarm_remove` 为 destructive, 其余 write (MCP Server 中写入类默认关, 需用户打开该组的写入开关); 超时 15 s, 只读工具并发 4, 其余 1; 工具调用改动记来源 `tool`, 关闭与贪睡记 `by` `tool` (`AlarmRuntime.toolApi`) | 与工具的输入同形, 模型可把读到的闹钟直接改了再写回; ISO 文本免去模型换算时区 | 已固定 (P4.1, chime-p4) |
+| T96 | 开机后的首次进程启动按 `BOOT` 对账: `Settings.Global.BOOT_COUNT` 与设备保护存储里记下的值不同即为新的一次开机 (`BootMarker`, 读不到计数时按 `RESTORE`), 日志 `start after boot` | 进程常先于开机广播被启动 (直接启动阶段的绑定或闹钟), 原来按 `RESTORE` 对账, 关机期间错过的闹钟被记成 `late` 补响而不是 `miss` (XQ-AT72 关机 10 分钟实测) | 已固定 (P5.3, chime-p5) |
+| T97 | 进程在后台且没有豁免时启动响铃前台服务被拒 (API 31+), 由 `RingKickReceiver` 在 1 s 后的闹钟唤醒中再启动一次 (可排精确闹钟时为精确唤醒, 再被拒不重设); 日志 `ring kick armed` / `ring kick: sounding=<id>` | 由宿主绑定或工具调用拉起的进程中补响的一轮原来只有日志, 没有声音 (XQ-AT72 强行停止后的后台启动实测); 闹钟广播带后台启动豁免 | 已固定 (P5.3, chime-p5) |
+| T98 | 界面读取宿主外观 Provider 后跟随 `HostAppearanceReader.accept` 保留的已知状态 (`follows`), 不再直接按原始应答解析; 首次解锁前 Provider 读不到时保留记住的快照 | G8441 (API 28) 重启后首次解锁前到点, 响铃界面每秒重建约 12 次直到被停止: 读到 null 解析为系统外观而判 "变化" 并重建, 重建后又从快照开始; 通知入队超速被系统丢弃 | 已固定 (P5.2, chime-p5) |
+| T99 | 增加 `MODIFY_AUDIO_SETTINGS` (普通权限, 安装即授予, 不出现在权限页) | API 33+ 对没有此权限的应用设了闹钟音量下限 (Redmi 22120RN86C 为 3 / 15, OnePlus OPD2413 为 6 / 16); 用户音量低于下限时, 独立音量响完还原被抬到下限 (用户音量被改大). 维护者 2026-11-07 选 "加权限" | 已固定 (P5.2, chime-p5) |
 
 ---
 
@@ -271,7 +275,7 @@ io.github.supermonster003.autojs6.plugin.three.chime.alarm
 | P2 | 1.0.0 | 闹钟核心: 存储, 重复规则引擎, 排程与恢复, 响铃, Binder 服务端与宿主联动, 系统时钟 Intent 接收, 契约一致性测试 | 完成 |
 | P3 | 1.0.0 | 独立界面: 闹钟列表与编辑, 响铃界面, 铃声选择, 权限页, 设置页与发行历史, 图标核对与截图 | 完成 |
 | P4 | 1.0.0 | 插件工具 `alarm_*` 与 MCP Server 实机调用 | 完成 (P4.1 - P4.2) |
-| P5 | 1.0.0 | 验证: AVD 矩阵, 真机矩阵, 时间与系统事件场景, ColorOS 激活, 联动边界, 基线 | 未开始 |
+| P5 | 1.0.0 | 验证: AVD 矩阵, 真机矩阵, 时间与系统事件场景, ColorOS 激活, 联动边界, 基线 | 完成 (chime-p5, 2026-11-07; 修复 T96 - T99, ColorOS 被杀进程不响待决 Q23) |
 | P6 | 1.0.0 | 文档, 声明, 四仓库同步, README / changelog / 截图, 发布与索引登记 | 未开始 |
 | P7 | 1.1.0 | 计时器与秒表 | 未开始 |
 | P8 | 1.2.0 | 节假日与 `beforeRing` | 未开始 |
@@ -461,27 +465,27 @@ P0 (插件骨架, 含 P0.2 评估)          P1.1 - P1.3 (宿主契约, 桥接, �
 
 ### P5.1 AVD 矩阵
 
-- [ ] (测试) `AVD_API_24`: 安装, 直接启动 (重启后不解锁, 到点应响), 最低 API 全流程; `AVD_API_33`: CI 用例集 (`connected-avd` job 的用例定稿); `AVD_API_35_16K` / `AVD_API_36.1_16K`: 全屏权限未授予的退化, 前台服务类型复核 (T6), 16 KB 页环境下安装与运行 (无原生库, 只核对). 证据: `device_smoke.py` 输出 + 日期.
+- [x] (测试) `AVD_API_24`: 安装, 直接启动 (重启后不解锁, 到点应响), 最低 API 全流程; `AVD_API_33`: CI 用例集 (`connected-avd` job 的用例定稿); `AVD_API_35_16K` / `AVD_API_36.1_16K`: 全屏权限未授予的退化, 前台服务类型复核 (T6), 16 KB 页环境下安装与运行 (无原生库, 只核对). 证据: `device_smoke.py` 输出 + 日期. 证据 (E3, 2026-11-06 - 07, chime-p5; 宿主为隔离克隆 87daced8ae 的 debug 包, 临时 versionCode 6641; 插件 APK 以 SHA-256 前 8 位区分, 见附录 D.1): `AVD_API_24` (插件 versionCode 32 `9492f37b`): `device_smoke.py --contract` PASS (契约 38 / 38), `device_p5.py drift` 5 次 P50 19 / 最大 115 ms 且 `execArgv.alarm` 一致, `links` 通过, 重启后不解锁 (FDE 无凭据锁定态) 到点响 (+149 ms); `AVD_API_33` (`bb0dbb1d`): 冒烟 PASS, `connectedDebugAndroidTest` 36 例连跑 3 次为 33 / 36, 36 / 36, 36 / 36 (首次 `ClockIntentActivityTest` 3 例在 10 s 内没等到结果), 等待改为 30 s (`ClockIntentActivityTest.OUTCOME_WAIT_MILLIS`), `connected-avd` 用例集定为全部 `connectedDebugAndroidTest` (4 个设备探针类无参数时自行跳过); `AVD_API_36.1_16K` (`bc023694` / `2fb36130`): 契约 38 / 38, `device_p5.py fgs` 前台服务类型 0x400 (`systemExempted`, T6), `device_ring.py --cases degraded` (全屏权限 `appops deny`) PASS, 强行停止后后台启动的补响 (T97) PASS; `AVD_API_35_16K` (`2fb36130`): 冒烟与契约 PASS, 前台服务类型 0x400, 退化 PASS, 强行停止后补响 PASS (直接启动被拒, kick 后响铃). 16 KB 页 AVD 上安装与运行正常. 模拟器均只读启动, 用完关闭.
 
 ### P5.2 真机矩阵
 
-- [ ] (测试) 附录 D 每台在线设备: R3 冒烟清单, 记录型号 / API / APK 摘要 / 触发偏差 (ms). 证据: 结果填入附录 D 矩阵的 "1.0.0 结果" 列.
+- [x] (测试) 附录 D 每台在线设备: R3 冒烟清单, 记录型号 / API / APK 摘要 / 触发偏差 (ms). 证据: 结果填入附录 D 矩阵的 "1.0.0 结果" 列. 证据 (E3, 2026-11-06 - 07, chime-p5): 附录 D.1 六台真机都已填写; 宿主一律换为隔离克隆 6641 的 debug 包, 测后装回各机原有宿主并核对 md5; 插件中心开关原为关的测时打开, 测后还原. R3 各项的对应: 安装与授权 (`device_smoke.py`, MIUI / ColorOS 的安装确认与通知授权由维护者操作), `alarms.add` 后到点响, `alarms.on('ring')` 收到事件, 绑定脚本被启动且 `execArgv.alarm` 正确 (`device_p5.py drift` 与契约的 ring 检查), 响铃界面贪睡与关闭 (`device_ring.py --cases lock`, 通知动作), 重启后闹钟仍在并按时响 (`device_p5.py due` / `rebootcheck`; 日志被 MIUI / ColorOS 开机后的大量日志轮换时, 改为从开机起持续抓取插件日志), `alarms.system.setAlarm` 建进系统时钟 (契约示例 3 以 `package` 指向本插件, `alarms.system.next()` 读回; 写进系统时钟应用的分支已在 P1.5 宿主检查中覆盖, 为免在维护者的时钟应用里留下闹钟, 本轮不重复). 期间查出并修复 T98 (G8441 首次解锁前响铃界面重建循环) 与 T99 (API 33+ 闹钟音量低于应用下限时还原被抬高); 维护者 00:49 - 08:5x 要求静音, 其间的锁屏响铃用 `device_ring.py --silent` (静音无振动, 跳过声音 / 音量 / 振动检查), 解除静音后各机都补跑了有声版本.
 
 ### P5.3 时间与系统事件场景 (T7 - T9, T16)
 
-- [ ] (测试) XQ-AT72: 改系统时间 (向前 / 向后), 改时区, DST (设 `America/New_York` 并把时间拨到跳变前 2 分钟, 两个方向), 升级安装 (`MY_PACKAGE_REPLACED` 后闹钟仍在排程), 关机错过 (关机 10 分钟越过触发点, 开机后应 `miss` 不响并有通知; 关机 2 分钟越过应补响), Doze (`adb shell dumpsys deviceidle force-idle` 后 `setAlarmClock` 不被推迟), 杀进程 (`am force-stop` 后到点仍响). 证据: 每项通过 / 失败 + logcat 关键行.
+- [x] (测试) XQ-AT72: 改系统时间 (向前 / 向后), 改时区, DST (设 `America/New_York` 并把时间拨到跳变前 2 分钟, 两个方向), 升级安装 (`MY_PACKAGE_REPLACED` 后闹钟仍在排程), 关机错过 (关机 10 分钟越过触发点, 开机后应 `miss` 不响并有通知; 关机 2 分钟越过应补响), Doze (`adb shell dumpsys deviceidle force-idle` 后 `setAlarmClock` 不被推迟), 杀进程 (`am force-stop` 后到点仍响). 证据: 每项通过 / 失败 + logcat 关键行. 证据 (E3, 2026-11-06 - 07, chime-p5, XQ-AT72 API 31, 宿主克隆 6641; 脚本 `.python/device_schedule.py`, `.python/device_events.py`, `.python/device_p5.py`; 测后已还原自动时间与时区): 改时间 / 时区 `device_schedule.py run` 全 PASS; DST `device_events.py dst` 12 / 12 (春季 2027-03-14 每日 02:30 落在跳变后的 07:00 UTC 响, 次日 06:30 UTC; 秋季 2026-11-01 每日 01:59 只在第一次 01:59 响, 时钟再走到第二次 01:59 不再响, 下一次 2026-11-02 06:59 UTC); 升级安装 `replaced` 6 / 6 (`MY_PACKAGE_REPLACED` 对账, `RTC_WAKEUP` 闹钟仍在); Doze `doze` 3 / 3 (先 `force-idle` 进入深度空闲再排闹钟, 到点偏差 17 ms; 系统排闹钟后随即退到 INACTIVE, 一小时内有闹钟时本就拒绝进入深度空闲); 关机: 10 分钟越过触发点的闹钟开机后 `miss <id> off` 不响并有错过通知 (通知 id 按闹钟核对), 另一个越过 2.5 分钟的闹钟开机后补响 (晚 167 s), 锁屏中 `scriptSkipped=locked`, 解锁后不补启动 (`offcheck` 6 / 6, 修复 T96 之后; 修复前开机后首次启动按 `RESTORE` 对账, 错过的闹钟被记成 `late` 补响); 维护者第一轮提前开机时闹钟在开机过程中到点, 晚 18 s 补响, 作短关机补响的证据; 杀进程: `am kill` 后到点照常响 (新进程, 见 P5.6 冷启动); `am force-stop` 按系统规则清掉本应用的全部闹钟, 停止期间到点不响, 这是平台行为, 不是插件能改变的; 之后进程被后台启动 (宿主绑定, 工具调用) 时 5 分钟补响窗口内补响, 原来补响的前台服务启动被后台限制拒绝而无声, 由 T97 修复 (XQ-AT72, `AVD_API_36.1_16K`, `AVD_API_35_16K` 复测 PASS). 强行停止后插件保持 stopped 状态 (G8441 上宿主绑定与重启都没有清除, 从启动器打开一次即清除), 写进 README 常见问题.
 
 ### P5.4 ColorOS 激活与唤醒 (OnePlus OPD2413)
 
-- [ ] (测试) 安装后不打开插件, 插件中心出现 "激活" 并可启用; 杀死进程后到点仍响 (记录是否需要自启动 / 后台限制设置, 写进 README 常见问题); 宿主被杀后经 `ALARM_TRIGGER` 唤醒并启动绑定脚本. 证据: 步骤与结果, 未执行项如实记录.
+- [x] (测试) 安装后不打开插件, 插件中心出现 "激活" 并可启用; 杀死进程后到点仍响 (记录是否需要自启动 / 后台限制设置, 写进 README 常见问题); 宿主被杀后经 `ALARM_TRIGGER` 唤醒并启动绑定脚本. 证据: 步骤与结果, 未执行项如实记录. 证据 (E3, 2026-11-07, chime-p5, OnePlus OPD2413 ColorOS 15 / API 35, 宿主克隆 6641, 插件 `2fb36130` / `9c3e5e47`; 安装确认, 设置开关与解锁由维护者操作): 安装后不打开插件, 插件中心把 3-Chime Alarm 置顶并标 "Newly installed", 开关已是打开 (没有单独的 "激活" 按钮), 截图留在会话笔记; 冒烟 + 契约 39 / 39 (通知权限未授予时 `notifications: false`), 前台服务类型 0x400, 触发偏差 5 次 P50 23 / 最大 27 ms, 有声锁屏响铃 22 PASS (维护者打开通知与横幅后); 杀死进程后到点不响: 插件进程被 `am kill` 或用户在最近任务里划掉后, 到点的闹钟广播被 `OplusAppStartupManager` 拦下 (`prevent start ... AlarmTriggerReceiver by broadcast system[alarmManger]`), 维护者先后打开自启动 (含关联启动), 后台行为, 最近任务锁定, 通知全部开关, 并把杀进程到到点拉长到 10 分钟, 共 9 轮都被拦; 重启后锁屏期间到点同样不响 (开机对账 `start after boot` 正常, 之后进程不在), 解锁后由 `BOOT_COMPLETED` 拉起补响 (晚 155 s); 宿主被杀后 `ALARM_TRIGGER` 被拦 (`prevent start org.autojs.autojs6`, ChimeTrigger `scriptSkipped=unavailable`), 打开宿主自启动后仍被拦; 进程活着或被冻结时一切正常. 结论: 本条的 "杀死进程后到点仍响" 在 ColorOS 上不满足, 现有设置无法绕开, 处理方式待决 (附录 B Q23); README 常见问题素材: 不要在最近任务里划掉或一键清理 3-Chime Alarm (可锁定, 锁定能挡住用户清理), 打开通知与横幅才会在锁屏打开响铃界面 (Q20), 强行停止后要从启动器打开一次.
 
 ### P5.5 联动边界 (附录 A 第 5.3 节)
 
-- [ ] (测试) 宿主被 "强行停止" (广播按系统规则不投递, 插件照常响铃), 宿主未安装 / 插件被禁用时的脚本错误三码, 设备未解锁 (`scriptSkipped: 'locked'`, 解锁后不补启动), 绑定脚本文件不存在 (跳过 + 日志), 同一 `occurrence` 不重复启动 (贪睡后再响为新 `occurrence`), 同一闹钟多脚本绑定, 实时监听者退出后回调注销 (`dumpsys activity services` 查绑定数). 证据: 每项通过 / 失败.
+- [x] (测试) 宿主被 "强行停止" (广播按系统规则不投递, 插件照常响铃), 宿主未安装 / 插件被禁用时的脚本错误三码, 设备未解锁 (`scriptSkipped: 'locked'`, 解锁后不补启动), 绑定脚本文件不存在 (跳过 + 日志), 同一 `occurrence` 不重复启动 (贪睡后再响为新 `occurrence`), 同一闹钟多脚本绑定, 实时监听者退出后回调注销 (`dumpsys activity services` 查绑定数). 证据: 每项通过 / 失败. 证据 (E3, 2026-11-06 - 07, chime-p5, XQ-AT72 为主, 脚本 `.python/device_p5.py`): 宿主强行停止 `hoststop` 8 / 8 (插件照常响铃, ChimeTrigger `scriptSkipped=unavailable`, 宿主保持停止, 脚本未被启动); 三码: `PLUGIN_UNAVAILABLE` (插件未装, 契约 unavailable 模式), `PLUGIN_DISABLED` (插件中心关闭, 契约 full 模式), `PLUGIN_INCOMPATIBLE` (`requiresHostVersion` 6642 的变体包, 6 / 6), 各台契约均通过; 设备未解锁: XQ-AT72 关机与重启, G8441 / XQ-DQ72 / OnePlus 重启后锁屏到点都是 `scriptSkipped=locked`, 解锁后不补启动; `links` 9 / 9: 绑定脚本被删除后跳过 (ChimeTrigger `missing=1`, 宿主 W 行 `bound script is gone`), 同一闹钟贪睡 1 分钟后再响为新的 `occurrence`, 每个 (`occurrence`, 事件) 只启动一次, 两个脚本绑定同一闹钟各启动一次; 实时监听 `listen` 4 / 4 (`dumpsys activity services` 中插件服务的连接数: 监听时加 1, 脚本退出后释放, 剩下的是宿主连接池的调用连接); 宿主被杀 (`am kill`, 非强行停止) 后 `ALARM_TRIGGER` 拉起宿主并启动绑定脚本 `hostkill` PASS (XQ-AT72, ChimeTrigger `launched=1`); ColorOS 上被拦见 P5.4 与 Q23.
 
 ### P5.6 基线
 
-- [ ] (测试) 响铃触发偏差 (`scheduledAt` 与实际 `firedAt`, 每台 10 次, P50 / 最大), 待机一夜电量 (无闹钟 vs 3 个启用闹钟, 同一台机), 冷启动到响铃界面可见的时长; 填附录 D 基线表. 证据: 表格数值.
+- [x] (测试) 响铃触发偏差 (`scheduledAt` 与实际 `firedAt`, 每台 10 次, P50 / 最大), 待机一夜电量 (无闹钟 vs 3 个启用闹钟, 同一台机), 冷启动到响铃界面可见的时长; 填附录 D 基线表. 证据: 表格数值. 证据 (E3, 2026-11-07, chime-p5): 附录 D.2 已填. 触发偏差 10 次: XQ-AT72 P50 44 / 最大 61 ms, Xiaomi Pad 32 / 42 ms, XQ-DQ72 13 / 18 ms (其余真机 5 次见 D.1); 过夜电量用 XQ-AT72 模拟拔电两段各 4 小时 (维护者 2026-11-07 选定, USB 不拔, `.python/device_battery.py`), 插件 uid 估算 0.00015 mAh (3 个启用闹钟) 对 0.0071 mAh (无闹钟), 两段唤醒都是 0 次, 差异小于 0.01 个百分点, 真实电量百分比未测; 冷启动 XQ-DQ72 `am kill` 后到点至响铃界面首帧 P50 1079 / 最大 1107 ms (`device_p5.py coldstart`, 首帧取 `RingActivity` 的 `ring screen drawn` 日志, 全屏 Intent 启动不打印 `Displayed`); release APK 2.24 MiB.
 
 ---
 
@@ -1130,6 +1134,7 @@ Q1 - Q6 已于 2026-11-03 拍板为 D20 - D25 (原表见附录 F), 编号不复�
 | Q20 | ColorOS 15 (OnePlus 平板 OPD2413) 上, 全屏 Intent 在关屏响铃时三次都没打开响铃界面: 响铃类别为高重要性, 全屏权限已授, 锁屏拦截已允许, 只有测试程序直接启动才显示, 实际使用时用户只听到铃声并看到通知 | (a) 另开条目, 本会话不深挖: P3.2 证据如实写 "OnePlus 为直接启动, 全屏 Intent 未生效", 新增 ColorOS 适配条目 (先查明哪个系统开关让全屏 Intent 生效, 再加权限页 ColorOS 项与悬浮窗后备), 由调度会话排批次 (推荐); (b) 本会话现在就查: 维护者在平板上依次打开候选开关, 每开一项跑一轮静音响铃, 查明后在权限页加 ColorOS 项与悬浮窗后备; (c) 不处理, 只在 README 兼容性一节写明 ColorOS 上锁屏响铃以通知加铃声呈现 | P3.2, P3.4, P5.4, P6.1 | (b) P3.2 延后约 1.5 小时 | P3.2 勾选前 | 已决 (2026-11-06, 维护者选 (b) 非推荐项): 根因是应用级 "横幅" 通知 (新装默认关闭) 把 `ring` 类别压到 DEFAULT, SystemUI 记 `FSI=off|not important enough`; 维护者勾选横幅后 `naturalImportance=4`, 关屏响铃自行打开响铃界面. 实施见 T87 |
 | Q21 | 响铃通知的 "贪睡 / 关闭" 动作与错过通知跟系统语言, 不跟插件语言 (XQ-DQ72 系统英文, 插件跟随 AutoJs6 为中文, 浮动通知上是中文标签配 "Snooze / Dismiss"); 响铃时进程多半新起, 响铃界面先用系统语言画出, 读到宿主语言后再重建 | (a) 跟插件语言 + 记住宿主外观: 读到的宿主外观存一份到设备加密存储, 进程新起时通知与各界面首帧都先用这份 (推荐); (b) 只让通知跟插件语言: 通知用内存里的宿主外观, 没有就退回系统语言; (c) 保持现状, 与 3-Macaw Speech 的通知一致 | P3.2 | (b) 约 20 分钟, 进程新起时的首次响铃仍是系统语言 | P3.2 勾选前 | 已决 (2026-11-06, 维护者选 (a)): 实施见 T88 |
 | Q22 | 通知小图标 (响铃通知, 错过闹钟通知) 原用自适应图标的单色层 (P0.3 源图经 Icon Studio 生成), 单色层带着自适应图标的安全区留白, 在 XQ-DQ72 状态栏与浮动通知里只有同排系统图标约一半大 (状态栏宽约 15 px, 同排约 31 px) | (a) 改用 24 dp 的 Material 闹钟图形 `ic_alarm_24` (与响铃滑块同一图形, 双铃闹钟轮廓与 P0.3 图案相近), 与同排图标同大 (推荐); (b) 从 P0.3 源图另生成专用小图标 (裁去安全区留白, 5 种密度 PNG 或矢量), 需扩展 Icon Studio 配方或另写生成脚本, 图案与启动器一致; (c) 保持单色层 | P3.6, P6.1 (README 截图) | (b) 约 1 小时加 XQ-DQ72 复拍; (c) 改回两行 | P6.4 发布前 | 已决 (2026-11-06 19:05, 维护者选 (a) 保持 ic_alarm_24, 已实施于 7c99701): 两处 `setSmallIcon` 改为 `ic_alarm_24`, XQ-DQ72 锁屏响铃复拍明暗都与同排图标同大, 见 P3.6 |
+| Q23 | ColorOS 15 (OnePlus OPD2413) 上插件进程一旦被杀 (`am kill`, 或用户在最近任务里划掉), 到点的闹钟广播被 `OplusAppStartupManager` 拦下 (`prevent start ... AlarmTriggerReceiver by broadcast system[alarmManger]`), 闹钟不响; 宿主被杀后 `ALARM_TRIGGER` 同样被拦 (`prevent start org.autojs.autojs6`). 维护者依次打开自启动 (含关联启动), 后台行为, 最近任务锁定, 通知全部开关 (允许通知, 横幅, 锁屏, 响铃, 勿扰例外), 并把杀进程到到点拉长到 10 分钟, 共 9 轮都被拦; 重启后锁屏期间到点也不响, 解锁后由 `BOOT_COMPLETED` 拉起补响 (晚 155 s); 进程活着或被冻结时正常响 (契约 39 / 39, 触发偏差 P50 23 ms) | (a) 1.0.0 前: 权限页自启动行在 ColorOS 上改用专门说明 (不要在最近任务里划掉, 可锁定; 被清理后到点不响), README 常见问题写清; 1.1.0 另开条目评估 ColorOS 可选的常驻前台服务保活 (常驻通知, 略增耗电) (推荐); (b) 1.0.0 就加保活选项 (设置开关 + 常驻前台服务 + 11 种语言文案 + 真机验证, 推迟发布); (c) 只在 README 兼容性一节写明 | P5.4, P6.1 (README), 权限页 | (a) 新增 1 条字符串 x 11 种语言, 约 1 小时; (b) 约 1 天 | P6.4 发布前 | 待决 (2026-11-07 维护者选 "只登记待决", 由调度会话排批次; 实测记录见 P5.4) |
 
 ---
 
@@ -1153,15 +1158,15 @@ Q1 - Q6 已于 2026-11-03 拍板为 D20 - D25 (原表见附录 F), 编号不复�
 
 | 设备 | serial | API | 角色 | 1.0.0 结果 |
 | --- | --- | --- | --- | --- |
-| Sony XQ-AT72 | QV710AF65F | 31 | 主联调机; `SCHEDULE_EXACT_ALARM` 需用户授权的路径; P5.3 时间与系统事件场景; P4.2 MCP 调用 | 待测 |
-| Sony XQ-DQ72 | QV770340J7 | 33 | `USE_EXACT_ALARM` 路径; 截图机 (1096 x 2560); 锁屏全屏响铃 | 待测 |
-| Redmi 22120RN86C | bek749scrwv4wo8h | 33 | MIUI 后台限制与自启动引导文案核对 | 待测 |
-| Xiaomi Pad 23046RP50C | 968e9f18 | 35 | API 34+ 全屏权限未授予的退化; 平板布局; T6 复核 | 待测 |
-| OnePlus OPD2413 | 63751f63 | 35 | ColorOS 激活与唤醒 (P5.4) | 待测 |
-| Sony G8441 | BH900ASK9E | 28 | 低 API 真机冒烟 (原装宿主包, 不开新模块层开关) | 待测 |
-| AVD_API_24 | emulator | 24 | 最低 API 与直接启动 | 待测 |
-| AVD_API_33 | emulator | 33 | CI 用例集 (`connected-avd`) | 待测 |
-| AVD_API_35_16K / AVD_API_36.1_16K | emulator | 35 / 36 | T6 实测, 全屏权限退化, 16 KB 页环境 (无原生库, 只核对安装与运行) | 待测 |
+| Sony XQ-AT72 | QV710AF65F | 31 | 主联调机; `SCHEDULE_EXACT_ALARM` 需用户授权的路径; P5.3 时间与系统事件场景; P4.2 MCP 调用 | 通过 (2026-11-06 - 07, `bb0dbb1d` / `bc023694` / `2fb36130`): 冒烟 + 契约 49 / 49 (含 `PERMISSION_REQUIRED`), 锁屏响铃 22 PASS, 触发偏差 10 次 P50 44 / 最大 61 ms 且 `execArgv.alarm` 一致, 重启后到点响, P5.3 / P5.5 全部场景, 过夜电量 (P5.6) |
+| Sony XQ-DQ72 | QV770340J7 | 33 | `USE_EXACT_ALARM` 路径; 截图机 (1096 x 2560); 锁屏全屏响铃 | 通过 (2026-11-06 - 07, `30f51a88` / `bc023694` / `9c3e5e47`): 契约 38 / 38 (插件中心开关原为关, 测时打开, 测后还原), 触发偏差 10 次 P50 13 / 最大 18 ms, 锁屏全屏响铃 PASS, `am kill` 后到点至响铃界面首帧 P50 1079 / 最大 1107 ms, 重启后锁屏到点响 (+135 ms, `scriptSkipped=locked`, 解锁后不补启动, 响铃界面只绘制 1 次) |
+| Redmi 22120RN86C | bek749scrwv4wo8h | 33 | MIUI 后台限制与自启动引导文案核对 | 通过 (2026-11-07, `e2293803` / `9c3e5e47`): MIUI 安装确认与通知授权由维护者操作, 冒烟 + 契约 39 / 39 (插件中心开关原为关, 测时打开, 测后还原), 触发偏差 5 次 P50 40 / 最大 42 ms, 有声锁屏响铃 20 PASS (本机未设锁屏, 2 项锁屏检查不适用), 重启后到点响 (+1642 ms, MIUI 在开机后多次结束插件进程, 到点时冷启动), 查出闹钟音量低于应用下限时还原被抬高 (T99, 复测还原到 1); 自启动引导文案未核对 |
+| Xiaomi Pad 23046RP50C | 968e9f18 | 35 | API 34+ 全屏权限未授予的退化; 平板布局; T6 复核 | 通过 (2026-11-07, `9c3e5e47`, 由 debug 29 原位升级): 冒烟 + 契约 39 / 39 (插件中心开关原为关, 测时打开, 测后还原), 触发偏差 10 次 P50 32 / 最大 42 ms, 有声锁屏响铃与全屏权限退化 30 PASS (无振动器, 记录跳过), 前台服务类型 0x400 (T6), 重启后锁屏到点响 (+481 ms, `scriptSkipped=locked`, 解锁后不补启动); 平板布局未另行核对 (P3 已截图) |
+| OnePlus OPD2413 | 63751f63 | 35 | ColorOS 激活与唤醒 (P5.4) | 部分通过 (2026-11-07, `2fb36130` / `9c3e5e47`): 冒烟 + 契约 39 / 39, 触发偏差 5 次 P50 23 / 最大 27 ms, 有声锁屏响铃 22 PASS, 前台服务类型 0x400; 插件或宿主进程被杀后到点被 ColorOS 拦下, 重启后锁屏期间不响, 解锁后补响 (Q23, 见 P5.4); 查出闹钟音量低于应用下限 (6 / 16) 时还原被抬高, T99 复测通过 |
+| Sony G8441 | BH900ASK9E | 28 | 低 API 真机冒烟 (原装宿主包, 不开新模块层开关) | 通过 (2026-11-07, `2fb36130` / `e2293803`; 宿主换为本会话的克隆 6641, 测后装回机上原有的宿主包): 冒烟 + 契约 39 / 39, 触发偏差 5 次 P50 41 / 最大 45 ms, 有声锁屏响铃 22 PASS, 重启后锁屏到点响 (+171 ms, `scriptSkipped=locked`, 解锁后不补启动); 查出首次解锁前响铃界面重建循环 (T98, 修复后复测只绘制 1 次) |
+| AVD_API_24 | emulator | 24 | 最低 API 与直接启动 | 通过 (2026-11-06, 见 P5.1) |
+| AVD_API_33 | emulator | 33 | CI 用例集 (`connected-avd`) | 通过 (2026-11-06, 见 P5.1) |
+| AVD_API_35_16K / AVD_API_36.1_16K | emulator | 35 / 36 | T6 实测, 全屏权限退化, 16 KB 页环境 (无原生库, 只核对安装与运行) | 通过 (2026-11-07, 见 P5.1) |
 | 租用机 SM-A566B / SM-F971B | 在线 (端口以实际为准) | 36 / 37 | 按需: 新 API 行为抽查 (租用机的 adb shell 经代理过滤, 长命令用 detached 方案) | 按需 |
 
 设备协调: 同一时间一台设备只给一个会话用; 构建宿主前与其他会话排队; 手机上的授权对话框 (精确闹钟, 通知, 全屏, MCP 配对) 由维护者操作, 子会话停下说明要确认什么.
@@ -1170,11 +1175,11 @@ Q1 - Q6 已于 2026-11-03 拍板为 D20 - D25 (原表见附录 F), 编号不复�
 
 | 指标 | 设备 | 1.0.0 | 备注 |
 | --- | --- | --- | --- |
-| 响铃触发偏差 P50 / 最大 (ms, 10 次) | XQ-AT72 | 待测 | `scheduledAt` 与 `firedAt` 之差 |
-| 响铃触发偏差 P50 / 最大 (ms, 10 次) | Xiaomi Pad | 待测 | |
-| 待机一夜电量差 (无闹钟 vs 3 个启用闹钟, 百分点) | 同一台机 | 待测 | |
-| 进程被杀后到点至响铃界面可见 (ms) | XQ-DQ72 | 待测 | `am force-stop` 后 |
-| release APK 体积 (MiB) | - | 待测 | 单 APK, 无 `lib/` |
+| 响铃触发偏差 P50 / 最大 (ms, 10 次) | XQ-AT72 | 44 / 61 | `scheduledAt` 与 `firedAt` 之差 (`device_p5.py drift`, 2026-11-07, `bc023694`) |
+| 响铃触发偏差 P50 / 最大 (ms, 10 次) | Xiaomi Pad | 32 / 42 | 2026-11-07, `9c3e5e47`; 另有 XQ-DQ72 10 次 13 / 18 ms, 5 次的 G8441 41 / 45, Redmi 40 / 42, OnePlus 23 / 27 |
+| 待机一夜电量差 (无闹钟 vs 3 个启用闹钟, 百分点) | XQ-AT72 | < 0.01 | 2026-11-07 00:51 - 08:51, USB 不拔, `dumpsys battery unplug` 模拟拔电与熄屏, 两段各 4 小时 (`.python/device_battery.py`): 3 个启用闹钟 (11 - 12 小时后到点) 时插件 uid 估算 0.00015 mAh, 唤醒 0 次, CPU 4 ms; 无闹钟时 0.0071 mAh (清除探针时拉起进程, CPU 1.3 s), 唤醒 0 次; 整机耗电在模拟拔电下估不出 (两段都是 0.0 mAh), 没有测真实电量百分比 |
+| 进程被杀后到点至响铃界面可见 (ms) | XQ-DQ72 | 1079 / 1107 | P50 / 最大, `am kill` 后到点至响铃界面首帧 (`ring screen drawn`), 熄屏, 2026-11-07, `bc023694`; `am force-stop` 会清掉本应用的闹钟 (P5.3), 无法以它计时 |
+| release APK 体积 (MiB) | - | 2.24 | 2026-11-07, `appendDigestToReleasedFiles`, 单 APK 2,345,101 字节; `lib/` 只有 Compose `ui-graphics` 的 `libandroidx.graphics.path.so` (4 个 ABI, T34) |
 
 ---
 
