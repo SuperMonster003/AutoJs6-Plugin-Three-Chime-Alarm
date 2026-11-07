@@ -49,6 +49,19 @@
 
 ******
 
+### {{ h3_screenshots }}
+
+******
+
+{{ p_screenshots }}
+
+| {{ text_screenshot_list }} | {{ text_screenshot_edit }} | {{ text_screenshot_ring }} | {{ text_screenshot_settings }} |
+| :---: | :---: | :---: | :---: |
+| <img src="{{ repo_url }}/blob/master/docs/images/screenshots/list-light.png?raw=true" alt="list-light" width="200" /> | <img src="{{ repo_url }}/blob/master/docs/images/screenshots/edit-light.png?raw=true" alt="edit-light" width="200" /> | <img src="{{ repo_url }}/blob/master/docs/images/screenshots/ring-light.png?raw=true" alt="ring-light" width="200" /> | <img src="{{ repo_url }}/blob/master/docs/images/screenshots/settings-light.png?raw=true" alt="settings-light" width="200" /> |
+| <img src="{{ repo_url }}/blob/master/docs/images/screenshots/list-dark.png?raw=true" alt="list-dark" width="200" /> | <img src="{{ repo_url }}/blob/master/docs/images/screenshots/edit-dark.png?raw=true" alt="edit-dark" width="200" /> | <img src="{{ repo_url }}/blob/master/docs/images/screenshots/ring-dark.png?raw=true" alt="ring-dark" width="200" /> | <img src="{{ repo_url }}/blob/master/docs/images/screenshots/settings-dark.png?raw=true" alt="settings-dark" width="200" /> |
+
+******
+
 ### {{ h3_usage }}
 
 ******
@@ -81,6 +94,28 @@ alarms.system.setAlarm({ hour: 6, minute: 50, label: "Flight" });
 
 ******
 
+### {{ h3_system_clock }}
+
+******
+
+{{ p_system_clock_intro }}:
+
+{{ placeholder_system_clock_points }}
+
+******
+
+### {{ h3_compatibility }}
+
+******
+
+{{ p_compatibility_host }}
+
+{{ p_compatibility_matrix }}:
+
+{{ placeholder_compatibility_table }}
+
+******
+
 ### {{ h3_faq }}
 
 ******
@@ -92,6 +127,10 @@ alarms.system.setAlarm({ hour: 6, minute: 50, label: "Flight" });
 ### {{ h3_security }}
 
 ******
+
+{{ p_permissions_intro }}:
+
+{{ placeholder_permission_points }}
 
 {{ p_security_intro }}
 

@@ -192,7 +192,7 @@
     <string name="permissions_title">الأذونات والعمل في الخلفية</string>
     <string name="permissions_vendor_banner">إشعارات اللافتة</string>
     <string name="permissions_vendor_banner_guide">لا يوفر النظام حالة هذا العنصر. فعّل \"لافتة\" في إعدادات إشعارات هذه الإضافة وإلا فلن تفتح شاشة الرنين تلقائيا على شاشة القفل ما لم يُسمح بالظهور فوق التطبيقات الأخرى.</string>
-    <string name="plugin_description">منبه ومؤقتات وساعة إيقاف مع قواعد تكرار تقويمية وتخطي العطلات وتشغيل نصوص برمجية عند الرنين</string>
+    <string name="plugin_description">منبه بقواعد تكرار تقويمية وقراءة صوتية وتشغيل سكربتات AutoJs6 عند الرنين</string>
     <string name="release_history_title">سجل الإصدارات</string>
     <string name="release_history_unavailable">تعذر تحميل سجل الإصدارات</string>
     <string name="ring_action_dismiss">إيقاف</string>

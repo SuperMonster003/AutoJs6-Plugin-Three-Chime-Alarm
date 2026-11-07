@@ -192,7 +192,7 @@
     <string name="permissions_title">権限とバックグラウンド動作</string>
     <string name="permissions_vendor_banner">バナー通知</string>
     <string name="permissions_vendor_banner_guide">システムはこの項目の状態を提供しません. このプラグインの通知設定で \"バナー\" をオンにしてください. オフのままだと, 他のアプリの上に重ねて表示を許可していない限り, ロック画面で鳴動画面が自動で開きません.</string>
-    <string name="plugin_description">カレンダー形式の繰り返しルール, 祝日スキップ, 鳴動時のスクリプト連携に対応したアラーム, タイマー, ストップウォッチ</string>
+    <string name="plugin_description">カレンダー形式の繰り返しルール, 読み上げ付きの鳴動, 鳴動時の AutoJs6 スクリプト連携に対応したアラーム</string>
     <string name="release_history_title">バージョン履歴</string>
     <string name="release_history_unavailable">バージョン履歴を読み込めませんでした</string>
     <string name="ring_action_dismiss">停止</string>

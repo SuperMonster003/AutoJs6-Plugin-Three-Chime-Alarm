@@ -6,19 +6,29 @@
   "changelog_label_dependency": "相依性",
   "$data": {
     "v1.0.0": {
-      "released_date": "2026/11/05",
+      "released_date": "2026/11/07",
       "hint": [
-        "開發預覽: 外掛可以被 AutoJs6 外掛中心辨識, 鬧鐘, 計時器, 碼錶, 外掛介面與 alarms 指令碼模組尚未交付",
-        "需要 AutoJs6 {{ required_host_version_name }} ({{ required_host_version_code }}) 或更高版本 (確切的最低版本號待宿主端變更完成後回填)",
-        "目前圖示為候選圖案, 之後可能更換"
+        "外掛中心啟用, 外掛工具與 alarms 指令碼模組需要 AutoJs6 {{ required_host_version_name }} (內部版本號 {{ required_host_version_code }}) 或更新版本; 在較早的 AutoJs6 上 (例如 6.8.0) 外掛只能作為獨立的鬧鐘應用程式使用",
+        "ColorOS (OPPO, 一加, realme) 上請在應用程式資訊與 設定 > 應用程式 > 自動啟動 兩處為外掛開啟自動啟動, 否則外掛處理程序被清理後鬧鐘不會響 (參閱 README > 常見問題)"
       ],
       "feature": [
-        "外掛骨架: Wake 啟用協定, 外掛中心身分服務與鬧鐘能力服務",
-        "只有一個適用於所有裝置的 APK, 支援 16 KB 記憶體分頁的裝置",
-        "10 種語言的 README, 外掛中心說明與更新日誌, 由 JSON 來源檔案統一產生"
+        "鬧鐘: 單次或重複鬧鐘, 重複規則按 RFC 5545 日曆規則 (工作日, 每月第幾個星期幾, 月底, 間隔天數, 截止日期與次數), 可以排除日期或只略過下一次",
+        "響鈴: 系統鈴聲或匯入的本機音訊, 朗讀文字, 獨立音量與漸強, 自訂震動, 貪睡與自動停止, 鎖定畫面全螢幕響鈴畫面, 多個鬧鐘同時到期時依序響鈴",
+        "排程: 重新開機, 修改時間或時區與外掛升級後自動重新排程, 首次解鎖前也能響鈴, 錯過的鬧鐘 5 分鐘內補響, 超過則留下一則通知",
+        "外掛介面: 鬧鐘清單, 編輯頁, 響鈴畫面, 權限頁與設定頁; 語言, 深色模式與主題色預設跟隨 AutoJs6, 可以切換啟動器圖示",
+        "設定頁: 鈴聲, 震動, 貪睡與自動停止的預設值, 時間格式, 自動檢查更新, 以及選用的 \"保持背景執行\" (常駐一則靜音通知, 減少外掛被系統清理)",
+        "權限頁逐項檢查通知, 精確鬧鐘, 全螢幕提醒, 電池最佳化, 背景限制與廠商自啟動, 在 ColorOS 上另有自動啟動清單與橫幅通知的引導",
+        "AutoJs6 指令碼模組 alarms / $alarms (需要 AutoJs6 {{ required_host_version_name }}, 僅 Rhino): 鬧鐘的新增, 查詢, 修改與刪除, 事件監聽, 登記由 AutoJs6 在事件發生時啟動的指令碼, 鈴聲清單 (參閱 [AutoJs6 文件](https://docs.autojs6.com/#/alarms))",
+        "外掛工具 alarm_add, alarm_list, alarm_update, alarm_remove, alarm_set_enabled, alarm_skip_next, alarm_upcoming, alarm_dismiss 與 alarm_snooze, 可經 MCP Server 外掛或 plugins.tools.call 呼叫",
+        "系統時鐘對接: 處理其他應用程式發出的設定, 顯示, 關閉與貪睡鬧鐘要求",
+        "只有一個適用於所有裝置的 APK, 支援 16 KB 記憶體分頁的裝置"
       ],
       "dependency": [
         "附加 AndroidX Core KTX 版本 1.15.0",
+        "附加 AndroidX Activity Compose 版本 1.12.2",
+        "附加 Jetpack Compose BOM 版本 2026.09.00 (外掛介面)",
+        "附加 Kotlin Coroutines Android 版本 1.11.0",
+        "附加 Material Color Utilities 版本 4.1.1 (主題色)",
         "附加 lib-recur 版本 0.17.1 (計算鬧鐘的重複規則)",
         "附加 Desugar JDK Libs 版本 2.1.5 (讓 Android 7.x 也能使用日期與時區運算)"
       ]

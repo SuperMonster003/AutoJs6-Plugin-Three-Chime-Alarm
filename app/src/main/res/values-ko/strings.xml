@@ -192,7 +192,7 @@
     <string name="permissions_title">권한 및 백그라운드 실행</string>
     <string name="permissions_vendor_banner">배너 알림</string>
     <string name="permissions_vendor_banner_guide">시스템이 이 항목의 상태를 제공하지 않습니다. 이 플러그인의 알림 설정에서 \"배너\"를 켜세요. 켜지 않으면 다른 앱 위에 표시를 허용하지 않은 한 잠금 화면에서 알람 화면이 자동으로 열리지 않습니다.</string>
-    <string name="plugin_description">달력 반복 규칙, 공휴일 건너뛰기, 알람이 울릴 때 스크립트 연동을 지원하는 알람, 타이머 및 스톱워치</string>
+    <string name="plugin_description">달력 반복 규칙, 음성 읽기 알람, 알람이 울릴 때 AutoJs6 스크립트 연동을 지원하는 알람 앱</string>
     <string name="release_history_title">버전 기록</string>
     <string name="release_history_unavailable">버전 기록을 불러올 수 없습니다</string>
     <string name="ring_action_dismiss">해제</string>

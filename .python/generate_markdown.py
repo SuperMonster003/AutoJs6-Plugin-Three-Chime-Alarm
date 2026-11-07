@@ -87,8 +87,10 @@ CHANGELOG_CATEGORIES = ["hint", "feature", "fix", "improvement", "dependency"]
 CHANGELOG_LABEL_KEYS = [f"changelog_label_{category}" for category in CHANGELOG_CATEGORIES]
 CHANGELOG_DATA_KEY = "$data"
 
-README_LIST_KEYS = ["features", "usage_steps", "api_points", "security_points"]
+README_LIST_KEYS = ["features", "usage_steps", "api_points", "permission_points", "security_points", "system_clock_points"]
 README_FAQ_KEY = "faq"
+README_COMPATIBILITY_KEY = "compatibility_rows"
+README_COMPATIBILITY_FIELDS = {"device", "android", "result"}
 
 EXPECTED_ARTIFACT_COUNT = 36
 README_LATEST_RELEASES = 3
@@ -207,6 +209,16 @@ def validate_readme_language(code: str, content: dict[str, Any]) -> None:
         require(
             isinstance(item, dict) and set(item) == {"q", "a"},
             f"README {code!r} faq[{index}] must be an object with exactly the keys 'q' and 'a'",
+        )
+    require(README_COMPATIBILITY_KEY in content, f"README language {code!r} is missing the {README_COMPATIBILITY_KEY!r} list")
+    rows = content[README_COMPATIBILITY_KEY]
+    require(isinstance(rows, list) and rows, f"README {code!r} field {README_COMPATIBILITY_KEY!r} must be a non-empty list")
+    for index, row in enumerate(rows):
+        require(
+            isinstance(row, dict) and set(row) == README_COMPATIBILITY_FIELDS
+            and all(isinstance(value, str) and "|" not in value for value in row.values()),
+            f"README {code!r} {README_COMPATIBILITY_KEY}[{index}] must be an object with exactly the string keys "
+            f"{sorted(README_COMPATIBILITY_FIELDS)} and no table separator",
         )
 
 
@@ -382,6 +394,13 @@ def faq_list(items: list[dict[str, str]]) -> str:
     return "\n\n".join(f"#### {item['q']}\n\n{item['a']}" for item in items)
 
 
+def compatibility_table(rows: list[dict[str, str]], content: dict[str, Any]) -> str:
+    header = f"| {content['text_compat_device']} | {content['text_compat_android']} | {content['text_compat_result']} |"
+    lines = [header, "| --- | --- | --- |"]
+    lines.extend(f"| {row['device']} | {row['android']} | {row['result']} |" for row in rows)
+    return "\n".join(lines)
+
+
 def markdown_link(label: str, url: str) -> str:
     return f"[{label}]({url})"
 
@@ -466,7 +485,10 @@ def build_readme_values(
     content["placeholder_features"] = bullet_list(content["features"])
     content["placeholder_usage_steps"] = numbered_list(content["usage_steps"])
     content["placeholder_api_points"] = bullet_list(content["api_points"])
+    content["placeholder_permission_points"] = bullet_list(content["permission_points"])
     content["placeholder_security_points"] = bullet_list(content["security_points"])
+    content["placeholder_system_clock_points"] = bullet_list(content["system_clock_points"])
+    content["placeholder_compatibility_table"] = compatibility_table(content[README_COMPATIBILITY_KEY], content)
     content["placeholder_faq"] = faq_list(content[README_FAQ_KEY])
     content["placeholder_latest_release_history"] = format_changelog_items(
         changelogs[code],
