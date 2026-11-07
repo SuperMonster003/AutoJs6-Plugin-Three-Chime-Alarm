@@ -133,6 +133,8 @@
     <string name="home_unbind_message">The AutoJs6 scripts bound to this alarm will no longer run with it. The alarm itself stays.</string>
     <string name="home_unbind_none">No scripts were bound to this alarm</string>
     <string name="home_unbind_title">Unbind scripts</string>
+    <string name="keep_alive_notification_text">3-Chime Alarm stays running so the system does not close it before an alarm. Turn off \"Keep running in background\" in Settings to remove this notification.</string>
+    <string name="keep_alive_notification_title">Keeping alarms on time</string>
     <string name="launcher_icon_applied_note">The launcher may take a few seconds to refresh. Some home-screen shortcuts may need to be added again.</string>
     <string name="launcher_icon_auto">Adaptive icon (automatic)</string>
     <string name="launcher_icon_auto_note">Tries to follow the system theme. Some launchers cache icons or use only one color scheme.</string>
@@ -151,6 +153,8 @@
     <string name="notices_third_party_summary">The components in the app and their licenses</string>
     <string name="notices_title">Licenses and notices</string>
     <string name="notices_unavailable">The document is not available</string>
+    <string name="notification_channel_keep_alive_description">Shown by \"Keep running in background\" while an alarm is on</string>
+    <string name="notification_channel_keep_alive_name">Keep running in background</string>
     <string name="notification_channel_missed_description">Alarms that did not ring because the device was off or the system held them back</string>
     <string name="notification_channel_missed_name">Missed alarms</string>
     <string name="notification_channel_ring_description">Shows the ringing alarm and its full screen alert</string>
@@ -160,6 +164,8 @@
     <string name="notification_missed_title">Missed: %1$s</string>
     <string name="permissions_allowed">Allowed</string>
     <string name="permissions_allowed_at_install">Allowed at install</string>
+    <string name="permissions_auto_launch">Auto launch list</string>
+    <string name="permissions_auto_launch_guide">The system does not report this state. ColorOS has two separate places: the autostart, associated launch and background activity switches in the app details (the row above), and the list under Settings > Apps > Auto launch (this row). Turn on 3-Chime Alarm in both, and AutoJs6 too when alarms start scripts, otherwise alarms do not ring once the plugin was closed in the background. When the list cannot open directly, this row opens Settings: go to Apps > Auto launch.</string>
     <string name="permissions_autostart">Autostart</string>
     <string name="permissions_autostart_guide">The system does not report this state. Without autostart, alarms come back after a restart only once 3-Chime Alarm is opened.</string>
     <string name="permissions_background">Background restriction</string>
@@ -217,6 +223,7 @@
     <string name="settings_about">About</string>
     <string name="settings_alarm_defaults">Alarm defaults</string>
     <string name="settings_appearance">Appearance</string>
+    <string name="settings_background">Background</string>
     <string name="settings_dark_mode_dark">Dark</string>
     <string name="settings_dark_mode_light">Light</string>
     <string name="settings_defaults_note">Options an alarm leaves at Default use these values</string>
@@ -225,6 +232,8 @@
     <string name="settings_follow_autojs6_unavailable">AutoJs6 is not available, so the system settings apply</string>
     <string name="settings_follow_system">Follow system</string>
     <string name="settings_follow_system_summary">Follow system - %1$s</string>
+    <string name="settings_keep_alive">Keep running in background</string>
+    <string name="settings_keep_alive_summary">While an alarm is on, a low priority notification keeps the system from closing 3-Chime Alarm in the background. Turn on when alarms do not ring after the plugin was cleared, for example on ColorOS. Uses slightly more battery.</string>
     <string name="settings_language">Language</string>
     <string name="settings_language_ar">العربية</string>
     <string name="settings_language_en">English</string>

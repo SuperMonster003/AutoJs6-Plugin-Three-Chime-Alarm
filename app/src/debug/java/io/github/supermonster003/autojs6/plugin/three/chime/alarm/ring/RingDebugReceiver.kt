@@ -30,13 +30,15 @@ import org.json.JSONObject
  *   omitted), the path the user takes;
  * - `state`: reports the ring state, the alarm stream volume and the saved user volume, the lock screen, the screen,
  *   the full screen and notification permissions and the active players with alarm usage;
- * - `clear`: dismisses and removes every probe alarm.
+ * - `clear`: dismisses and removes every probe alarm;
+ * - `keepalive`: sets "Keep running in background" (roadmap Q23 (b), T100) to `value` `on` / `off` and syncs the
+ *   keep-alive service, or only reports it without a `value`.
  *
  * zh-CN: 仅 debug 构建: `.python/device_ring.py` 的探针 (路线图 P2.4). `am instrument` 会强行停止插件, 从而结束被测的响铃, 因此设备脚本改为向本接收器
  * 发送 shell 广播, 并从日志读取应答 (标签 [TAG], 每行以请求的 `token` 开头). 操作 (`op`): `add` 在 `inSeconds` 秒后添加一次性探针闹钟 `label`
  * (以 [LABEL_PREFIX] 开头), 附加 `options64` (JSON 对象的 Base64) 中的选项; `snooze` / `dismiss` 向响铃服务发送通知按钮的 Intent (针对探针 `id`,
  * 省略时为全部), 与用户的操作路径相同; `state` 报告响铃状态, 闹钟流音量与保存的用户音量, 锁屏, 屏幕, 全屏与通知权限, 以及闹钟用途的活动播放器;
- * `clear` 关闭并删除全部探针闹钟.
+ * `clear` 关闭并删除全部探针闹钟; `keepalive` 把 "保持后台运行" (路线图 Q23 (b), T100) 设为 `value` `on` / `off` 并同步保活服务, 不带 `value` 时只报告.
  */
 class RingDebugReceiver : BroadcastReceiver() {
 
@@ -69,6 +71,7 @@ class RingDebugReceiver : BroadcastReceiver() {
             }
             "cleared=${probes.size}"
         }
+        "keepalive" -> keepAlive(context, intent.getStringExtra("value"))
         else -> "error=unknown op '$op'"
     }
 
@@ -88,6 +91,17 @@ class RingDebugReceiver : BroadcastReceiver() {
         } catch (e: AlarmException) {
             "error=${e.code}: ${e.message}"
         }
+    }
+
+    private fun keepAlive(context: Context, value: String?): String {
+        val settings = KeepAliveService.settings(context)
+        val saved = when (value) {
+            "on" -> settings.setEnabled(true)
+            "off" -> settings.setEnabled(false)
+            else -> null
+        }
+        if (saved == true) KeepAliveService.sync(context)
+        return "keepAlive=${settings.enabled} running=${KeepAliveService.running}" + (saved?.let { " saved=$it" } ?: "")
     }
 
     private fun send(context: Context, action: String, id: String?): String {
@@ -127,6 +141,9 @@ class RingDebugReceiver : BroadcastReceiver() {
             "notifications=${NotificationManagerCompat.from(context).areNotificationsEnabled()}",
             "alarmPlayers=$alarmPlayers",
             "probes=${probes.ifEmpty { "none" }}",
+            "keepAlive=${KeepAliveService.settings(context).enabled}",
+            "keepAliveRunning=${KeepAliveService.running}",
+            "enabledAlarms=${runtime.repository.list().count { it.enabled }}",
         ).joinToString(" ")
     }
 

@@ -8,7 +8,7 @@
 3. direct landing: `am start` of the frozen OPEN action with `page=permissions`, as `alarms.openPlugin('permissions')`
    sends it, resumes `.ui.permissions.PermissionsActivity`.
 4. PermissionsJumpProbe (androidTest): every row's state, the alarm list banner shown exactly while a row is
-   missing and opening the page, the OPEN action again, then a tap on each tappable row (all by default) with the
+   missing (on ColorOS also while the auto launch list row was never opened, roadmap T103) and opening the page, the OPEN action again, then a tap on each tappable row (all by default) with the
    system page it opened: the page the row chose and the component on top; a fallback to the app details is marked.
    The notification row is skipped (SKIP) while it would show the runtime permission dialog, which only the
    maintainer answers on the device. A row without a result, a row that threw and a probe that stopped early fail.
@@ -88,9 +88,11 @@ def run(serial, args):
         rows = [row for row in values.get("chime.rows", "").split(",") if row]
         missing = [row for row in values.get("chime.missing", "").split(",") if row]
         print(f"    rows (API {values.get('chime.sdk')}): " + ", ".join(f"{row}={values.get(f'chime.state.{row}')}" for row in rows))
+        # The banner rows: the missing ones, and on ColorOS the auto launch list until its row was opened once (T103).
+        named = [row for row in values.get("chime.bannerRows", ",".join(missing)).split(",") if row]
         banner = values.get("chime.banner") == "true"
-        report.check("alarm list banner shown exactly while a row is missing", banner == bool(missing),
-                     f"banner {banner}, missing [{', '.join(missing)}]")
+        report.check("alarm list banner shown exactly while a row is missing (or the ColorOS auto launch list was never opened)",
+                     banner == bool(named), f"banner {banner}, missing [{', '.join(missing)}], named [{', '.join(named)}]")
         if banner:
             report.check("banner opens the page", values.get("chime.bannerOpens") == "true")
         report.check("OPEN action reaches the page from the plugin", values.get("chime.direct") == "true")

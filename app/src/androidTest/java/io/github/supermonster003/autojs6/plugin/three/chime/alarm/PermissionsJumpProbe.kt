@@ -72,11 +72,12 @@ class PermissionsJumpProbe {
         out.putString("chime.sdk", snapshot.sdk.toString())
         out.putString("chime.rows", snapshot.rows.joinToString(",") { it.tag })
         out.putString("chime.missing", snapshot.missing.joinToString(",") { it.tag })
+        out.putString("chime.bannerRows", snapshot.banner.joinToString(",") { it.tag })
         snapshot.rows.forEach { row ->
             out.putString("chime.state.${row.tag}", snapshot.state(row).name)
             out.putString("chime.actionable.${row.tag}", snapshot.actionable(row).toString())
         }
-        // The alarm list shows the banner exactly while a row is missing, and the banner opens the page.
+        // The alarm list shows the banner exactly while it names a row (T82, T103), and the banner opens the page.
         context.startActivity(Intent(context, HomeActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         compose.waitUntil(WAIT_MILLIS) { listOf("chime.home.list", "chime.emptyState").any { compose.onAllNodesWithTag(it).fetchSemanticsNodes().isNotEmpty() } }
         val banner = compose.onAllNodesWithTag(BANNER).fetchSemanticsNodes().isNotEmpty()

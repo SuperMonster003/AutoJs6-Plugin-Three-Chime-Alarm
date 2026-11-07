@@ -13,6 +13,7 @@ import android.os.PowerManager
 import android.provider.Settings
 import android.util.Log
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.edit
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.AlarmRuntime
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ThreeChimeAlarmApplication
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ring.RingService
@@ -27,6 +28,12 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ring.RingServi
 internal object Permissions {
 
     const val TAG = "ChimePermissions"
+
+    /** The preferences of the permissions page. zh-CN: 权限页的偏好. */
+    const val PREFERENCES = "ui-permissions"
+
+    /** Whether the auto launch list row was opened once (T103). zh-CN: 自动启动列表一行是否已打开过 (T103). */
+    const val KEY_AUTO_LAUNCH_OPENED = "autoLaunchOpened"
 
     /** Name of the last page a row opened, for the device probe. zh-CN: 最近一次某行打开的页面名, 供设备探针读取. */
     @Volatile
@@ -51,8 +58,11 @@ internal object Permissions {
             batteryUnrestricted = app.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(app.packageName),
             backgroundRestricted = background,
             autostart = AutostartVendor.of(Build.MANUFACTURER, Build.BRAND),
+            autoLaunchOpened = preferences(app).getBoolean(KEY_AUTO_LAUNCH_OPENED, false),
         )
     }
+
+    private fun preferences(context: Context) = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
 
     /** The pages of [row] in the order they are tried, before the app details. zh-CN: [row] 的页面, 按尝试顺序, 应用详情之前. */
     fun pagesOf(context: Context, row: PermissionRow, snapshot: PermissionSnapshot): List<Intent> {
@@ -91,6 +101,12 @@ internal object Permissions {
             PermissionRow.BATTERY -> listOf(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
             PermissionRow.BACKGROUND -> emptyList()
             PermissionRow.AUTOSTART -> snapshot.autostart?.pages.orEmpty().map { (pkg, cls) -> Intent().setComponent(ComponentName(pkg, cls)) }
+            PermissionRow.AUTO_LAUNCH -> listOf(
+                Intent(AutostartVendor.COLOROS_AUTO_LAUNCH_ACTION).setPackage(AutostartVendor.COLOROS_AUTO_LAUNCH_PACKAGE),
+                Intent().setComponent(ComponentName(AutostartVendor.COLOROS_AUTO_LAUNCH_PACKAGE, AutostartVendor.COLOROS_AUTO_LAUNCH_CLASS)),
+                Intent(AutostartVendor.COLOROS_APP_LIST_ACTION).setPackage(AutostartVendor.COLOROS_SETTINGS_PACKAGE),
+                Intent(Settings.ACTION_SETTINGS),
+            )
         }
     }
 
@@ -105,6 +121,7 @@ internal object Permissions {
                 val fallback = index == pages.lastIndex && pages.size > 1
                 Log.i(TAG, "open ${row.tag} -> $name${if (fallback) " (fallback)" else ""}")
                 lastOpened = name
+                if (row == PermissionRow.AUTO_LAUNCH) preferences(activity).edit { putBoolean(KEY_AUTO_LAUNCH_OPENED, true) }
                 return true
             } catch (e: ActivityNotFoundException) {
                 Log.i(TAG, "open ${row.tag}: no $name")

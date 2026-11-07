@@ -210,7 +210,7 @@ class ManifestContractTest {
     @Test
     fun `the INFO and ALARM services match the discovery constants and the ring service stays internal`() {
         assertEquals(
-            listOf(".ring.RingService", ".service.ThreeChimeAlarmInfoService", ".service.ThreeChimeAlarmService", ".tool.ChimeToolService"),
+            listOf(".ring.RingService", ".ring.KeepAliveService", ".service.ThreeChimeAlarmInfoService", ".service.ThreeChimeAlarmService", ".tool.ChimeToolService"),
             application.children("service").map { it.android("name") },
         )
         val info = service(".service.ThreeChimeAlarmInfoService")
@@ -242,6 +242,13 @@ class ManifestContractTest {
         assertEquals("true", ring.android("directBootAware"))
         // Roadmap T6 (measured in P0.2): the type and its permission change together.
         assertEquals(RING_SERVICE_TYPE, ring.android("foregroundServiceType"))
+
+        // The optional keep-alive service of roadmap Q23 (b) (T100): internal, before the first unlock, the ring service type.
+        val keepAlive = service(".ring.KeepAliveService")
+        assertEquals("false", keepAlive.android("exported"))
+        assertEquals("true", keepAlive.android("directBootAware"))
+        assertEquals(RING_SERVICE_TYPE, keepAlive.android("foregroundServiceType"))
+        assertTrue(keepAlive.children("intent-filter").isEmpty())
     }
 
     @Test

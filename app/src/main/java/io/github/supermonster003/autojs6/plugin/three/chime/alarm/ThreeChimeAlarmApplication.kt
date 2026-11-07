@@ -34,12 +34,21 @@ class ThreeChimeAlarmApplication : Application() {
         val missed = NotificationChannel(CHANNEL_MISSED, getString(R.string.notification_channel_missed_name), NotificationManager.IMPORTANCE_DEFAULT).apply {
             description = getString(R.string.notification_channel_missed_description)
         }
-        getSystemService(NotificationManager::class.java).createNotificationChannels(listOf(ring, missed))
+        // The optional keep-alive service (roadmap Q23 (b), T100): minimum importance, no sound, no status bar icon.
+        // zh-CN: 可选的保活服务 (路线图 Q23 (b), T100): 最低重要性, 无声音, 不在状态栏显示图标.
+        val keepAlive = NotificationChannel(CHANNEL_KEEP_ALIVE, getString(R.string.notification_channel_keep_alive_name), NotificationManager.IMPORTANCE_MIN).apply {
+            description = getString(R.string.notification_channel_keep_alive_description)
+            setSound(null, null)
+            enableVibration(false)
+            setShowBadge(false)
+        }
+        getSystemService(NotificationManager::class.java).createNotificationChannels(listOf(ring, missed, keepAlive))
     }
 
     internal companion object {
         const val CHANNEL_RING = "ring"
         const val CHANNEL_MISSED = "missed"
+        const val CHANNEL_KEEP_ALIVE = "keep-alive"
     }
 
 }

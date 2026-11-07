@@ -109,13 +109,14 @@ import java.time.ZoneId
  * ring ("in 9 hr, 3 min"), its enable switch, who created and last changed it, and a mark when AutoJs6 scripts are
  * bound to it (tap to unbind, T27). The overflow menu skips or restores the next ring and deletes; a long press starts
  * the multi-select delete. A banner on top opens the permissions page while a permission the alarms need is missing
- * (P3.4, T82). A tap on a row, the add button and the empty state open the edit page (P3.1, T83); the top bar opens the
- * settings, and the list runs the automatic update check when it opens (P3.5, T84). Repository calls run off the main
- * thread; the list and the banner reload on resume, on repository and ring changes, and at every minute (state changes
- * such as a new next ring send no change event).
+ * (P3.4, T82; on ColorOS also the auto launch list until its row was opened once, T103). A tap on a row, the add
+ * button and the empty state open the edit page (P3.1, T83); the top bar opens the settings, and the list runs the
+ * automatic update check when it opens (P3.5, T84). Repository calls run off the main thread; the list and the banner
+ * reload on resume, on repository and ring changes, and at every minute (state changes such as a new next ring send no
+ * change event).
  * zh-CN: 闹钟列表 (路线图 P3.1, D7, T18, D20), 启动器目标: 每个闹钟的时间, 重复, 标签与下次响铃 ("还有 9 小时 3 分"), 启用开关, 创建与最后修改来源,
  * 以及 AutoJs6 脚本绑定标记 (点击解除绑定, T27). 溢出菜单跳过或恢复下次响铃并删除; 长按进入多选删除. 缺少闹钟所需的权限时, 顶部横幅打开权限页 (P3.4,
- * T82). 点击列表行, 新建按钮与空状态打开编辑页 (P3.1, T83); 顶栏打开设置页, 列表打开时进行自动更新检查 (P3.5, T84). 仓库调用不在主线程; 列表与横幅
+ * T82; ColorOS 上另提示自动启动列表, 直到该行被打开过一次, T103). 点击列表行, 新建按钮与空状态打开编辑页 (P3.1, T83); 顶栏打开设置页, 列表打开时进行自动更新检查 (P3.5, T84). 仓库调用不在主线程; 列表与横幅
  * 在恢复, 仓库与响铃变化以及每分钟时重新加载 (新的下次响铃等状态变化不发变更事件).
  */
 class HomeActivity : StandaloneActivity() {
@@ -186,7 +187,7 @@ private fun HomeScreen() {
     val selecting = selection.isNotEmpty()
 
     LaunchedEffect(generation) {
-        val (loaded, lacking, format) = withContext(Dispatchers.IO) { Triple(loadItems(context), Permissions.read(context).missing, TimeFormats.get(context)) }
+        val (loaded, lacking, format) = withContext(Dispatchers.IO) { Triple(loadItems(context), Permissions.read(context).banner, TimeFormats.get(context)) }
         items = loaded
         missing = lacking
         timeFormat = format

@@ -9,8 +9,9 @@ P5.6 baselines). The host must be a build with the alarm contract (versionCode 6
     py .python/device_p5.py <serial> hostkill [--lead 45]
     py .python/device_p5.py <serial> due [--lead 240] [--tag p5-reboot]      (adds a bound alarm and exits)
     py .python/device_p5.py <serial> rebootcheck [--tag p5-reboot]          (after the reboot: did it ring, was the script started)
-    py .python/device_p5.py <serial> coldstart [--count 3] [--kill am|force-stop] [--screen off|on]
+    py .python/device_p5.py <serial> coldstart [--count 3] [--kill am|force-stop] [--screen off|on] [--keep-alive on|off] [--no-screen-check]
     py .python/device_p5.py <serial> fgs
+    py .python/device_p5.py <serial> keepalive
     py .python/device_p5.py <serial> cleanup
     py .python/device_p5.py <serial> quiet | unquiet
 
@@ -36,9 +37,16 @@ P5.6 baselines). The host must be a build with the alarm contract (versionCode 6
   time from the due instant to the new process, the ring session, the resumed ring screen and its first frame (the
   `ring screen drawn` line; logcat epoch times; screen off by default). With `--kill force-stop` it shows the system
   rule instead: no ring while the package is stopped; a background start within 5 minutes rings late (through the
-  kick wake-up of roadmap T97 when the direct foreground service start is refused).
+  kick wake-up of roadmap T97 when the direct foreground service start is refused). `--keep-alive on` turns on "Keep
+  running in background" (roadmap Q23 (b), T100) for the run and puts the previous value back afterwards: the process
+  then survives `am kill` (no kill -9 fallback) and the probe must ring in it; `--keep-alive off` turns it off for the
+  run. `--no-screen-check` passes on the ring session alone (the ringing screen opening by itself depends on other
+  settings, such as the ColorOS banner notifications of roadmap Q20).
 - fgs: a silent probe of the debug hook rings; the foreground service type of the ring service is read from
   `dumpsys activity services` (roadmap T6: `systemExempted`, 0x400, from API 34; no type below API 34).
+- keepalive (roadmap Q23 (b), T100): with "Keep running in background" on, the keep-alive service runs in the foreground
+  while an alarm is enabled (type `systemExempted` 0x400 from API 34) and stops once none is; with it off it never runs.
+  Reads the channel importance the system gave its notification; puts the previous setting back.
 - cleanup: removes the alarms an interrupted run left (tag p5*), and the debug probes.
 - quiet / unquiet: turns the system sounds that a run can set off (lock screen sound on screen off / on, charging sound
   of a simulated plug-in, touch sounds) off and saves their values; `unquiet` puts the saved values back. The probes of
@@ -631,12 +639,94 @@ def pid(serial):
     return adb(serial, "shell", "pidof", PLUGIN).strip()
 
 
+def keep_alive_state(serial):
+    answer = hook(serial, "state")
+    return answer.get("keepAlive") == "true", answer.get("keepAliveRunning") == "true", int(answer.get("enabledAlarms", "-1"))
+
+
+def set_keep_alive(serial, value):
+    """Sets the setting through the debug hook and waits up to 10 s for the service to follow (a start refused in the
+    background is retried by the kick wake-up 1 s later)."""
+    hook(serial, "keepalive", value=value)
+    deadline = time.time() + 10
+    while time.time() < deadline:
+        enabled, running, alarms = keep_alive_state(serial)
+        if running == (enabled and alarms > 0):
+            return enabled, running, alarms
+        time.sleep(1)
+    return keep_alive_state(serial)
+
+
+def keep_alive_service(serial):
+    text = adb(serial, "shell", "dumpsys", "activity", "services", f"{PLUGIN}/.ring.KeepAliveService", timeout=60)
+    types = sorted(set(re.findall(r"(?:foregroundServiceType|types)=(0x[0-9a-fA-F]+|\d+)", text)))
+    return "isForeground=true" in text, int(types[0], 0) if types else None
+
+
+def keep_alive_channel(serial):
+    text = adb(serial, "shell", "dumpsys", "notification", timeout=60)
+    found = re.search(r"NotificationChannel\{mId='keep-alive'[^}]*?mImportance=(\d+)", text)
+    return int(found.group(1)) if found else None
+
+
+def keepalive(serial, args, report):
+    """Roadmap Q23 (b), T100: the keep-alive service follows the setting and the enabled alarms."""
+    sdk = int(adb(serial, "shell", "getprop", "ro.build.version.sdk").strip() or 0)
+    hook(serial, "clear")
+    before, _, others = keep_alive_state(serial)
+    report.line("enabled alarms besides the probes", "PASS" if others >= 0 else "FAIL", str(others))
+    try:
+        enabled, running, _ = set_keep_alive(serial, "off")
+        report.line("setting off: not running", "PASS" if not enabled and not running else "FAIL", f"enabled {enabled}, running {running}")
+        options = __import__("base64").b64encode(json.dumps({"sound": {"source": "silent"}, "vibrate": False}).encode()).decode()
+        hook(serial, "add", label="p24-probe-keepalive", inSeconds=3600, options64=options)
+        time.sleep(3)
+        _, running, alarms = keep_alive_state(serial)
+        report.line("setting off with an enabled alarm: not running", "PASS" if not running else "FAIL", f"enabled alarms {alarms}")
+        enabled, running, alarms = set_keep_alive(serial, "on")
+        foreground, value = keep_alive_service(serial)
+        expected = 0x400 if sdk >= 34 else None
+        type_ok = value == expected if expected is not None else value in (None, 0)
+        report.line("setting on with an enabled alarm: running in the foreground", "PASS" if enabled and running and foreground and type_ok else "FAIL",
+                    f"running {running}, isForeground {foreground}, type {hex(value) if value is not None else 'none'} (API {sdk})")
+        importance = keep_alive_channel(serial)
+        report.line("keep-alive channel importance", "PASS" if importance in (1, 2) else "FAIL", f"{importance} (1 min, 2 low)")
+        hook(serial, "clear")
+        deadline = time.time() + 10
+        while time.time() < deadline:
+            _, running, alarms = keep_alive_state(serial)
+            if running == (alarms > 0):
+                break
+            time.sleep(1)
+        report.line("no enabled alarm left: stops (or keeps running for the other enabled alarms)", "PASS" if running == (alarms > 0) else "FAIL",
+                    f"running {running}, enabled alarms {alarms}")
+        enabled, running, _ = set_keep_alive(serial, "off")
+        report.line("setting off again: stops", "PASS" if not enabled and not running else "FAIL", f"running {running}")
+    finally:
+        hook(serial, "clear")
+        set_keep_alive(serial, "on" if before else "off")
+
+
 def coldstart(serial, args, report):
     """`am kill`: the process start, the ring session, the resumed and the first drawn ring screen after the due instant.
     `force-stop`: no ring while the package is stopped (the system drops its alarms, roadmap T60); started again within
     the 5 minute window, the plugin rings late (T16)."""
     results = []
     options = __import__("base64").b64encode(json.dumps({"sound": {"source": "silent"}, "vibrate": False}).encode()).decode()
+    before = keep_alive_state(serial)[0] if args.keep_alive else None
+    if args.keep_alive:
+        hook(serial, "keepalive", value=args.keep_alive)
+    try:
+        coldstart_rounds(serial, args, report, options, results)
+    finally:
+        if args.keep_alive:
+            hook(serial, "keepalive", value="on" if before else "off")
+    if results:
+        report.line("due to the first frame of the ring screen", "PASS", f"n {len(results)}, P50 {percentile50(results):.0f} ms, max {max(results):.0f} ms")
+
+
+def coldstart_rounds(serial, args, report, options, results):
+    keep_alive = args.keep_alive == "on"
     for i in range(args.count):
         answer = hook(serial, "add", label=f"p24-probe-cold-{i}", inSeconds=args.lead, options64=options)
         if "added" not in answer:
@@ -645,13 +735,17 @@ def coldstart(serial, args, report):
         at = int(answer["at"])
         alarm = answer["added"]
         time.sleep(3)
+        if keep_alive:
+            running = keep_alive_state(serial)[1]
+            report.line(f"cold start {i}: keep-alive service running", "PASS" if running else "FAIL", f"running {running}")
         adb(serial, "shell", "input", "keyevent", "KEYCODE_HOME")
         time.sleep(2)
+        before_pid = pid(serial)
         if args.kill == "force-stop":
             adb(serial, "shell", "am", "force-stop", PLUGIN)
         else:
             adb(serial, "shell", "am", "kill", PLUGIN)
-            if pid(serial):
+            if pid(serial) and not keep_alive:
                 adb(serial, "shell", "run-as", PLUGIN, "sh", "-c", "kill -9 $(pidof " + PLUGIN + ")")
         time.sleep(1)
         killed = not pid(serial)
@@ -680,8 +774,16 @@ def coldstart(serial, args, report):
             report.line(f"force-stop {i}: late ring after a background start", "PASS" if late and sounded else "FAIL",
                         (late[0].split(" ", 2)[-1] if late else "no ring") + f", direct start refused {refused}, kick {kicked}, ring session {sounded}")
             adb(serial, "shell", "input", "keyevent", "KEYCODE_HOME")
+        elif keep_alive:
+            # The foreground service keeps the process out of `am kill` (it only kills background processes).
+            # zh-CN: 前台服务让进程不在 `am kill` 之列 (它只杀后台进程).
+            visible = drawn if args.screen == "off" and args.screen_check else True
+            survived = pid(serial) == before_pid or not killed
+            report.line(f"keep-alive {i}: process survived am kill", "PASS" if survived and not killed else "FAIL", f"killed {killed}")
+            report.line(f"keep-alive {i}: rings on time in the living process", "PASS" if session and visible else "FAIL",
+                        f"new process {start is not None}, ring session +{ms(session)} ms, screen resumed +{ms(resumed)} ms, first frame +{ms(drawn)} ms")
         else:
-            visible = drawn if args.screen == "off" else True
+            visible = drawn if args.screen == "off" and args.screen_check else True
             report.line(f"cold start {i} (am kill, killed {killed})", "PASS" if killed and session and visible else "FAIL",
                         f"process +{ms(start)} ms, ring session +{ms(session)} ms, screen resumed +{ms(resumed)} ms, first frame +{ms(drawn)} ms")
             if drawn:
@@ -689,8 +791,6 @@ def coldstart(serial, args, report):
         hook(serial, "clear")
         adb(serial, "shell", "input", "keyevent", "KEYCODE_WAKEUP")
         time.sleep(3)
-    if results:
-        report.line("due to the first frame of the ring screen", "PASS", f"n {len(results)}, P50 {percentile50(results):.0f} ms, max {max(results):.0f} ms")
 
 
 def fgs(serial, args, report):
@@ -725,13 +825,15 @@ def fgs(serial, args, report):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("serial")
-    parser.add_argument("command", choices=["drift", "links", "listen", "hoststop", "hostkill", "due", "rebootcheck", "coldstart", "fgs", "cleanup", "quiet", "unquiet"])
+    parser.add_argument("command", choices=["drift", "links", "listen", "hoststop", "hostkill", "due", "rebootcheck", "coldstart", "fgs", "keepalive", "cleanup", "quiet", "unquiet"])
     parser.add_argument("--count", type=int, default=None)
     parser.add_argument("--gap", type=int, default=20)
     parser.add_argument("--lead", type=int, default=None)
     parser.add_argument("--tag", default="p5-reboot")
     parser.add_argument("--kill", choices=["am", "force-stop"], default="am")
     parser.add_argument("--screen", choices=["off", "on"], default="off")
+    parser.add_argument("--no-screen-check", dest="screen_check", action="store_false", help="coldstart: pass on the ring session alone")
+    parser.add_argument("--keep-alive", choices=["on", "off"], default=None, help="coldstart: set Keep running in background for the run")
     parser.add_argument("--locked-only", action="store_true", help="rebootcheck: only read the logs (the device is still locked)")
     args = parser.parse_args(argv)
     report = Report()
@@ -742,6 +844,8 @@ def main(argv=None):
         coldstart(args.serial, args, report)
     elif args.command == "fgs":
         fgs(args.serial, args, report)
+    elif args.command == "keepalive":
+        keepalive(args.serial, args, report)
     elif args.command == "quiet":
         quiet(args.serial, report)
     elif args.command == "unquiet":

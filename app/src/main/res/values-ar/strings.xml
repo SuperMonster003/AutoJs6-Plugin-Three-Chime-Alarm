@@ -133,6 +133,8 @@
     <string name="home_unbind_message">لن تعمل البرامج النصية في ⁨AutoJs6⁩ المرتبطة بهذا المنبه معه بعد الآن. يبقى المنبه نفسه.</string>
     <string name="home_unbind_none">لم تكن هناك برامج نصية مرتبطة بهذا المنبه</string>
     <string name="home_unbind_title">إلغاء ربط البرامج النصية</string>
+    <string name="keep_alive_notification_text">يبقى ⁨3-Chime Alarm⁩ قيد التشغيل حتى لا يغلقه النظام قبل المنبه. أوقف \"الاستمرار في العمل في الخلفية\" في الإعدادات لإزالة هذا الإشعار.</string>
+    <string name="keep_alive_notification_title">الحفاظ على دقة المنبهات</string>
     <string name="launcher_icon_applied_note">قد يستغرق تحديث المشغل بضع ثوان. قد تحتاج إلى إضافة بعض اختصارات الشاشة الرئيسية مرة أخرى.</string>
     <string name="launcher_icon_auto">أيقونة تكيفية (تلقائية)</string>
     <string name="launcher_icon_auto_note">يحاول اتباع سمة النظام. بعض المشغلات تخزن الرموز مؤقتا أو تستخدم نظام ألوان واحدا فقط.</string>
@@ -151,6 +153,8 @@
     <string name="notices_third_party_summary">مكونات التطبيق وتراخيصها</string>
     <string name="notices_title">التراخيص والإشعارات</string>
     <string name="notices_unavailable">المستند غير متاح</string>
+    <string name="notification_channel_keep_alive_description">إشعار \"الاستمرار في العمل في الخلفية\" ما دام هناك منبه مفعّل</string>
+    <string name="notification_channel_keep_alive_name">الاستمرار في العمل في الخلفية</string>
     <string name="notification_channel_missed_description">المنبهات التي لم ترن لأن الجهاز كان مطفأ أو لأن النظام أخرها</string>
     <string name="notification_channel_missed_name">المنبهات الفائتة</string>
     <string name="notification_channel_ring_description">يعرض المنبه الذي يرن وتنبيهه بملء الشاشة</string>
@@ -160,6 +164,8 @@
     <string name="notification_missed_title">منبه فائت: %1$s</string>
     <string name="permissions_allowed">مسموح</string>
     <string name="permissions_allowed_at_install">مسموح عند التثبيت</string>
+    <string name="permissions_auto_launch">قائمة التشغيل التلقائي</string>
+    <string name="permissions_auto_launch_guide">لا يوفر النظام حالة هذا العنصر. في ColorOS موضعان منفصلان: مفاتيح التشغيل التلقائي والتشغيل المرتبط والنشاط في الخلفية في معلومات التطبيق (الصف السابق) وقائمة الإعدادات > التطبيقات > التشغيل التلقائي (هذا الصف). فعّل ⁨3-Chime Alarm⁩ في الموضعين وفعّل AutoJs6 أيضا إذا كانت المنبهات تشغل نصوصا برمجية وإلا فلن ترن المنبهات بعد إغلاق الإضافة في الخلفية. إذا تعذر فتح القائمة مباشرة يفتح هذا الصف الإعدادات: انتقل إلى التطبيقات > التشغيل التلقائي.</string>
     <string name="permissions_autostart">التشغيل التلقائي</string>
     <string name="permissions_autostart_guide">لا يوفر النظام حالة هذا العنصر. بدون التشغيل التلقائي لا تعود المنبهات بعد إعادة التشغيل إلا بعد فتح ⁨3-Chime Alarm⁩ مرة واحدة.</string>
     <string name="permissions_background">تقييد العمل في الخلفية</string>
@@ -217,6 +223,7 @@
     <string name="settings_about">حول</string>
     <string name="settings_alarm_defaults">الإعدادات الافتراضية للمنبهات</string>
     <string name="settings_appearance">المظهر</string>
+    <string name="settings_background">العمل في الخلفية</string>
     <string name="settings_dark_mode_dark">داكن</string>
     <string name="settings_dark_mode_light">فاتح</string>
     <string name="settings_defaults_note">تستخدم خيارات المنبه المتروكة على الافتراضي هذه القيم</string>
@@ -225,6 +232,8 @@
     <string name="settings_follow_autojs6_unavailable">AutoJs6 غير متاح, لذا تُطبق إعدادات النظام</string>
     <string name="settings_follow_system">اتباع النظام</string>
     <string name="settings_follow_system_summary">اتباع النظام - %1$s</string>
+    <string name="settings_keep_alive">الاستمرار في العمل في الخلفية</string>
+    <string name="settings_keep_alive_summary">ما دام هناك منبه مفعّل يمنع إشعار منخفض الأولوية النظام من إغلاق ⁨3-Chime Alarm⁩ في الخلفية. فعّله إذا لم ترن المنبهات بعد تنظيف الإضافة مثلا في ColorOS. يستهلك قدرا أكبر قليلا من البطارية.</string>
     <string name="settings_language">اللغة</string>
     <string name="settings_language_ar">العربية</string>
     <string name="settings_language_en">English</string>

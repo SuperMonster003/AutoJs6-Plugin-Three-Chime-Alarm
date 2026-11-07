@@ -133,6 +133,8 @@
     <string name="home_unbind_message">Скрипты AutoJs6, привязанные к этому будильнику, больше не будут запускаться вместе с ним. Сам будильник останется.</string>
     <string name="home_unbind_none">К этому будильнику не было привязано скриптов</string>
     <string name="home_unbind_title">Отвязать скрипты</string>
+    <string name="keep_alive_notification_text">3-Chime Alarm продолжает работать, чтобы система не закрыла его до будильника. Чтобы убрать это уведомление, выключите \"Работать в фоне\" в настройках.</string>
+    <string name="keep_alive_notification_title">Будильники прозвонят вовремя</string>
     <string name="launcher_icon_applied_note">Обновление значка может занять несколько секунд. Некоторые ярлыки на главном экране может потребоваться добавить заново.</string>
     <string name="launcher_icon_auto">Адаптивный значок (автоматически)</string>
     <string name="launcher_icon_auto_note">Пытается следовать системной теме. Некоторые лаунчеры кешируют значки или используют только одну цветовую схему.</string>
@@ -151,6 +153,8 @@
     <string name="notices_third_party_summary">Компоненты приложения и их лицензии</string>
     <string name="notices_title">Лицензии и уведомления</string>
     <string name="notices_unavailable">Документ недоступен</string>
+    <string name="notification_channel_keep_alive_description">Уведомление параметра \"Работать в фоне\", пока включён хотя бы один будильник</string>
+    <string name="notification_channel_keep_alive_name">Работать в фоне</string>
     <string name="notification_channel_missed_description">Будильники, которые не прозвонили, потому что устройство было выключено или система их задержала</string>
     <string name="notification_channel_missed_name">Пропущенные будильники</string>
     <string name="notification_channel_ring_description">Показывает звонящий будильник и полноэкранное оповещение</string>
@@ -160,6 +164,8 @@
     <string name="notification_missed_title">Пропущен: %1$s</string>
     <string name="permissions_allowed">Разрешено</string>
     <string name="permissions_allowed_at_install">Разрешено при установке</string>
+    <string name="permissions_auto_launch">Список автозапуска</string>
+    <string name="permissions_auto_launch_guide">Система не сообщает это состояние. В ColorOS есть два отдельных места: переключатели автозапуска, связанного запуска и фоновой активности в сведениях о приложении (строка выше) и список Настройки > Приложения > Автозапуск (эта строка). Включите 3-Chime Alarm в обоих, а если будильники запускают скрипты, то и AutoJs6, иначе будильники не прозвонят после того, как плагин закрыт в фоне. Если список нельзя открыть напрямую, эта строка открывает настройки: перейдите в Приложения > Автозапуск.</string>
     <string name="permissions_autostart">Автозапуск</string>
     <string name="permissions_autostart_guide">Система не сообщает это состояние. Без автозапуска после перезагрузки будильники восстановятся, только когда вы откроете 3-Chime Alarm.</string>
     <string name="permissions_background">Ограничение фоновой работы</string>
@@ -217,6 +223,7 @@
     <string name="settings_about">О приложении</string>
     <string name="settings_alarm_defaults">Параметры будильников по умолчанию</string>
     <string name="settings_appearance">Оформление</string>
+    <string name="settings_background">Фоновая работа</string>
     <string name="settings_dark_mode_dark">Темная</string>
     <string name="settings_dark_mode_light">Светлая</string>
     <string name="settings_defaults_note">Параметры будильника, оставленные по умолчанию, берут эти значения</string>
@@ -225,6 +232,8 @@
     <string name="settings_follow_autojs6_unavailable">AutoJs6 недоступен, поэтому применяются системные настройки</string>
     <string name="settings_follow_system">Следовать системе</string>
     <string name="settings_follow_system_summary">Следовать системе - %1$s</string>
+    <string name="settings_keep_alive">Работать в фоне</string>
+    <string name="settings_keep_alive_summary">Пока включён хотя бы один будильник, уведомление с низким приоритетом не даёт системе закрыть 3-Chime Alarm в фоне. Включите, если будильники не звонят после очистки плагина, например в ColorOS. Расход батареи немного выше.</string>
     <string name="settings_language">Язык</string>
     <string name="settings_language_ar">العربية</string>
     <string name="settings_language_en">English</string>

@@ -133,6 +133,8 @@
     <string name="home_unbind_message">Los scripts de AutoJs6 vinculados a esta alarma ya no se ejecutarán con ella. La alarma se conserva.</string>
     <string name="home_unbind_none">No había scripts vinculados a esta alarma</string>
     <string name="home_unbind_title">Desvincular scripts</string>
+    <string name="keep_alive_notification_text">3-Chime Alarm sigue activo para que el sistema no lo cierre antes de una alarma. Desactiva \"Mantener en segundo plano\" en los ajustes para quitar esta notificación.</string>
+    <string name="keep_alive_notification_title">Alarmas a su hora</string>
     <string name="launcher_icon_applied_note">El lanzador puede tardar unos segundos en actualizarse. Puede ser necesario volver a agregar algunos accesos directos.</string>
     <string name="launcher_icon_auto">Icono adaptable (automático)</string>
     <string name="launcher_icon_auto_note">Intenta seguir el tema del sistema. Algunos lanzadores guardan los iconos en caché o usan una sola paleta.</string>
@@ -151,6 +153,8 @@
     <string name="notices_third_party_summary">Los componentes de la aplicación y sus licencias</string>
     <string name="notices_title">Licencias y avisos</string>
     <string name="notices_unavailable">El documento no está disponible</string>
+    <string name="notification_channel_keep_alive_description">Notificación de \"Mantener en segundo plano\" mientras haya una alarma activada</string>
+    <string name="notification_channel_keep_alive_name">Mantener en segundo plano</string>
     <string name="notification_channel_missed_description">Alarmas que no sonaron porque el dispositivo estaba apagado o el sistema las retrasó</string>
     <string name="notification_channel_missed_name">Alarmas perdidas</string>
     <string name="notification_channel_ring_description">Muestra la alarma que suena y su aviso a pantalla completa</string>
@@ -160,6 +164,8 @@
     <string name="notification_missed_title">Alarma perdida: %1$s</string>
     <string name="permissions_allowed">Permitido</string>
     <string name="permissions_allowed_at_install">Permitido al instalar</string>
+    <string name="permissions_auto_launch">Lista de inicio automático</string>
+    <string name="permissions_auto_launch_guide">El sistema no informa de este estado. ColorOS tiene dos ajustes separados: los interruptores de inicio automático, inicio asociado y actividad en segundo plano en la información de la app (fila anterior) y la lista Ajustes > Aplicaciones > Inicio automático (esta fila). Activa 3-Chime Alarm en ambos, y también AutoJs6 si las alarmas inician scripts; si no, las alarmas no suenan después de que el complemento se cierre en segundo plano. Si la lista no se puede abrir directamente, esta fila abre los ajustes: ve a Aplicaciones > Inicio automático.</string>
     <string name="permissions_autostart">Inicio automático</string>
     <string name="permissions_autostart_guide">El sistema no informa de este estado. Sin inicio automático, tras un reinicio las alarmas solo se recuperan al abrir 3-Chime Alarm una vez.</string>
     <string name="permissions_background">Restricción en segundo plano</string>
@@ -217,6 +223,7 @@
     <string name="settings_about">Acerca de</string>
     <string name="settings_alarm_defaults">Valores predeterminados de las alarmas</string>
     <string name="settings_appearance">Apariencia</string>
+    <string name="settings_background">Segundo plano</string>
     <string name="settings_dark_mode_dark">Oscuro</string>
     <string name="settings_dark_mode_light">Claro</string>
     <string name="settings_defaults_note">Las opciones que una alarma deja en Predeterminado usan estos valores</string>
@@ -225,6 +232,8 @@
     <string name="settings_follow_autojs6_unavailable">AutoJs6 no está disponible, así que se aplican los ajustes del sistema</string>
     <string name="settings_follow_system">Seguir el sistema</string>
     <string name="settings_follow_system_summary">Seguir el sistema - %1$s</string>
+    <string name="settings_keep_alive">Mantener en segundo plano</string>
+    <string name="settings_keep_alive_summary">Mientras haya una alarma activada, una notificación de baja prioridad evita que el sistema cierre 3-Chime Alarm en segundo plano. Actívalo si las alarmas no suenan después de limpiar el complemento, por ejemplo en ColorOS. Usa algo más de batería.</string>
     <string name="settings_language">Idioma</string>
     <string name="settings_language_ar">العربية</string>
     <string name="settings_language_en">English</string>

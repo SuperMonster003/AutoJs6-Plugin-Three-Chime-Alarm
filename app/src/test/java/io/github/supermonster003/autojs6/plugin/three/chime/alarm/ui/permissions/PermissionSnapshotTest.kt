@@ -8,9 +8,10 @@ import org.junit.Test
 
 /**
  * Roadmap P3.4 (T82): the states, the banner rows and the tappable rows of the permissions page on plain values, per
- * Android version, the vendors whose autostart page the page opens, and the ColorOS banner and overlay rows (Q20, T87).
- * zh-CN: 路线图 P3.4 (T82): 以普通值按 Android 版本检查权限页各行的状态, 横幅列出的行与可点按的行, 权限页会打开其自启动页的厂商, 以及 ColorOS 横幅与
- * 悬浮窗两行 (Q20, T87).
+ * Android version, the vendors whose autostart page the page opens, the ColorOS banner and overlay rows (Q20, T87) and
+ * the ColorOS auto launch list (Q23 (b), T103).
+ * zh-CN: 路线图 P3.4 (T82): 以普通值按 Android 版本检查权限页各行的状态, 横幅列出的行与可点按的行, 权限页会打开其自启动页的厂商, ColorOS 横幅与
+ * 悬浮窗两行 (Q20, T87), 以及 ColorOS 自动启动列表 (Q23 (b), T103).
  */
 class PermissionSnapshotTest {
 
@@ -24,6 +25,7 @@ class PermissionSnapshotTest {
         batteryUnrestricted: Boolean = true,
         backgroundRestricted: Boolean = false,
         autostart: AutostartVendor? = null,
+        autoLaunchOpened: Boolean = false,
     ) = PermissionSnapshot(
         sdk = sdk,
         exactAlarm = exactAlarm,
@@ -34,6 +36,7 @@ class PermissionSnapshotTest {
         batteryUnrestricted = batteryUnrestricted,
         backgroundRestricted = backgroundRestricted,
         autostart = autostart,
+        autoLaunchOpened = autoLaunchOpened,
     )
 
     @Test
@@ -112,9 +115,10 @@ class PermissionSnapshotTest {
 
     @Test
     fun `the autostart row shows on known vendors only`() {
-        val vendorRows = setOf(PermissionRow.AUTOSTART, PermissionRow.VENDOR_BANNER, PermissionRow.OVERLAY)
+        val colorOsRows = setOf(PermissionRow.VENDOR_BANNER, PermissionRow.AUTO_LAUNCH)
+        val vendorRows = colorOsRows + PermissionRow.AUTOSTART + PermissionRow.OVERLAY
         assertEquals(PermissionRow.entries - vendorRows, snapshot(35).rows)
-        assertEquals(PermissionRow.entries - PermissionRow.VENDOR_BANNER - PermissionRow.OVERLAY, snapshot(35, autostart = AutostartVendor.XIAOMI).rows)
+        assertEquals(PermissionRow.entries - colorOsRows - PermissionRow.OVERLAY, snapshot(35, autostart = AutostartVendor.XIAOMI).rows)
         assertEquals(PermissionRow.entries.toList(), snapshot(35, autostart = AutostartVendor.OPPO).rows)
     }
 
@@ -128,6 +132,35 @@ class PermissionSnapshotTest {
         assertEquals("neither row joins the alarm list banner", emptyList<PermissionRow>(), colorOs.missing)
         assertEquals(RowState.OK, snapshot(35, overlay = true, autostart = AutostartVendor.OPPO).state(PermissionRow.OVERLAY))
         assertFalse(snapshot(35, autostart = AutostartVendor.VIVO).colorOs)
+    }
+
+    @Test
+    fun `ColorOS guides to the auto launch list and names it in the banner until it was opened (Q23 (b), T103)`() {
+        val colorOs = snapshot(35, autostart = AutostartVendor.OPPO)
+        val rows = colorOs.rows
+        assertEquals("right after the app's own autostart switches", rows.indexOf(PermissionRow.AUTOSTART) + 1, rows.indexOf(PermissionRow.AUTO_LAUNCH))
+        assertEquals("the system does not report the list", RowState.UNKNOWN, colorOs.state(PermissionRow.AUTO_LAUNCH))
+        assertTrue(colorOs.actionable(PermissionRow.AUTO_LAUNCH))
+        assertEquals("not a missing permission", emptyList<PermissionRow>(), colorOs.missing)
+        assertEquals("named in the alarm list banner", listOf(PermissionRow.AUTO_LAUNCH), colorOs.banner)
+        assertEquals("after the missing rows", listOf(PermissionRow.NOTIFICATIONS, PermissionRow.AUTO_LAUNCH),
+            snapshot(35, notifications = false, autostart = AutostartVendor.OPPO).banner)
+        assertEquals("gone once the row was opened", emptyList<PermissionRow>(), snapshot(35, autostart = AutostartVendor.OPPO, autoLaunchOpened = true).banner)
+        for (vendor in AutostartVendor.entries - AutostartVendor.OPPO) {
+            val other = snapshot(35, notifications = false, autostart = vendor)
+            assertFalse(vendor.name, PermissionRow.AUTO_LAUNCH in other.rows)
+            assertEquals(vendor.name, other.missing, other.banner)
+        }
+        assertEquals(snapshot(35).missing, snapshot(35).banner)
+    }
+
+    @Test
+    fun `the ColorOS auto launch list is the page ColorOS 15 Settings opens, then Settings - Apps`() {
+        assertEquals("com.oplus.battery.permission.startup.StartupAppListActivity", AutostartVendor.COLOROS_AUTO_LAUNCH_ACTION)
+        assertEquals("com.oplus.battery", AutostartVendor.COLOROS_AUTO_LAUNCH_PACKAGE)
+        assertEquals("com.oplus.startupapp.view.StartupAppListActivity", AutostartVendor.COLOROS_AUTO_LAUNCH_CLASS)
+        assertEquals("com.android.settings.action.APP_LIST", AutostartVendor.COLOROS_APP_LIST_ACTION)
+        assertEquals("com.android.settings", AutostartVendor.COLOROS_SETTINGS_PACKAGE)
     }
 
     @Test

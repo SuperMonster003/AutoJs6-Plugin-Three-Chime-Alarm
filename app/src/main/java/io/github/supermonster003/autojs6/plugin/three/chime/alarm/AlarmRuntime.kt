@@ -16,6 +16,7 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.schedule.
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.schedule.AlarmSchedule
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.schedule.BootMarker
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ring.AlarmStreamVolume
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ring.KeepAliveService
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ring.RingDefaultsStore
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ring.RingService
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ring.StoredVolumeMemory
@@ -100,6 +101,8 @@ class AlarmRuntime private constructor(context: Context) {
         // Every change of the alarm list, whoever made it, becomes a `change` event (roadmap P2.5, T18).
         // zh-CN: 闹钟列表的每次变更, 无论由谁发起, 都成为 `change` 事件 (路线图 P2.5, T18).
         repository.addListener { events.emit(ChangeEvents.of(it, System.currentTimeMillis())) }
+        // The optional keep-alive service follows the enabled alarms (roadmap Q23 (b), T100). zh-CN: 可选的保活服务跟随启用的闹钟 (路线图 Q23 (b), T100).
+        repository.addListener { executor.execute { KeepAliveService.sync(this.context) } }
     }
 
     /** One thread for the scheduler work of receivers. zh-CN: 接收器的调度工作所用的单线程. */
@@ -125,6 +128,7 @@ class AlarmRuntime private constructor(context: Context) {
                 val resumed = rings.resume()
                 if (resumed > 0) Log.i(RingService.TAG, "start: $resumed interrupted rings resumed")
                 if (rings.sounding != null) RingService.start(context) else volume.restore()
+                KeepAliveService.sync(context)
             } catch (e: RuntimeException) {
                 Log.e(AndroidAlarmSchedulePort.TAG, "start reconcile failed", e)
             }

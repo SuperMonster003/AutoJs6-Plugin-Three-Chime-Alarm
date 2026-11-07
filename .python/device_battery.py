@@ -1,7 +1,10 @@
 """Standby cost of 3-Chime Alarm on one device (roadmap P5.6): two equal screen-off windows on the same device, the first
 with three enabled alarms that are not due during the window, the second without alarms.
 
-    py .python/device_battery.py <serial> [--hours 4] [--out DIR]
+    py .python/device_battery.py <serial> [--hours 4] [--out DIR] [--keep-alive]
+
+With --keep-alive (roadmap Q23 (b), T100) both windows keep the three enabled alarms: the first with "Keep running in
+background" on (the keep-alive foreground service runs), the second with it off; the setting is put back afterwards.
 
 The device stays on USB, so the battery is not really drained: the run simulates the unplug (`dumpsys battery unplug`)
 and resets `batterystats` at the start of each window, so that the system estimates the drain and lets the device doze.
@@ -75,6 +78,7 @@ def main(argv=None):
     parser.add_argument("serial")
     parser.add_argument("--hours", type=float, default=4)
     parser.add_argument("--out", default=".")
+    parser.add_argument("--keep-alive", action="store_true", help="compare Keep running in background on / off, both with the alarms")
     args = parser.parse_args(argv)
     serial, out = args.serial, Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -86,19 +90,35 @@ def main(argv=None):
     chime = adb(serial, "shell", "settings", "get", "secure", "charging_sounds_enabled").strip()
     options = base64.b64encode(json.dumps({"sound": {"source": "silent"}, "vibrate": False}).encode()).decode()
     results = {}
+    keep_alive_before = p5.keep_alive_state(serial)[0] if args.keep_alive else None
     try:
         adb(serial, "shell", "settings", "put", "secure", "charging_sounds_enabled", "0")
         adb(serial, "shell", "settings", "put", "global", "stay_on_while_plugged_in", "0")
         for i, hours in enumerate((11, 11.5, 12)):
             answer = p5.hook(serial, "add", label=f"p24-probe-battery-{i}", inSeconds=int(hours * 3600), options64=options)
             report.line(f"alarm {i} enabled, due in {hours} h", "PASS" if "added" in answer else "FAIL", answer.get("added", str(answer)[:80]))
+        if args.keep_alive:
+            enabled, running, _ = p5.set_keep_alive(serial, "on")
+            report.line("keep-alive on and running", "PASS" if enabled and running else "FAIL", f"enabled {enabled}, running {running}")
         adb(serial, "shell", "input", "keyevent", "KEYCODE_SLEEP")
         adb(serial, "shell", "dumpsys", "battery", "unplug")
-        results["alarms"] = window(serial, "alarms", args.hours, out, uid, report)
-        cleared = p5.hook(serial, "clear")
-        report.line("alarms removed", "PASS" if cleared.get("cleared") == "3" else "FAIL", f"cleared {cleared.get('cleared')}")
-        adb(serial, "shell", "input", "keyevent", "KEYCODE_SLEEP")
-        results["none"] = window(serial, "none", args.hours, out, uid, report)
+        if args.keep_alive:
+            results["keepalive"] = window(serial, "keepalive", args.hours, out, uid, report)
+            # The process the service keeps resident: its memory (PSS) at the end of the window.
+            meminfo = adb(serial, "shell", "dumpsys", "meminfo", PLUGIN)
+            pss = re.search(r"TOTAL PSS:\s+(\d+)", meminfo) or re.search(r"^\s+TOTAL\s+(\d+)", meminfo, re.M)
+            results["keepalive"]["pluginPssKb"] = int(pss.group(1)) if pss else None
+            report.line("plugin process memory while kept alive", "PASS" if pss else "FAIL", f"PSS {pss.group(1) if pss else '-'} KB")
+            enabled, running, _ = p5.set_keep_alive(serial, "off")
+            report.line("keep-alive off and stopped", "PASS" if not enabled and not running else "FAIL", f"enabled {enabled}, running {running}")
+            adb(serial, "shell", "input", "keyevent", "KEYCODE_SLEEP")
+            results["alarms"] = window(serial, "alarms", args.hours, out, uid, report)
+        else:
+            results["alarms"] = window(serial, "alarms", args.hours, out, uid, report)
+            cleared = p5.hook(serial, "clear")
+            report.line("alarms removed", "PASS" if cleared.get("cleared") == "3" else "FAIL", f"cleared {cleared.get('cleared')}")
+            adb(serial, "shell", "input", "keyevent", "KEYCODE_SLEEP")
+            results["none"] = window(serial, "none", args.hours, out, uid, report)
     finally:
         adb(serial, "shell", "dumpsys", "battery", "reset")
         time.sleep(5)
@@ -106,10 +126,13 @@ def main(argv=None):
         if chime and chime != "null":
             adb(serial, "shell", "settings", "put", "secure", "charging_sounds_enabled", chime)
         p5.hook(serial, "clear")
+        if args.keep_alive:
+            p5.hook(serial, "keepalive", value="on" if keep_alive_before else "off")
     (out / "battery-summary.json").write_text(json.dumps(results, indent=1), encoding="utf-8")
-    a, n = results.get("alarms") or {}, results.get("none") or {}
+    a, n = (results.get("keepalive") or {}, results.get("alarms") or {}) if args.keep_alive else (results.get("alarms") or {}, results.get("none") or {})
+    label = "keep-alive - alarms only" if args.keep_alive else "alarms - none"
     if a.get("computedDrainMah") is not None and n.get("computedDrainMah") is not None:
-        print(f"    difference (alarms - none): device {a['computedDrainMah'] - n['computedDrainMah']:+.1f} mAh, plugin {a['pluginMah'] - n['pluginMah']:+.2f} mAh", flush=True)
+        print(f"    difference ({label}): device {a['computedDrainMah'] - n['computedDrainMah']:+.1f} mAh, plugin {a['pluginMah'] - n['pluginMah']:+.2f} mAh", flush=True)
     print(f"{serial}: P5.6 battery {'PASS' if report.failed == 0 else 'FAIL'} ({report.passed} passed, {report.failed} failed)", flush=True)
     return 0 if report.failed == 0 else 1
 

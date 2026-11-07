@@ -78,7 +78,7 @@ class PermissionsActivity : StandaloneActivity() {
             val permission = Manifest.permission.POST_NOTIFICATIONS
             // The system stops showing the request after the second denial; the first request has no rationale yet.
             // zh-CN: 第二次拒绝后系统不再显示申请; 首次申请时还没有 rationale.
-            val preferences = getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+            val preferences = getSharedPreferences(Permissions.PREFERENCES, Context.MODE_PRIVATE)
             if (!preferences.getBoolean(KEY_REQUESTED, false) || shouldShowRequestPermissionRationale(permission)) {
                 preferences.edit { putBoolean(KEY_REQUESTED, true) }
                 Log.i(Permissions.TAG, "open ${row.tag} -> runtime request")
@@ -90,7 +90,6 @@ class PermissionsActivity : StandaloneActivity() {
     }
 
     private companion object {
-        const val PREFERENCES = "ui-permissions"
         const val KEY_REQUESTED = "notificationsRequested"
     }
 }
@@ -144,7 +143,7 @@ private val RINGING_ROWS = listOf(
     PermissionRow.FULL_SCREEN,
     PermissionRow.OVERLAY,
 )
-private val BACKGROUND_ROWS = listOf(PermissionRow.BATTERY, PermissionRow.BACKGROUND, PermissionRow.AUTOSTART)
+private val BACKGROUND_ROWS = listOf(PermissionRow.BATTERY, PermissionRow.BACKGROUND, PermissionRow.AUTOSTART, PermissionRow.AUTO_LAUNCH)
 
 private fun LazyListScope.group(@StringRes title: Int, rows: List<PermissionRow>, snapshot: PermissionSnapshot, open: (PermissionRow) -> Unit) {
     val visible = rows.filter { it in snapshot.rows }
@@ -182,6 +181,7 @@ internal fun titleOf(row: PermissionRow): Int = when (row) {
     PermissionRow.BATTERY -> R.string.permissions_battery
     PermissionRow.BACKGROUND -> R.string.permissions_background
     PermissionRow.AUTOSTART -> R.string.permissions_autostart
+    PermissionRow.AUTO_LAUNCH -> R.string.permissions_auto_launch
 }
 
 @DrawableRes
@@ -194,6 +194,7 @@ private fun iconOf(row: PermissionRow): Int = when (row) {
     PermissionRow.BATTERY -> R.drawable.ic_battery_saver_24
     PermissionRow.BACKGROUND -> R.drawable.ic_tune_24
     PermissionRow.AUTOSTART -> R.drawable.ic_power_24
+    PermissionRow.AUTO_LAUNCH -> R.drawable.ic_power_24
 }
 
 @StringRes
@@ -224,5 +225,6 @@ private fun summaryOf(row: PermissionRow, snapshot: PermissionSnapshot): Int {
             else -> R.string.permissions_background_restricted
         }
         PermissionRow.AUTOSTART -> R.string.permissions_autostart_guide
+        PermissionRow.AUTO_LAUNCH -> R.string.permissions_auto_launch_guide
     }
 }

@@ -264,6 +264,17 @@
             tools:targetApi="34" />
 
         <!--
+            Optional keep-alive service of "Keep running in background" (roadmap Q23 (b), T100): not exported, same type as
+            the ring service, runs while the setting is on and an alarm is enabled; available before the first unlock.
+        -->
+        <service
+            android:name=".ring.KeepAliveService"
+            android:directBootAware="true"
+            android:exported="false"
+            android:foregroundServiceType="systemExempted"
+            tools:targetApi="34" />
+
+        <!--
             Scheduling (roadmap T3 / T7 / T8, P2.3): the trigger receiver gets the alarm clock and skip wake-ups of the
             plugin's own pending intents; the reschedule receiver gets protected system broadcasts only (boot, clock and
             time zone changes, the plugin update, the exact alarm permission). Both run before the first unlock.

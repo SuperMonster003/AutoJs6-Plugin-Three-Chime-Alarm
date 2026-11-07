@@ -13,6 +13,7 @@ internal enum class PermissionRow(val tag: String) {
     BATTERY("battery"),
     BACKGROUND("background"),
     AUTOSTART("autostart"),
+    AUTO_LAUNCH("autoLaunch"),
 }
 
 /** The state a row shows. zh-CN: 一行显示的状态. */
@@ -29,7 +30,7 @@ internal enum class RowState {
     /** This Android version needs nothing. zh-CN: 此 Android 版本无需设置. */
     NOT_NEEDED,
 
-    /** The system does not report the state (vendor autostart, ColorOS banner): guidance only. zh-CN: 系统不提供状态 (厂商自启动, ColorOS 横幅): 只作引导. */
+    /** The system does not report the state (vendor autostart, ColorOS banner and auto launch list): guidance only. zh-CN: 系统不提供状态 (厂商自启动, ColorOS 横幅与自动启动列表): 只作引导. */
     UNKNOWN,
 }
 
@@ -43,12 +44,17 @@ internal enum class RowState {
  * whether the full screen intent opens at all (roadmap Q20, T87): the system reports no state for them, so that row
  * only guides. [overlay] (display over other apps) lets the ring service open the ringing screen directly while the
  * device is not in use; its row is advice and shows where it helps (ColorOS, or a full screen intent that is not
- * allowed) or once it is allowed.
+ * allowed) or once it is allowed. ColorOS also keeps the list of Settings > Apps > Auto launch apart from the app's own
+ * auto launch switches (roadmap Q23 (b), T103): an app off in that list is not started by its alarm broadcast once its
+ * process was killed. The system reports no state for it either, so the alarm list banner names it until the row was
+ * opened once ([autoLaunchOpened]).
  * zh-CN: 权限页与闹钟列表横幅显示的内容 (路线图 P3.4, T82), 每次恢复时重新读取. 精确闹钟一行与 `capabilities().permissions.exactAlarm` 读同一个
  * `canScheduleExact()` (T60); 应用通知或响铃通知类别关闭时通知算作缺失 (T69); 后台限制 (API 28+) 也算缺失, 此时系统会忽略响铃前台服务. 电池优化只是
  * 建议: 闹钟时钟唤醒不受 Doze 推迟. [autostart] 是该行打开其自启动页的厂商, 没有这类页面的系统为 null (隐藏该行). 在 ColorOS (OPPO, OnePlus, realme)
  * 上, 应用的 "横幅" 通知决定全屏 Intent 是否打开 (路线图 Q20, T87): 系统不报告其状态, 因此该行只作引导. [overlay] (悬浮窗) 让响铃服务在设备未被
- * 使用时直接打开响铃界面; 该行只是建议, 在有用处的地方 (ColorOS, 或全屏 Intent 未被允许) 或已允许时显示.
+ * 使用时直接打开响铃界面; 该行只是建议, 在有用处的地方 (ColorOS, 或全屏 Intent 未被允许) 或已允许时显示. ColorOS 另把 设置 > 应用 > 自动启动 列表与应用自己的
+ * 自启动开关分开 (路线图 Q23 (b), T103): 在该列表中关闭的应用, 进程被杀后不会被它的闹钟广播拉起. 系统同样不报告其状态, 因此闹钟列表横幅会提到它, 直到该行
+ * 被打开过一次 ([autoLaunchOpened]).
  */
 internal data class PermissionSnapshot(
     val sdk: Int,
@@ -60,6 +66,7 @@ internal data class PermissionSnapshot(
     val batteryUnrestricted: Boolean,
     val backgroundRestricted: Boolean,
     val autostart: AutostartVendor?,
+    val autoLaunchOpened: Boolean = false,
 ) {
 
     /** Whether the system is ColorOS, where the app's "Banner" notifications gate the full screen intent (Q20). zh-CN: 系统是否为 ColorOS, 其应用 "横幅" 通知决定全屏 Intent (Q20). */
@@ -75,15 +82,23 @@ internal data class PermissionSnapshot(
         get() = PermissionRow.entries.filter {
             when (it) {
                 PermissionRow.AUTOSTART -> autostart != null
-                PermissionRow.VENDOR_BANNER -> colorOs
+                PermissionRow.VENDOR_BANNER, PermissionRow.AUTO_LAUNCH -> colorOs
                 PermissionRow.OVERLAY -> overlay || overlayHelps
                 else -> true
             }
         }
 
-    /** The rows the alarm list banner reports (T82). zh-CN: 闹钟列表横幅报告的行 (T82). */
+    /** The missing rows (T82). zh-CN: 缺失的行 (T82). */
     val missing: List<PermissionRow>
         get() = rows.filter { state(it) == RowState.MISSING }
+
+    /**
+     * The rows the alarm list banner reports: the missing ones, and on ColorOS the auto launch list until its row was
+     * opened once (T103).
+     * zh-CN: 闹钟列表横幅报告的行: 缺失的行, 以及在 ColorOS 上直到该行被打开过一次之前的自动启动列表 (T103).
+     */
+    val banner: List<PermissionRow>
+        get() = missing + rows.filter { it == PermissionRow.AUTO_LAUNCH && !autoLaunchOpened }
 
     fun state(row: PermissionRow): RowState = when (row) {
         PermissionRow.EXACT_ALARM -> when {
@@ -105,7 +120,7 @@ internal data class PermissionSnapshot(
             backgroundRestricted -> RowState.MISSING
             else -> RowState.OK
         }
-        PermissionRow.AUTOSTART -> RowState.UNKNOWN
+        PermissionRow.AUTOSTART, PermissionRow.AUTO_LAUNCH -> RowState.UNKNOWN
     }
 
     /**
@@ -118,7 +133,8 @@ internal data class PermissionSnapshot(
         PermissionRow.EXACT_ALARM -> sdk in API_EXACT_ALARM until API_USE_EXACT_ALARM || state(row) == RowState.MISSING
         PermissionRow.FULL_SCREEN -> sdk >= API_FULL_SCREEN
         PermissionRow.BACKGROUND -> sdk >= API_BACKGROUND_RESTRICTION
-        PermissionRow.NOTIFICATIONS, PermissionRow.VENDOR_BANNER, PermissionRow.OVERLAY, PermissionRow.BATTERY, PermissionRow.AUTOSTART -> true
+        PermissionRow.NOTIFICATIONS, PermissionRow.VENDOR_BANNER, PermissionRow.OVERLAY, PermissionRow.BATTERY, PermissionRow.AUTOSTART,
+        PermissionRow.AUTO_LAUNCH -> true
     }
 
     /** Whether the notification row asks the runtime permission (API 33+) instead of opening the settings. zh-CN: 通知一行是否申请运行时权限 (API 33+) 而非打开设置. */
@@ -178,6 +194,25 @@ internal enum class AutostartVendor(private val brands: Set<String>, val pages: 
     ;
 
     companion object {
+
+        /**
+         * The Settings > Apps > Auto launch list of ColorOS 15 (OnePlus OPD2413, 15.0.1.801, read with `dumpsys activity`
+         * while it was open; Settings opens it by this action), apart from the app's own switches (T103). It requires the
+         * system permission `oplus.permission.OPLUS_COMPONENT_SAFE` there, so a third-party app is refused, and the
+         * Settings > Apps page that lists it ([COLOROS_APP_LIST_ACTION]) is not exported there; the row then opens the
+         * Settings home page (the user goes on to Apps > Auto launch), and the app details last.
+         * zh-CN: ColorOS 15 的 设置 > 应用 > 自动启动 列表 (OnePlus OPD2413, 15.0.1.801, 打开时用 `dumpsys activity` 读取; 设置以此 action 打开它),
+         * 与应用自己的开关分开 (T103). 该机上它要求系统权限 `oplus.permission.OPLUS_COMPONENT_SAFE`, 第三方应用会被拒绝, 列出它的 设置 > 应用 页
+         * ([COLOROS_APP_LIST_ACTION]) 在该机上也未导出; 此时该行打开系统设置首页 (用户再进入 应用 > 自动启动), 最后才是应用详情.
+         */
+        const val COLOROS_AUTO_LAUNCH_ACTION = "com.oplus.battery.permission.startup.StartupAppListActivity"
+        const val COLOROS_AUTO_LAUNCH_PACKAGE = "com.oplus.battery"
+        const val COLOROS_AUTO_LAUNCH_CLASS = "com.oplus.startupapp.view.StartupAppListActivity"
+
+        /** The ColorOS 15 Settings > Apps page (`OplusSettingsActivity$AppSettingsActivity`). zh-CN: ColorOS 15 的 设置 > 应用 页. */
+        const val COLOROS_APP_LIST_ACTION = "com.android.settings.action.APP_LIST"
+        const val COLOROS_SETTINGS_PACKAGE = "com.android.settings"
+
         /** The vendor of a device by its manufacturer, else its brand; null elsewhere. zh-CN: 按制造商 (其次品牌) 判断设备厂商; 其他为 null. */
         fun of(manufacturer: String?, brand: String?): AutostartVendor? {
             fun find(name: String?) = name?.trim()?.lowercase()?.let { key -> entries.firstOrNull { key in it.brands } }

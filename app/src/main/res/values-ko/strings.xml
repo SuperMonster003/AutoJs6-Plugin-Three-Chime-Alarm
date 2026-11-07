@@ -133,6 +133,8 @@
     <string name="home_unbind_message">이 알람에 연결된 AutoJs6 스크립트가 더 이상 알람과 함께 실행되지 않습니다. 알람은 그대로 유지됩니다.</string>
     <string name="home_unbind_none">이 알람에 연결된 스크립트가 없습니다</string>
     <string name="home_unbind_title">스크립트 연결 해제</string>
+    <string name="keep_alive_notification_text">알람 전에 시스템이 3-Chime Alarm을 종료하지 않도록 백그라운드에서 계속 실행 중입니다. 설정에서 \"백그라운드에서 계속 실행\"을 끄면 이 알림이 사라집니다.</string>
+    <string name="keep_alive_notification_title">알람이 제때 울리도록 실행 중</string>
     <string name="launcher_icon_applied_note">런처가 새로 고침되기까지 몇 초가 걸릴 수 있습니다. 일부 홈 화면 바로가기를 다시 추가해야 할 수 있습니다.</string>
     <string name="launcher_icon_auto">적응형 아이콘 (자동)</string>
     <string name="launcher_icon_auto_note">시스템 테마를 따르려고 시도합니다. 일부 런처는 아이콘을 캐시하거나 한 가지 색상만 사용합니다.</string>
@@ -151,6 +153,8 @@
     <string name="notices_third_party_summary">앱에 포함된 구성 요소와 해당 라이선스</string>
     <string name="notices_title">라이선스 및 고지</string>
     <string name="notices_unavailable">문서를 사용할 수 없습니다</string>
+    <string name="notification_channel_keep_alive_description">켜진 알람이 있을 때 \"백그라운드에서 계속 실행\"이 표시하는 알림</string>
+    <string name="notification_channel_keep_alive_name">백그라운드에서 계속 실행</string>
     <string name="notification_channel_missed_description">기기가 꺼져 있었거나 시스템이 지연시켜 울리지 않은 알람</string>
     <string name="notification_channel_missed_name">놓친 알람</string>
     <string name="notification_channel_ring_description">울리는 알람과 전체 화면 알림을 표시합니다</string>
@@ -160,6 +164,8 @@
     <string name="notification_missed_title">놓친 알람: %1$s</string>
     <string name="permissions_allowed">허용됨</string>
     <string name="permissions_allowed_at_install">설치 시 허용됨</string>
+    <string name="permissions_auto_launch">자동 시작 목록</string>
+    <string name="permissions_auto_launch_guide">시스템이 이 항목의 상태를 제공하지 않습니다. ColorOS에는 서로 다른 두 곳의 스위치가 있습니다: 앱 정보의 자동 시작, 연관 시작, 백그라운드 활동 (위 행)과 설정 > 앱 > 자동 시작 목록 (이 행)입니다. 두 곳 모두에서 3-Chime Alarm을 켜고, 알람으로 스크립트를 실행하면 AutoJs6도 켜세요. 그렇지 않으면 플러그인이 백그라운드에서 종료된 뒤 알람이 울리지 않습니다. 목록을 바로 열 수 없으면 이 행은 시스템 설정을 엽니다. 앱 > 자동 시작으로 이동하세요.</string>
     <string name="permissions_autostart">자동 시작</string>
     <string name="permissions_autostart_guide">시스템이 이 항목의 상태를 제공하지 않습니다. 자동 시작을 허용하지 않으면 재시작 후 3-Chime Alarm을 한 번 열어야 알람이 복원됩니다.</string>
     <string name="permissions_background">백그라운드 제한</string>
@@ -217,6 +223,7 @@
     <string name="settings_about">정보</string>
     <string name="settings_alarm_defaults">알람 기본값</string>
     <string name="settings_appearance">모양</string>
+    <string name="settings_background">백그라운드 실행</string>
     <string name="settings_dark_mode_dark">다크</string>
     <string name="settings_dark_mode_light">라이트</string>
     <string name="settings_defaults_note">알람에서 기본값으로 둔 항목에는 이 값이 사용됩니다</string>
@@ -225,6 +232,8 @@
     <string name="settings_follow_autojs6_unavailable">AutoJs6를 사용할 수 없어 시스템 설정이 적용됩니다</string>
     <string name="settings_follow_system">시스템 따르기</string>
     <string name="settings_follow_system_summary">시스템 따르기 - %1$s</string>
+    <string name="settings_keep_alive">백그라운드에서 계속 실행</string>
+    <string name="settings_keep_alive_summary">켜진 알람이 있는 동안 우선순위가 낮은 알림을 유지해 시스템이 백그라운드에서 3-Chime Alarm을 종료하지 않게 합니다. 플러그인이 정리된 뒤 알람이 울리지 않으면 (ColorOS 등) 켜세요. 배터리를 약간 더 사용합니다.</string>
     <string name="settings_language">언어</string>
     <string name="settings_language_ar">العربية</string>
     <string name="settings_language_en">English</string>

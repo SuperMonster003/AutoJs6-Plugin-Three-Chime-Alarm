@@ -133,6 +133,8 @@
     <string name="home_unbind_message">このアラームに連携した AutoJs6 のスクリプトは, 今後このアラームと一緒に実行されなくなります. アラーム自体は残ります.</string>
     <string name="home_unbind_none">このアラームに連携したスクリプトはありません</string>
     <string name="home_unbind_title">スクリプトの連携を解除</string>
+    <string name="keep_alive_notification_text">アラームの前にシステムが 3-Chime Alarm を終了しないよう, バックグラウンドで動作し続けています. 設定で \"バックグラウンドで動作し続ける\" をオフにすると, この通知は消えます.</string>
+    <string name="keep_alive_notification_title">アラームを時間どおりに鳴らすため動作中</string>
     <string name="launcher_icon_applied_note">反映まで数秒かかる場合があります. ホーム画面のショートカットを再追加する必要がある場合があります.</string>
     <string name="launcher_icon_auto">アダプティブ アイコン (自動)</string>
     <string name="launcher_icon_auto_note">システムテーマへの追従を試みます. ランチャーによってはアイコンがキャッシュされ, 配色が固定されます.</string>
@@ -151,6 +153,8 @@
     <string name="notices_third_party_summary">アプリに含まれるコンポーネントとそのライセンス</string>
     <string name="notices_title">ライセンスと通知</string>
     <string name="notices_unavailable">ドキュメントを利用できません</string>
+    <string name="notification_channel_keep_alive_description">有効なアラームがある間, \"バックグラウンドで動作し続ける\" が表示する通知</string>
+    <string name="notification_channel_keep_alive_name">バックグラウンドで動作し続ける</string>
     <string name="notification_channel_missed_description">端末の電源が切れていたか, システムに遅延されたために鳴らなかったアラーム</string>
     <string name="notification_channel_missed_name">鳴らなかったアラーム</string>
     <string name="notification_channel_ring_description">鳴動中のアラームと全画面通知を表示します</string>
@@ -160,6 +164,8 @@
     <string name="notification_missed_title">鳴らなかったアラーム: %1$s</string>
     <string name="permissions_allowed">許可済み</string>
     <string name="permissions_allowed_at_install">インストール時に許可済み</string>
+    <string name="permissions_auto_launch">自動起動リスト</string>
+    <string name="permissions_auto_launch_guide">システムはこの項目の状態を提供しません. ColorOS には独立した 2 か所の設定があります: アプリ情報の自動起動, 関連起動, バックグラウンド動作 (上の行) と, 設定 > アプリ > 自動起動 のリスト (この行) です. 両方で 3-Chime Alarm をオンにし, アラームでスクリプトを起動する場合は AutoJs6 もオンにしてください. オフのままだと, プラグインがバックグラウンドで終了された後にアラームが鳴りません. リストを直接開けない場合, この行はシステムの設定を開きます. アプリ > 自動起動 に進んでください.</string>
     <string name="permissions_autostart">自動起動</string>
     <string name="permissions_autostart_guide">システムはこの項目の状態を提供しません. 自動起動を許可していないと, 再起動後のアラームは 3-Chime Alarm を一度開くまで復元されません.</string>
     <string name="permissions_background">バックグラウンドの制限</string>
@@ -217,6 +223,7 @@
     <string name="settings_about">アプリについて</string>
     <string name="settings_alarm_defaults">アラームのデフォルト</string>
     <string name="settings_appearance">外観</string>
+    <string name="settings_background">バックグラウンド動作</string>
     <string name="settings_dark_mode_dark">ダーク</string>
     <string name="settings_dark_mode_light">ライト</string>
     <string name="settings_defaults_note">アラームでデフォルトのままの項目には, ここの値が使われます</string>
@@ -225,6 +232,8 @@
     <string name="settings_follow_autojs6_unavailable">AutoJs6 を利用できないため, システムの設定が適用されます</string>
     <string name="settings_follow_system">システムに従う</string>
     <string name="settings_follow_system_summary">システムに従う - %1$s</string>
+    <string name="settings_keep_alive">バックグラウンドで動作し続ける</string>
+    <string name="settings_keep_alive_summary">有効なアラームがある間, 優先度の低い通知を表示して, システムがバックグラウンドで 3-Chime Alarm を終了しないようにします. プラグインが消去された後にアラームが鳴らない場合 (ColorOS など) はオンにしてください. バッテリー消費がわずかに増えます.</string>
     <string name="settings_language">言語</string>
     <string name="settings_language_ar">العربية</string>
     <string name="settings_language_en">English</string>

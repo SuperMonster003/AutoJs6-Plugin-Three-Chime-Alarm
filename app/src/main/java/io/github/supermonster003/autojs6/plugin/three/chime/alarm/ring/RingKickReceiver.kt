@@ -13,10 +13,12 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.AlarmRuntime
  * Starts the ring service again from an alarm wake-up (roadmap P5.3, T97). A ring offered while the process runs in the
  * background without an exemption (started by a host binding or a tool call after a force stop, for example) cannot
  * start the foreground service; [arm] then sets an exact wake-up [DELAY_MILLIS] ahead, and the alarm broadcast, which
- * may start a foreground service, starts it if a ring still sounds. A start refused here is not armed again.
+ * may start a foreground service, starts it if a ring still sounds. The optional keep-alive service of roadmap Q23 (b)
+ * (T100) uses the same wake-up when its start is refused. A start refused here is not armed again.
  *
  * zh-CN: 由闹钟唤醒再次启动响铃服务 (路线图 P5.3, T97). 进程在后台且没有豁免时 (例如强行停止后由宿主绑定或工具调用拉起) 收到的响铃无法启动前台服务;
- * 此时 [arm] 在 [DELAY_MILLIS] 后设一个精确唤醒, 闹钟广播可以启动前台服务, 届时仍有发声的一轮就启动它. 在这里启动仍被拒绝时不再重设.
+ * 此时 [arm] 在 [DELAY_MILLIS] 后设一个精确唤醒, 闹钟广播可以启动前台服务, 届时仍有发声的一轮就启动它. 路线图 Q23 (b) 的可选保活服务 (T100) 启动被拒时
+ * 也用这个唤醒. 在这里启动仍被拒绝时不再重设.
  */
 class RingKickReceiver : BroadcastReceiver() {
 
@@ -28,6 +30,7 @@ class RingKickReceiver : BroadcastReceiver() {
                 val sounding = runtime.rings.sounding
                 Log.i(RingService.TAG, "ring kick: sounding=${sounding?.alarmId ?: "none"}")
                 if (sounding != null) RingService.start(context, rearm = false)
+                KeepAliveService.sync(context, rearm = false)
             } finally {
                 pending.finish()
             }

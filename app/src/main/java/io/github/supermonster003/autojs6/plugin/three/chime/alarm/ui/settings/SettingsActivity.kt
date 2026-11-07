@@ -31,7 +31,9 @@ import androidx.core.net.toUri
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.AlarmRuntime
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.BuildConfig
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.R
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.ring.KeepAliveSettings
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.ring.RingDefaults
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ring.KeepAliveService
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ring.RingDefaultsStore
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.service.SystemRingtones
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.StandaloneActivity
@@ -154,6 +156,7 @@ class SettingsActivity : StandaloneActivity() {
                 Column(modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(scroll).testTag("chime.settings")) {
                     AppearanceGroup()
                     DefaultsGroup()
+                    BackgroundGroup()
                     FormatGroup()
                     AboutGroup()
                     Spacer(Modifier.height(24.dp))
@@ -210,6 +213,30 @@ class SettingsActivity : StandaloneActivity() {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = RowDefaults.textStart, end = RowDefaults.horizontalPadding, top = 4.dp),
         )
+    }
+
+    /**
+     * "Keep running in background" (roadmap Q23 (b), T100): off by default; a change starts or stops the keep-alive
+     * service at once (the screen is in the foreground, so the start is allowed).
+     * zh-CN: "保持后台运行" (路线图 Q23 (b), T100): 默认关闭; 修改后立即启动或停止保活服务 (界面在前台, 允许启动).
+     */
+    @Composable
+    private fun BackgroundGroup() {
+        SectionHeader(stringResource(R.string.settings_background))
+        val settings = remember { KeepAliveService.settings(this) }
+        SwitchRow(stringResource(R.string.settings_keep_alive), settings.enabled, { saveKeepAlive(settings, it) },
+            summary = stringResource(R.string.settings_keep_alive_summary), icon = R.drawable.ic_power_24,
+            modifier = Modifier.testTag("chime.settings.keepAlive"))
+    }
+
+    private fun saveKeepAlive(settings: KeepAliveSettings, value: Boolean) {
+        if (!settings.setEnabled(value)) {
+            pendingMessage = getString(R.string.settings_save_failed)
+            return
+        }
+        val app = applicationContext
+        AlarmRuntime.get(app).executor.execute { KeepAliveService.sync(app) }
+        saved()
     }
 
     @Composable
