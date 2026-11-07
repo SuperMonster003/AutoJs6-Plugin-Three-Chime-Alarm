@@ -53,7 +53,8 @@ jobs:
           # on CI; the signed collection task (appendDigestToReleasedFiles) and device_smoke.py run locally.
           ./gradlew :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest :app:assembleRelease :app:lintDebug -Pautojs.gradle.build.number.auto.increment.enabled=false -Pautojs.gradle.build.time.update.enabled=false --console=plain --stacktrace
 
-      # Roadmap T20: exactly one release APK and no native code (the same rule appendDigestToReleasedFiles enforces locally).
+      # Roadmap T20 / T34: exactly one release APK whose only native code is the Compose graphics-path library in the four
+      # ABIs, stored uncompressed (the same whitelist appendDigestToReleasedFiles enforces locally).
       - name: Check the release artifact
         shell: python
         run: |
@@ -61,11 +62,16 @@ jobs:
           apks = sorted(pathlib.Path("app/build/outputs/apk/release").glob("*.apk"))
           if len(apks) != 1:
               sys.exit(f"expected exactly one release APK, found {[apk.name for apk in apks]}")
+          expected = {f"lib/{abi}/libandroidx.graphics.path.so" for abi in ("arm64-v8a", "armeabi-v7a", "x86_64", "x86")}
           with zipfile.ZipFile(apks[0]) as archive:
-              natives = [name for name in archive.namelist() if name.startswith("lib/") or name.endswith(".so")]
-          if natives:
-              sys.exit(f"{apks[0].name} must not contain native code: {sorted(natives)[:10]}")
-          print(f"RELEASE_OK {apks[0].name} {apks[0].stat().st_size} bytes, no native code")
+              entries = {info.filename: info for info in archive.infolist()}
+          natives = {name for name in entries if name.startswith("lib/") or name.endswith(".so")}
+          if natives != expected:
+              sys.exit(f"{apks[0].name} native code differs from the whitelist: extra {sorted(natives - expected)}, missing {sorted(expected - natives)}")
+          compressed = sorted(name for name in natives if entries[name].compress_type != zipfile.ZIP_STORED)
+          if compressed:
+              sys.exit(f"{apks[0].name} compresses native libraries: {compressed}")
+          print(f"RELEASE_OK {apks[0].name} {apks[0].stat().st_size} bytes, native code: {len(natives)} whitelisted libraries")
 
       - name: Upload debug, release and test APKs
         uses: actions/upload-artifact@v7
