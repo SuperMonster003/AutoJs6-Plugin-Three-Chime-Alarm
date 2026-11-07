@@ -166,6 +166,7 @@
     "Démarrage (`RECEIVE_BOOT_COMPLETED`): replanifie après un redémarrage pour sonner même avant le premier déverrouillage.",
     "Service de premier plan (`FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SYSTEM_EXEMPTED`): maintient le son pendant la sonnerie; sert aussi à rester actif quand \"Rester actif en arrière-plan\" est activé dans les paramètres (désactivé par défaut).",
     "Vibration, verrou de réveil et réglages audio (`VIBRATE`, `WAKE_LOCK`, `MODIFY_AUDIO_SETTINGS`): vibrer, garder l'appareil éveillé pendant la sonnerie et rétablir le volume d'alarme indépendant ensuite.",
+    "Réorganiser les applications en cours d'exécution (`REORDER_TASKS`, Android 7.0 - 8.1 uniquement): quand d'autres applications ou scripts envoient plusieurs demandes d'alarme presque en même temps, ramène au premier plan une demande que le système n'a pas lancée, afin que chaque demande soit traitée. Accordée à l'installation.",
     "Réseau (`INTERNET`, `ACCESS_NETWORK_STATE`): uniquement pour la recherche de mises à jour de l'écran des paramètres (à partir de 1.2.0, aussi pour actualiser les données des jours fériés). La recherche n'a lieu qu'à l'ouverture de la liste des alarmes, à la fréquence choisie, et évite par défaut les réseaux limités; la planification, la sonnerie et le lien avec AutoJs6 n'utilisent jamais le réseau.",
     "Autorisation de plugin AutoJs6 (`org.autojs.permission.PLUGIN`): communiquer avec AutoJs6."
   ]

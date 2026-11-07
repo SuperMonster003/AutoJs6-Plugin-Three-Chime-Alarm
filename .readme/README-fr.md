@@ -207,6 +207,7 @@ Autorisations demandées par le plugin et leur usage:
 - Démarrage (`RECEIVE_BOOT_COMPLETED`): replanifie après un redémarrage pour sonner même avant le premier déverrouillage.
 - Service de premier plan (`FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SYSTEM_EXEMPTED`): maintient le son pendant la sonnerie; sert aussi à rester actif quand "Rester actif en arrière-plan" est activé dans les paramètres (désactivé par défaut).
 - Vibration, verrou de réveil et réglages audio (`VIBRATE`, `WAKE_LOCK`, `MODIFY_AUDIO_SETTINGS`): vibrer, garder l'appareil éveillé pendant la sonnerie et rétablir le volume d'alarme indépendant ensuite.
+- Réorganiser les applications en cours d'exécution (`REORDER_TASKS`, Android 7.0 - 8.1 uniquement): quand d'autres applications ou scripts envoient plusieurs demandes d'alarme presque en même temps, ramène au premier plan une demande que le système n'a pas lancée, afin que chaque demande soit traitée. Accordée à l'installation.
 - Réseau (`INTERNET`, `ACCESS_NETWORK_STATE`): uniquement pour la recherche de mises à jour de l'écran des paramètres (à partir de 1.2.0, aussi pour actualiser les données des jours fériés). La recherche n'a lieu qu'à l'ouverture de la liste des alarmes, à la fréquence choisie, et évite par défaut les réseaux limités; la planification, la sonnerie et le lien avec AutoJs6 n'utilisent jamais le réseau.
 - Autorisation de plugin AutoJs6 (`org.autojs.permission.PLUGIN`): communiquer avec AutoJs6.
 
@@ -255,9 +256,9 @@ Les plans, décisions de conception et l'avancement sont suivis sous forme de li
 
 #### v1.0.1
 
-_2026/11/07_
+_2026/11/08_
 
-- `Correctif` Quand une autre application ou un script AutoJs6 envoyait coup sur coup deux demandes d'alarme du même type (par exemple deux nouvelles alarmes de suite, ou deux appels d'alarms.system.setAlarm visant ce plugin) alors qu'aucun écran du plugin n'était ouvert, la seconde demande était ignorée sans aucun message et son alarme n'était pas créée; chaque demande est désormais traitée
+- `Correctif` Quand une autre application ou un script AutoJs6 envoyait coup sur coup deux demandes d'alarme du même type (par exemple deux nouvelles alarmes de suite, ou deux appels d'alarms.system.setAlarm visant ce plugin) alors qu'aucun écran du plugin n'était ouvert, la seconde demande était ignorée sans aucun message et son alarme n'était pas créée; chaque demande est désormais traitée; sous Android 7.0 - 8.1, cela nécessite l'autorisation "réorganiser les applications en cours d'exécution" (accordée à l'installation)
 
 #### v1.0.0
 

@@ -207,6 +207,7 @@ Permisos que solicita el complemento y para qué sirven:
 - Arranque (`RECEIVE_BOOT_COMPLETED`): reprograma tras un reinicio para sonar incluso antes del primer desbloqueo.
 - Servicio en primer plano (`FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SYSTEM_EXEMPTED`): mantiene el sonido mientras suena la alarma; también sirve para seguir activo cuando "Mantener en segundo plano" está activado en los ajustes (desactivado de forma predeterminada).
 - Vibración, bloqueo de activación y ajustes de audio (`VIBRATE`, `WAKE_LOCK`, `MODIFY_AUDIO_SETTINGS`): vibrar, mantener el dispositivo despierto mientras suena y restaurar después el volumen de alarma independiente.
+- Reordenar aplicaciones en ejecución (`REORDER_TASKS`, solo Android 7.0 - 8.1): cuando otras aplicaciones o scripts envían varias solicitudes de alarma casi al mismo tiempo, trae al frente una solicitud que el sistema no inició, para que se atienda cada solicitud. Se concede al instalar.
 - Red (`INTERNET`, `ACCESS_NETWORK_STATE`): solo para la búsqueda de actualizaciones de la pantalla de ajustes (desde 1.2.0, también para actualizar los datos de festivos). La búsqueda solo ocurre al abrir la lista de alarmas, con la frecuencia elegida, y evita las redes de uso medido de forma predeterminada; la programación, el sonido y el vínculo con AutoJs6 nunca usan la red.
 - Permiso de complemento de AutoJs6 (`org.autojs.permission.PLUGIN`): comunicarse con AutoJs6.
 
@@ -255,9 +256,9 @@ Los planes, las decisiones de diseño y el progreso se registran como lista de v
 
 #### v1.0.1
 
-_2026/11/07_
+_2026/11/08_
 
-- `Corrección` Cuando otra aplicación o un script de AutoJs6 enviaba seguidas dos solicitudes de alarma del mismo tipo (por ejemplo, dos alarmas nuevas una tras otra, o dos llamadas a alarms.system.setAlarm dirigidas a este complemento) sin ninguna pantalla del complemento abierta, la segunda solicitud se ignoraba sin ningún aviso y su alarma no se creaba; ahora se atiende cada solicitud
+- `Corrección` Cuando otra aplicación o un script de AutoJs6 enviaba seguidas dos solicitudes de alarma del mismo tipo (por ejemplo, dos alarmas nuevas una tras otra, o dos llamadas a alarms.system.setAlarm dirigidas a este complemento) sin ninguna pantalla del complemento abierta, la segunda solicitud se ignoraba sin ningún aviso y su alarma no se creaba; ahora se atiende cada solicitud; en Android 7.0 - 8.1 esto requiere el permiso "reordenar aplicaciones en ejecución" (concedido al instalar)
 
 #### v1.0.0
 

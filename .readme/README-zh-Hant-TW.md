@@ -207,6 +207,7 @@ ColorOS 新安裝應用程式的 "橫幅" 通知預設關閉, 系統因此不顯
 - 開機啟動 (`RECEIVE_BOOT_COMPLETED`): 重新開機後重新排程, 首次解鎖前也能響鈴.
 - 前景服務 (`FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SYSTEM_EXEMPTED`): 響鈴期間保持發聲; 設定頁的 "保持背景執行" 開啟時也用它常駐 (預設關閉).
 - 震動, 喚醒鎖定與音訊設定 (`VIBRATE`, `WAKE_LOCK`, `MODIFY_AUDIO_SETTINGS`): 震動, 響鈴時保持裝置喚醒, 以及獨立的鬧鐘音量在響鈴後還原.
+- 重新排序執行中的應用程式 (`REORDER_TASKS`, 僅 Android 7.0 - 8.1): 其他應用程式或指令碼幾乎同時發出多個鬧鐘要求時, 把系統沒有啟動的要求調到前景處理, 讓每個要求都得到處理. 安裝時即授予.
 - 網路 (`INTERNET`, `ACCESS_NETWORK_STATE`): 只用於設定頁的更新檢查 (1.2.0 起也用於更新假日資料). 只在開啟鬧鐘清單時依設定的頻率檢查, 計量付費網路預設不檢查; 排程, 響鈴與 AutoJs6 連動從不連網.
 - AutoJs6 外掛權限 (`org.autojs.permission.PLUGIN`): 與 AutoJs6 通訊.
 
@@ -255,9 +256,9 @@ native libraries: libandroidx.graphics.path.so only (Compose graphics-path, 4 AB
 
 #### v1.0.1
 
-_2026/11/07_
+_2026/11/08_
 
-- `修復` 其他應用程式或 AutoJs6 指令碼很快地連續發出兩個同類的鬧鐘要求 (例如連續兩次新增鬧鐘, 或連續呼叫 alarms.system.setAlarm 並指定本外掛) 時, 如果外掛當時沒有開啟的畫面, 第二個要求會被忽略, 鬧鐘沒有建立, 也沒有任何提示; 現在每個要求都會處理
+- `修復` 其他應用程式或 AutoJs6 指令碼很快地連續發出兩個同類的鬧鐘要求 (例如連續兩次新增鬧鐘, 或連續呼叫 alarms.system.setAlarm 並指定本外掛) 時, 如果外掛當時沒有開啟的畫面, 第二個要求會被忽略, 鬧鐘沒有建立, 也沒有任何提示; 現在每個要求都會處理; 在 Android 7.0 - 8.1 上, 為此需要 "重新排序執行中的應用程式" 權限 (安裝時自動授予)
 
 #### v1.0.0
 

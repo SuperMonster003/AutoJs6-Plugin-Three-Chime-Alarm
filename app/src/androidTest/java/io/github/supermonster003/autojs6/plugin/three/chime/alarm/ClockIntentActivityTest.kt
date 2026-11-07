@@ -49,7 +49,8 @@ import java.util.UUID
  * T83), which saves with source `intent` or closes without saving; `SHOW_ALARMS` opens the alarm list; `DISMISS_ALARM` skips a ring within a day, refuses one further away, finds
  * nothing for an unknown label and lets the user choose among several matches; `SNOOZE_ALARM` without a ringing alarm
  * and the refused extras; a ringing alarm is snoozed for one minute by `SNOOZE_ALARM` and its round ended by
- * `DISMISS_ALARM` without a search mode; two `SET_ALARM` sent back to back are both answered (roadmap Q25).
+ * `DISMISS_ALARM` without a search mode; two `SET_ALARM` sent back to back are both answered, also while the edit page of
+ * an earlier request closes (roadmap Q25, Q26).
  *
  * Every alarm here carries the label prefix `p26-probe`; [cleanUp] removes them, so a run leaves the alarm list as
  * it found it. Nothing here touches the device's other alarms (no `all` search on a device).
@@ -57,7 +58,7 @@ import java.util.UUID
  * zh-CN: 已安装插件的系统时钟 Intent (路线图 P2.6, D21, T79, T80), 以 Intent 启动 [ClockIntentActivity], 再从其结果行与闹钟列表读回: `SET_ALARM`
  * 只保存一次, 第二次改为启用同一闹钟 (来源 `intent`), 没有 `EXTRA_SKIP_UI` 或时间时打开编辑页 (路线图 P3.1, T83), 以来源 `intent` 保存或不保存直接关闭; `SHOW_ALARMS` 打开闹钟列表; `DISMISS_ALARM`
  * 跳过一天之内的响铃, 拒绝更远的, 未知标签找不到闹钟, 多个匹配时由用户选择; `SNOOZE_ALARM` 在没有闹钟响铃时的结果与被拒的 extras; 正在响的闹钟经
- * `SNOOZE_ALARM` 贪睡一分钟, 再由不带搜索模式的 `DISMISS_ALARM` 结束本轮; 背靠背发送的两个 `SET_ALARM` 都得到应答 (路线图 Q25). 这里的闹钟都带标签前缀 `p26-probe`; [cleanUp] 删除它们, 运行后闹钟
+ * `SNOOZE_ALARM` 贪睡一分钟, 再由不带搜索模式的 `DISMISS_ALARM` 结束本轮; 背靠背发送的两个 `SET_ALARM` 都得到应答, 之前请求的编辑页正在关闭时也是如此 (路线图 Q25, Q26). 这里的闹钟都带标签前缀 `p26-probe`; [cleanUp] 删除它们, 运行后闹钟
  * 列表保持原样. 不触碰设备上的其他闹钟 (设备上不做 `all` 搜索).
  */
 @RunWith(AndroidJUnit4::class)
@@ -122,13 +123,39 @@ class ClockIntentActivityTest {
      * Two `SET_ALARM` sent back to back while the plugin has no task: in 1.0.0 the second arrived while the first
      * [ClockIntentActivity] still rooted the new task, was only queued for that instance, which finishes in `onCreate`
      * without resuming, and was lost; `documentLaunchMode="always"` gives each request a task of its own (roadmap Q25,
-     * T104). zh-CN: 插件没有任务时背靠背发送两个 `SET_ALARM`: 1.0.0 中第二个到达时第一个 [ClockIntentActivity] 仍是新任务的根, 请求只为该实例排队,
-     * 而它在 `onCreate` 里结束, 不会 resume, 请求因此丢失; `documentLaunchMode="always"` 让每个请求有自己的任务 (路线图 Q25, T104).
+     * T104). On API 24 - 27 the system can still leave one of the two tasks behind the home screen (CI API 24, `53416fd`),
+     * which [ClockRescue] starts (Q26, T105). zh-CN: 插件没有任务时背靠背发送两个 `SET_ALARM`: 1.0.0 中第二个到达时第一个 [ClockIntentActivity] 仍是新任务
+     * 的根, 请求只为该实例排队, 而它在 `onCreate` 里结束, 不会 resume, 请求因此丢失; `documentLaunchMode="always"` 让每个请求有自己的任务 (路线图 Q25,
+     * T104). 在 API 24 - 27 上系统仍可能把两个任务之一留在桌面后面 (CI API 24, `53416fd`), 由 [ClockRescue] 启动 (Q26, T105).
      */
     @Test
     fun backToBackRequestsAreBothAnswered() {
         finishAllActivities()
         val extras = arrayOf<Pair<String, Any>>(AlarmClock.EXTRA_HOUR to 6, AlarmClock.EXTRA_MINUTES to 42, AlarmClock.EXTRA_SKIP_UI to true)
+        start(AlarmClock.ACTION_SET_ALARM, *extras, AlarmClock.EXTRA_MESSAGE to "$label-a")
+        start(AlarmClock.ACTION_SET_ALARM, *extras, AlarmClock.EXTRA_MESSAGE to "$label-b")
+        waitFor("both requests are answered", OUTCOME_WAIT_MILLIS) { probes(label).size == 2 }
+        assertEquals(setOf("$label-a", "$label-b"), probes(label).map { it.spec.label }.toSet())
+        assertTrue(probes(label).all { it.source == AlarmContract.SOURCE_INTENT })
+    }
+
+    /**
+     * Two `SET_ALARM` sent back to back while the edit page of an earlier request closes: on API 24 - 27 the system left the
+     * task of one of them behind the home screen without starting it (a probe lost one request in 4 - 5 of 6 rounds on
+     * AVD_API_24 and AVD_API_27, none on AVD_API_29), and [ClockRescue] moves that task to the front (roadmap Q26, T105).
+     * zh-CN: 之前请求的编辑页正在关闭时背靠背发送两个 `SET_ALARM`: 在 API 24 - 27 上系统把其中一个的任务留在桌面后面且不启动 (探针在 AVD_API_24 与
+     * AVD_API_27 上 6 轮中有 4 - 5 轮丢失一个请求, AVD_API_29 上没有), [ClockRescue] 把该任务调到前台 (路线图 Q26, T105).
+     */
+    @Test
+    fun backToBackRequestsWhileTheDraftPageClosesAreBothAnswered() {
+        finishAllActivities()
+        val page = monitor(ClockDraftActivity::class.java)
+        start(AlarmClock.ACTION_SET_ALARM, AlarmClock.EXTRA_HOUR to 6, AlarmClock.EXTRA_MINUTES to 5, AlarmClock.EXTRA_MESSAGE to "$label-draft")
+        val draft = editPage(page)
+        // The probe closed the page once it had settled. zh-CN: 探针在页面稳定后关闭它.
+        SystemClock.sleep(DRAFT_SETTLE_MILLIS)
+        val extras = arrayOf<Pair<String, Any>>(AlarmClock.EXTRA_HOUR to 6, AlarmClock.EXTRA_MINUTES to 42, AlarmClock.EXTRA_SKIP_UI to true)
+        instrumentation.runOnMainSync { draft.finish() }
         start(AlarmClock.ACTION_SET_ALARM, *extras, AlarmClock.EXTRA_MESSAGE to "$label-a")
         start(AlarmClock.ACTION_SET_ALARM, *extras, AlarmClock.EXTRA_MESSAGE to "$label-b")
         waitFor("both requests are answered", OUTCOME_WAIT_MILLIS) { probes(label).size == 2 }
@@ -375,6 +402,7 @@ class ClockIntentActivityTest {
          * 多半就是 [awaitNoClockIntentActivity] 现在等过的启动竞态; 等待时间仍为慢速模拟器保持宽裕.
          */
         private const val OUTCOME_WAIT_MILLIS = 30_000L
+        private const val DRAFT_SETTLE_MILLIS = 800L
         private const val HOUR = 60 * 60 * 1000L
         private const val RING_SECONDS = 12
         private const val RING_WAIT_MILLIS = 90_000L

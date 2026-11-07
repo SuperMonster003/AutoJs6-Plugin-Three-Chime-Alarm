@@ -207,6 +207,7 @@ ColorOS 新装应用的 "横幅" 通知默认关闭, 系统因此不显示全屏
 - 开机启动 (`RECEIVE_BOOT_COMPLETED`): 重启后重新排程, 首次解锁前也能响铃.
 - 前台服务 (`FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SYSTEM_EXEMPTED`): 响铃期间保持发声; 设置页的 "保持后台运行" 开启时也用它常驻 (默认关闭).
 - 振动, 唤醒锁与音频设置 (`VIBRATE`, `WAKE_LOCK`, `MODIFY_AUDIO_SETTINGS`): 振动, 响铃时保持设备唤醒, 以及独立的闹钟音量在响铃后还原.
+- 对正在运行的应用重新排序 (`REORDER_TASKS`, 仅 Android 7.0 - 8.1): 其他应用或脚本几乎同时发来多个闹钟请求时, 把系统没有启动的请求调到前台处理, 使每个请求都得到处理. 安装即授予.
 - 网络 (`INTERNET`, `ACCESS_NETWORK_STATE`): 只用于设置页的更新检查 (1.2.0 起也用于刷新节假日数据). 只在打开闹钟列表时按设定的频率检查, 计量网络默认不检查; 排程, 响铃与 AutoJs6 联动从不联网.
 - AutoJs6 插件权限 (`org.autojs.permission.PLUGIN`): 与 AutoJs6 通信.
 
@@ -255,9 +256,9 @@ native libraries: libandroidx.graphics.path.so only (Compose graphics-path, 4 AB
 
 #### v1.0.1
 
-_2026/11/07_
+_2026/11/08_
 
-- `修复` 其他应用或 AutoJs6 脚本很快地连续发来两个同类的闹钟请求 (例如连续两次新建闹钟, 或连续调用 alarms.system.setAlarm 并指定本插件) 时, 如果插件当时没有打开的界面, 第二个请求会被忽略, 闹钟没有建成, 也没有任何提示; 现在每个请求都会处理
+- `修复` 其他应用或 AutoJs6 脚本很快地连续发来两个同类的闹钟请求 (例如连续两次新建闹钟, 或连续调用 alarms.system.setAlarm 并指定本插件) 时, 如果插件当时没有打开的界面, 第二个请求会被忽略, 闹钟没有建成, 也没有任何提示; 现在每个请求都会处理; 在 Android 7.0 - 8.1 上, 为此需要 "对正在运行的应用重新排序" 权限 (安装时自动授予)
 
 #### v1.0.0
 

@@ -207,6 +207,7 @@ Permissions requested by the plugin and what they are for:
 - Boot (`RECEIVE_BOOT_COMPLETED`): reschedules after a reboot so that alarms ring before the first unlock.
 - Foreground service (`FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SYSTEM_EXEMPTED`): keeps the alarm sounding while it rings; also keeps the plugin running when "Keep running in background" is on in the settings (off by default).
 - Vibration, wake lock and audio settings (`VIBRATE`, `WAKE_LOCK`, `MODIFY_AUDIO_SETTINGS`): vibrate, keep the device awake while ringing, and restore the independent alarm volume after ringing.
+- Reorder running apps (`REORDER_TASKS`, Android 7.0 - 8.1 only): when other apps or scripts send several alarm requests at almost the same time, brings a request the system did not start to the front, so every request is handled. Granted at install.
 - Network (`INTERNET`, `ACCESS_NETWORK_STATE`): only for the update check of the settings screen (from 1.2.0 also for refreshing holiday data). Checks run only when the alarm list opens, at the chosen frequency, and skip metered networks by default; scheduling, ringing and the AutoJs6 link never use the network.
 - AutoJs6 plugin permission (`org.autojs.permission.PLUGIN`): communicates with AutoJs6.
 
@@ -255,9 +256,9 @@ Plans, design decisions and progress are tracked as a checklist in ROADMAP.md. U
 
 #### v1.0.1
 
-_2026/11/07_
+_2026/11/08_
 
-- `Fix` When another app or an AutoJs6 script sent two alarm requests of the same kind in quick succession (for example two new alarms in a row, or two calls of alarms.system.setAlarm aimed at this plugin) while no plugin screen was open, the second request was ignored without any message and its alarm was never created; every request is now handled
+- `Fix` When another app or an AutoJs6 script sent two alarm requests of the same kind in quick succession (for example two new alarms in a row, or two calls of alarms.system.setAlarm aimed at this plugin) while no plugin screen was open, the second request was ignored without any message and its alarm was never created; every request is now handled; on Android 7.0 - 8.1 this needs the "reorder running apps" permission (granted at install)
 
 #### v1.0.0
 

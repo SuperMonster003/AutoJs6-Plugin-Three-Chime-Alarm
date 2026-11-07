@@ -28,7 +28,7 @@ class ManifestContractTest {
     private val application: Element get() = manifest.child("application")
 
     @Test
-    fun `the permissions are exactly the plugin permission, the roadmap T4 set with the T87 overlay, the T99 audio settings and the Q16 (a) network pair`() {
+    fun `the permissions are exactly the plugin permission, the roadmap T4 set with the T87 overlay, the T99 audio settings, the T105 task order and the Q16 (a) network pair`() {
         assertEquals(
             listOf(
                 PLUGIN_PERMISSION,
@@ -43,6 +43,7 @@ class ManifestContractTest {
                 "android.permission.RECEIVE_BOOT_COMPLETED",
                 "android.permission.FOREGROUND_SERVICE",
                 RING_SERVICE_PERMISSION,
+                "android.permission.REORDER_TASKS",
                 "android.permission.INTERNET",
                 "android.permission.ACCESS_NETWORK_STATE",
             ),
@@ -50,6 +51,8 @@ class ManifestContractTest {
         )
         val exact = manifest.children("uses-permission").single { it.android("name") == "android.permission.SCHEDULE_EXACT_ALARM" }
         assertEquals("SCHEDULE_EXACT_ALARM only below API 33 (roadmap T4)", "32", exact.android("maxSdkVersion"))
+        val reorder = manifest.children("uses-permission").single { it.android("name") == "android.permission.REORDER_TASKS" }
+        assertEquals("REORDER_TASKS only where ClockRescue runs, API 24 - 27 (roadmap Q26, T105)", "27", reorder.android("maxSdkVersion"))
         val permissions = manifest.children("uses-permission").map { it.android("name") }
         assertTrue("no storage permission (roadmap T4)", permissions.none { it.contains("STORAGE") || it.contains("MEDIA") })
         assertEquals(

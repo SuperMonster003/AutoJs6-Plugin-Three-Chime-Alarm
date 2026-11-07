@@ -6,9 +6,9 @@
 
 # v1.0.1
 
-###### 2026/11/07
+###### 2026/11/08
 
-* `Fix` When another app or an AutoJs6 script sent two alarm requests of the same kind in quick succession (for example two new alarms in a row, or two calls of alarms.system.setAlarm aimed at this plugin) while no plugin screen was open, the second request was ignored without any message and its alarm was never created; every request is now handled
+* `Fix` When another app or an AutoJs6 script sent two alarm requests of the same kind in quick succession (for example two new alarms in a row, or two calls of alarms.system.setAlarm aimed at this plugin) while no plugin screen was open, the second request was ignored without any message and its alarm was never created; every request is now handled; on Android 7.0 - 8.1 this needs the "reorder running apps" permission (granted at install)
 
 # v1.0.0
 

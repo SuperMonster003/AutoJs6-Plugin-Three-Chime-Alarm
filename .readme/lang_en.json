@@ -166,6 +166,7 @@
     "Boot (`RECEIVE_BOOT_COMPLETED`): reschedules after a reboot so that alarms ring before the first unlock.",
     "Foreground service (`FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SYSTEM_EXEMPTED`): keeps the alarm sounding while it rings; also keeps the plugin running when \"Keep running in background\" is on in the settings (off by default).",
     "Vibration, wake lock and audio settings (`VIBRATE`, `WAKE_LOCK`, `MODIFY_AUDIO_SETTINGS`): vibrate, keep the device awake while ringing, and restore the independent alarm volume after ringing.",
+    "Reorder running apps (`REORDER_TASKS`, Android 7.0 - 8.1 only): when other apps or scripts send several alarm requests at almost the same time, brings a request the system did not start to the front, so every request is handled. Granted at install.",
     "Network (`INTERNET`, `ACCESS_NETWORK_STATE`): only for the update check of the settings screen (from 1.2.0 also for refreshing holiday data). Checks run only when the alarm list opens, at the chosen frequency, and skip metered networks by default; scheduling, ringing and the AutoJs6 link never use the network.",
     "AutoJs6 plugin permission (`org.autojs.permission.PLUGIN`): communicates with AutoJs6."
   ]
