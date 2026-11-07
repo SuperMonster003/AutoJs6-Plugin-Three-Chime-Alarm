@@ -28,7 +28,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SYSTEM_EXEMPTED" />
 
     <!--
-        Roadmap Q26, T105: on API 24 - 27 the system can leave a clock request that arrived together with another one in a
+        Roadmap Q27, T105: on API 24 - 27 the system can leave a clock request that arrived together with another one in a
         task behind the home screen, never started; ClockRescue moves such a task to the front so the request is answered.
         Granted at install, and not requested on API 28+, where the system starts every request.
     -->

@@ -52,7 +52,7 @@ class ManifestContractTest {
         val exact = manifest.children("uses-permission").single { it.android("name") == "android.permission.SCHEDULE_EXACT_ALARM" }
         assertEquals("SCHEDULE_EXACT_ALARM only below API 33 (roadmap T4)", "32", exact.android("maxSdkVersion"))
         val reorder = manifest.children("uses-permission").single { it.android("name") == "android.permission.REORDER_TASKS" }
-        assertEquals("REORDER_TASKS only where ClockRescue runs, API 24 - 27 (roadmap Q26, T105)", "27", reorder.android("maxSdkVersion"))
+        assertEquals("REORDER_TASKS only where ClockRescue runs, API 24 - 27 (roadmap Q27, T105)", "27", reorder.android("maxSdkVersion"))
         val permissions = manifest.children("uses-permission").map { it.android("name") }
         assertTrue("no storage permission (roadmap T4)", permissions.none { it.contains("STORAGE") || it.contains("MEDIA") })
         assertEquals(

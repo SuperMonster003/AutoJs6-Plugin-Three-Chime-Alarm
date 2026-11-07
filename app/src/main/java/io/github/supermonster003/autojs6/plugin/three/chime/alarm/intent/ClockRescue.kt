@@ -9,7 +9,7 @@ import android.os.SystemClock
 import android.util.Log
 
 /**
- * Starts the clock requests that the system left behind the home screen (roadmap Q26, T105). On API 24 - 27, when two
+ * Starts the clock requests that the system left behind the home screen (roadmap Q27, T105). On API 24 - 27, when two
  * requests arrive together (above all while another page of the plugin is closing), the task of one of them can end up
  * behind the home screen with its [ClockIntentActivity] never started, so the request is lost; `documentLaunchMode`
  * (T104) does not prevent it there. A single request is always started, so every lost request comes with one that runs
@@ -17,7 +17,7 @@ import android.util.Log
  * activity is a [ClockIntentActivity] that is not running and moves them to the front, which starts the activity and
  * answers the request. A started request finishes at once and is never moved. API 28+ starts every request; the
  * permission (`REORDER_TASKS`, `maxSdkVersion` 27) is not requested there.
- * zh-CN: 启动被系统留在桌面后面的时钟请求 (路线图 Q26, T105). 在 API 24 - 27 上, 两个请求同时到达时 (尤其插件另一个页面正在关闭时), 其中一个请求的任务
+ * zh-CN: 启动被系统留在桌面后面的时钟请求 (路线图 Q27, T105). 在 API 24 - 27 上, 两个请求同时到达时 (尤其插件另一个页面正在关闭时), 其中一个请求的任务
  * 可能被压到桌面后面, 它的 [ClockIntentActivity] 从未启动, 请求因此丢失; `documentLaunchMode` (T104) 在这些版本上挡不住. 单个请求总会启动, 所以每个丢失
  * 的请求都伴随一个运行了 [ClockIntentActivity] 的请求, 由它调用 [schedule]: [DELAYS_MILLIS] 之后 [rescue] 查找本应用中唯一活动是未运行的
  * [ClockIntentActivity] 的任务并调到前台, 由此启动该活动并应答请求. 已启动的请求会立即结束, 不会被调动. API 28+ 会启动每个请求, 权限

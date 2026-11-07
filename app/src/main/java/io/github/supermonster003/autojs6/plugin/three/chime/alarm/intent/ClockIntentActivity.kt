@@ -19,12 +19,12 @@ import java.time.ZoneId
  * snoozes with `by` `user` (T66). A `SET_ALARM` without `SKIP_UI` opens the edit page ([EditAlarmActivity.draft], roadmap
  * P3.1), the alarm chooser is [ClockDialogActivity], the alarm list is [HomeActivity]. Each outcome is a toast and one
  * line of `adb logcat -s ChimeIntent` ([ClockActions]). Every request gets a task of its own (`documentLaunchMode`,
- * roadmap Q25, T104); on API 24 - 27 [ClockRescue] starts a request the system left behind the home screen (Q26, T105).
+ * roadmap Q25, T104); on API 24 - 27 [ClockRescue] starts a request the system left behind the home screen (Q27, T105).
  * zh-CN:不带自身窗口地应答系统时钟 Intent (路线图 D21, P2.6): `SET_ALARM`, `SHOW_ALARMS`, `DISMISS_ALARM` 与 `SNOOZE_ALARM` (extras 由
  * [ClockRequests] 映射). 调用方须持有 `com.android.alarm.permission.SET_ALARM` (Manifest). 变更以来源 `intent` 记录; 关闭与贪睡以 `by` `user`
  * 记录 (T66). 不带 `SKIP_UI` 的 `SET_ALARM` 打开编辑页 ([EditAlarmActivity.draft], 路线图 P3.1), 闹钟选择由 [ClockDialogActivity] 提供, 闹钟列表为
  * [HomeActivity]. 每个结果为一个 toast 与 `adb logcat -s ChimeIntent` 的一行 ([ClockActions]). 每个请求各有自己的任务 (`documentLaunchMode`, 路线图
- * Q25, T104); 在 API 24 - 27 上, 被系统留在桌面后面的请求由 [ClockRescue] 启动 (Q26, T105).
+ * Q25, T104); 在 API 24 - 27 上, 被系统留在桌面后面的请求由 [ClockRescue] 启动 (Q27, T105).
  */
 class ClockIntentActivity : Activity() {
 
