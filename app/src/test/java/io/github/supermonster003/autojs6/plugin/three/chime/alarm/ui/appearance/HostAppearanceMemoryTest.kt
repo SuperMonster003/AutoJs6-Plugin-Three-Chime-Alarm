@@ -58,4 +58,15 @@ class HostAppearanceMemoryTest {
         assertFalse("unchanged: no write", HostAppearanceReader.replaces(true, sample, sample.copy(), unlocked = true))
         assertFalse("still missing: no write", HostAppearanceReader.replaces(true, null, null, unlocked = true))
     }
+
+    /** Roadmap T98: the ringing screen before the first unlock recreated itself in a loop (G8441, API 28). */
+    @Test
+    fun `a screen follows the remembered snapshot while the provider cannot answer`() {
+        assertEquals("before the first unlock", sample, HostAppearanceReader.follows(true, sample, null, unlocked = false))
+        assertNull("nothing remembered, still locked", HostAppearanceReader.follows(true, null, null, unlocked = false))
+        assertNull("unlocked: AutoJs6 is really missing", HostAppearanceReader.follows(true, sample, null, unlocked = true))
+        val other = sample.copy(language = "ja")
+        assertEquals("a new answer", other, HostAppearanceReader.follows(true, sample, other, unlocked = false))
+        assertEquals("unchanged", sample, HostAppearanceReader.follows(true, sample, sample.copy(), unlocked = true))
+    }
 }

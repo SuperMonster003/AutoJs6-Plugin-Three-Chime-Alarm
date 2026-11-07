@@ -28,7 +28,7 @@ class ManifestContractTest {
     private val application: Element get() = manifest.child("application")
 
     @Test
-    fun `the permissions are exactly the plugin permission, the roadmap T4 set with the T87 overlay and the Q16 (a) network pair`() {
+    fun `the permissions are exactly the plugin permission, the roadmap T4 set with the T87 overlay, the T99 audio settings and the Q16 (a) network pair`() {
         assertEquals(
             listOf(
                 PLUGIN_PERMISSION,
@@ -38,6 +38,7 @@ class ManifestContractTest {
                 "android.permission.SYSTEM_ALERT_WINDOW",
                 "android.permission.POST_NOTIFICATIONS",
                 "android.permission.VIBRATE",
+                "android.permission.MODIFY_AUDIO_SETTINGS",
                 "android.permission.WAKE_LOCK",
                 "android.permission.RECEIVE_BOOT_COMPLETED",
                 "android.permission.FOREGROUND_SERVICE",
@@ -261,10 +262,12 @@ class ManifestContractTest {
     fun `the scheduling receivers are private, direct boot aware and hear the T8 broadcasts`() {
         val receivers = application.children("receiver").associateBy { it.android("name") }
         assertEquals(
-            listOf(".schedule.AlarmTriggerReceiver", ".schedule.AlarmRescheduleReceiver", ".ui.appearance.LauncherIconUpdateReceiver"),
+            listOf(".schedule.AlarmTriggerReceiver", ".ring.RingKickReceiver", ".schedule.AlarmRescheduleReceiver", ".ui.appearance.LauncherIconUpdateReceiver"),
             receivers.keys.toList(),
         )
-        listOf(".schedule.AlarmTriggerReceiver", ".schedule.AlarmRescheduleReceiver").map(receivers::getValue).forEach {
+        // Roadmap T97: the ring service restart receiver is private and direct boot aware like the scheduling ones.
+        assertTrue(receivers.getValue(".ring.RingKickReceiver").children("intent-filter").isEmpty())
+        listOf(".schedule.AlarmTriggerReceiver", ".ring.RingKickReceiver", ".schedule.AlarmRescheduleReceiver").map(receivers::getValue).forEach {
             assertEquals("false", it.android("exported"))
             assertEquals("true", it.android("directBootAware"))
         }

@@ -44,13 +44,19 @@ object AlarmPlanner {
         /** The alarm clock or the skip wake-up of the alarm fired. zh-CN: 闹钟或跳过的唤醒到时. */
         TRIGGER,
 
-        /** `BOOT_COMPLETED` / `LOCKED_BOOT_COMPLETED`: rings missed while the device was off. zh-CN: 开机, 关机期间错过的响铃. */
+        /**
+         * `BOOT_COMPLETED` / `LOCKED_BOOT_COMPLETED` and the first process start after a boot (T96, [BootMarker]): rings
+         * missed while the device was off. zh-CN: 开机广播与开机后的第一次进程启动 (T96): 关机期间错过的响铃.
+         */
         BOOT,
 
         /** `TIME_SET` / `TIMEZONE_CHANGED`. zh-CN: 改时间或时区. */
         CLOCK,
 
-        /** `MY_PACKAGE_REPLACED`, the exact alarm permission, the start of the plugin process. zh-CN: 升级, 精确闹钟权限, 插件进程启动. */
+        /**
+         * `MY_PACKAGE_REPLACED`, the exact alarm permission, a start of the plugin process that is not the first since the
+         * boot. zh-CN: 升级, 精确闹钟权限, 非开机后首次的插件进程启动.
+         */
         RESTORE,
     }
 

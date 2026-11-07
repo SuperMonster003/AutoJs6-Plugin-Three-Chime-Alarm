@@ -7,6 +7,7 @@ import android.os.Looper
 import android.util.Log
 import android.view.WindowManager
 import androidx.activity.compose.BackHandler
+import androidx.core.view.OneShotPreDrawListener
 import androidx.compose.animation.core.animate
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
@@ -118,6 +119,10 @@ class RingActivity : StandaloneActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         runtime.rings.addListener(listener)
         render()
+        // The first frame of the ringing screen, for the cold start baseline of roadmap P5.6 (`adb logcat -s ChimeRing`):
+        // a launch through the full screen intent logs no `Displayed` line. zh-CN: 响铃界面的首帧, 用于路线图 P5.6 的冷启动基线;
+        // 经全屏 Intent 的启动不记录 `Displayed` 行.
+        OneShotPreDrawListener.add(window.decorView) { Log.i(RingService.TAG, "ring screen drawn ${shown?.ring?.alarmId ?: "(none)"}") }
     }
 
     override fun onResume() {

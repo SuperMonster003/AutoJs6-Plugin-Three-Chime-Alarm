@@ -242,14 +242,17 @@ class RingService : Service() {
 
         /**
          * Starts the service for a ring that was just offered. The start is refused when the process is in the
-         * background without an exemption (a resume after the process died); the ring then sounds at the next start.
-         * zh-CN: 为刚收到的响铃启动服务. 进程在后台且没有豁免时 (进程死亡后的接续) 启动会被拒绝, 响铃在下次启动时发声.
+         * background without an exemption (a resume after the process died, a late ring of a process that a binding
+         * started); [rearm] then lets [RingKickReceiver] start it from an alarm wake-up a second later (T97).
+         * zh-CN: 为刚收到的响铃启动服务. 进程在后台且没有豁免时 (进程死亡后的接续, 由绑定拉起的进程中的补响) 启动会被拒绝; [rearm] 时由
+         * [RingKickReceiver] 在一秒后的闹钟唤醒中启动 (T97).
          */
-        fun start(context: Context) {
+        fun start(context: Context, rearm: Boolean = true) {
             try {
                 ContextCompat.startForegroundService(context, Intent(context, RingService::class.java))
             } catch (e: IllegalStateException) {
                 Log.w(TAG, "ring service start refused: ${e.message}")
+                if (rearm) RingKickReceiver.arm(context)
             }
         }
 

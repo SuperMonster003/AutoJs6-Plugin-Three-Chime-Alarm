@@ -10,6 +10,8 @@
         foreground service type is the one roadmap P0.2 measured (T6). Display over other apps lets the ring service open
         the ringing screen while the device is not in use where the system holds the full screen intent back (roadmap
         Q20, T87); the user grants it from the permissions page; without it the full screen intent stays the only way.
+        Changing audio settings (granted at install) lets the independent ring volume set and restore an alarm volume below
+        the floor that API 33+ keeps for other apps (index 3 of 15 on the Redmi 22120RN86C; roadmap T99).
     -->
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission
@@ -19,6 +21,7 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -267,6 +270,14 @@
         -->
         <receiver
             android:name=".schedule.AlarmTriggerReceiver"
+            android:directBootAware="true"
+            android:exported="false" />
+        <!--
+            Roadmap T97: starts the ring service from an alarm wake-up when a start without a background exemption was
+            refused (a late ring in a process that a binding started). Only the plugin's own pending intent reaches it.
+        -->
+        <receiver
+            android:name=".ring.RingKickReceiver"
             android:directBootAware="true"
             android:exported="false" />
         <receiver

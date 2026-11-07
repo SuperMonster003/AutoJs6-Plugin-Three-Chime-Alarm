@@ -112,8 +112,8 @@ abstract class StandaloneActivity : ComponentActivity() {
             val snapshot = HostAppearanceReader.read(application)
             main.post {
                 owner.get()?.takeIf { !it.isFinishing && !it.isDestroyed && it.refreshGeneration == expected }?.let { activity ->
-                    HostAppearanceReader.accept(application, snapshot)
-                    activity.refreshIfChanged(AppearancePreferences.resolve(application, snapshot))
+                    // Roadmap T98: follow what accept() keeps (the remembered snapshot before the first unlock), not the raw answer.
+                    activity.refreshIfChanged(AppearancePreferences.resolve(application, HostAppearanceReader.accept(application, snapshot)))
                 }
             }
         }

@@ -177,18 +177,23 @@ internal object HostAppearanceReader {
 
     /**
      * Called only after a still-resumed Activity accepts the refresh, including a missing host. Before the first unlock
-     * the host provider cannot answer, so a missing host then keeps the remembered snapshot.
-     * zh-CN: 仅在仍处于前台的 Activity 接受刷新后调用, 包括宿主缺失. 首次解锁前宿主 Provider 无法应答, 此时的缺失保留记住的快照.
+     * the host provider cannot answer, so a missing host then keeps the remembered snapshot. Answers the appearance the
+     * screen follows from now on ([follows]); the screen must not resolve the raw [value] itself (roadmap T98).
+     * zh-CN: 仅在仍处于前台的 Activity 接受刷新后调用, 包括宿主缺失. 首次解锁前宿主 Provider 无法应答, 此时的缺失保留记住的快照. 返回界面此后跟随的外观
+     * ([follows]); 界面不能自行按原始 [value] 解析 (路线图 T98).
      */
-    fun accept(context: Context, value: HostAppearance?) {
-        val current = known
-        if (!replaces(current != null, current?.value, value, unlocked(context))) return
+    fun accept(context: Context, value: HostAppearance?): HostAppearance? {
+        val current = known ?: Known(load(context)).also { known = it }
+        val unlocked = unlocked(context)
+        val followed = follows(true, current.value, value, unlocked)
+        if (!replaces(true, current.value, value, unlocked)) return followed
         known = Known(value)
         runCatching {
             val editor = file(context).edit().clear()
             if (value != null) remember(value).forEach { (key, item) -> if (item is Boolean) editor.putBoolean(key, item) else editor.putString(key, item as String) }
             editor.apply()
         }
+        return followed
     }
 
     /**
@@ -198,6 +203,16 @@ internal object HostAppearanceReader {
      */
     internal fun replaces(isKnown: Boolean, known: HostAppearance?, value: HostAppearance?, unlocked: Boolean): Boolean =
         (value != null || unlocked) && !(isKnown && known == value)
+
+    /**
+     * The appearance a screen follows after reading [value]: the known state after [accept] (roadmap T98). Resolving the
+     * raw answer instead made the ringing screen before the first unlock recreate itself about 12 times a second: the
+     * missing answer resolved to the system appearance, the recreated screen started from the remembered snapshot again.
+     * zh-CN: 读到 [value] 后界面跟随的外观, 即 [accept] 之后的已知状态 (路线图 T98). 此前按原始应答解析, 首次解锁前的响铃界面每秒重建约 12 次:
+     * 缺失的应答解析为系统外观, 重建后的界面又从记住的快照开始.
+     */
+    internal fun follows(isKnown: Boolean, known: HostAppearance?, value: HostAppearance?, unlocked: Boolean): HostAppearance? =
+        if (replaces(isKnown, known, value, unlocked)) value else known
 
     /** The stored form of [value]; colors as hexadecimal text. zh-CN: [value] 的存储形式; 颜色写成十六进制文本. */
     internal fun remember(value: HostAppearance): Map<String, Any> = mapOf(

@@ -1,6 +1,7 @@
 package io.github.supermonster003.autojs6.plugin.three.chime.alarm
 
 import android.content.Context
+import android.provider.Settings
 import android.util.Log
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmRepository
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmStore
@@ -13,6 +14,7 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.ring.Ring
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.ring.RingtoneLibrary
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.schedule.AlarmPlanner
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.schedule.AlarmSchedule
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.schedule.BootMarker
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ring.AlarmStreamVolume
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ring.RingDefaultsStore
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ring.RingService
@@ -103,10 +105,23 @@ class AlarmRuntime private constructor(context: Context) {
     /** One thread for the scheduler work of receivers. zh-CN: 接收器的调度工作所用的单线程. */
     val executor: ExecutorService = Executors.newSingleThreadExecutor { Thread(it, "chime-schedule") }
 
+    /**
+     * The first start since the boot reconciles as a boot, since it runs before the boot broadcast that started the
+     * process (roadmap P5.3, T96). zh-CN: 开机后的第一次启动按开机对账, 因为它先于启动进程的开机广播运行 (路线图 P5.3, T96).
+     */
+    private val bootMarker = BootMarker(
+        current = { runCatching { Settings.Global.getInt(this.context.contentResolver, Settings.Global.BOOT_COUNT) }.getOrNull() },
+        stored = { bootPreferences().let { if (it.contains(KEY_BOOT_COUNT)) it.getInt(KEY_BOOT_COUNT, -1) else null } },
+        store = { bootPreferences().edit().putInt(KEY_BOOT_COUNT, it).commit() },
+    )
+
+    private fun bootPreferences() = context.createDeviceProtectedStorageContext().getSharedPreferences(BOOT_PREFERENCES, Context.MODE_PRIVATE)
+
     private fun start() {
         executor.execute {
             try {
-                log("start", schedule.reconcile(AlarmPlanner.Cause.RESTORE).values)
+                val cause = bootMarker.startCause()
+                log(if (cause == AlarmPlanner.Cause.BOOT) "start after boot" else "start", schedule.reconcile(cause).values)
                 val resumed = rings.resume()
                 if (resumed > 0) Log.i(RingService.TAG, "start: $resumed interrupted rings resumed")
                 if (rings.sounding != null) RingService.start(context) else volume.restore()
@@ -132,6 +147,10 @@ class AlarmRuntime private constructor(context: Context) {
 
         /** The directory of `alarms.json` under device-protected `filesDir` (roadmap P2.1). zh-CN: `alarms.json` 所在目录. */
         const val STORE_DIRECTORY = "alarms"
+
+        /** Device-protected preferences with the boot count of the previous process start (T96). zh-CN: 保存上次进程启动时开机次数的设备加密偏好. */
+        private const val BOOT_PREFERENCES = "boot"
+        private const val KEY_BOOT_COUNT = "bootCount"
 
         @Volatile
         private var instance: AlarmRuntime? = null
