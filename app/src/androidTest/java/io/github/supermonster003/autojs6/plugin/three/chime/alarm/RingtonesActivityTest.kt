@@ -10,7 +10,7 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isEnabled
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -59,6 +59,11 @@ import kotlin.random.Random
 @RunWith(AndroidJUnit4::class)
 class RingtonesActivityTest {
 
+    // The v2 rule (StandardTestDispatcher) runs what the screens' effects do after a read on Dispatchers.IO on the main
+    // thread, as on a device; the v1 rule resumed it on the IO thread, where a state written while the Scaffold content
+    // was being subcomposed could be missed and the screen stayed unloaded (CI API 24 / 33, roadmap T106).
+    // zh-CN: v2 规则 (StandardTestDispatcher) 让界面副作用在 Dispatchers.IO 读取之后的部分在主线程执行, 与设备上一致; v1 规则让它在 IO 线程继续, 在
+    // Scaffold 内容子组合期间写入的状态可能被漏掉, 界面一直停在未加载状态 (CI API 24 / 33, 路线图 T106).
     @get:Rule
     val compose = createEmptyComposeRule()
 
@@ -149,13 +154,13 @@ class RingtonesActivityTest {
     fun theEditPageAndTheSettingsScreenTakeTheChoice() {
         val record = runtime.repository.add(mapOf("hour" to 6, "minute" to 30, "label" to "$PREFIX-edit", "enabled" to false), AlarmContract.SOURCE_TOOL)
         context.startActivity(EditAlarmActivity.edit(context, record.id).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        compose.waitUntil(WAIT_MILLIS) { compose.onAllNodesWithTag("chime.edit.content").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(WAIT_MILLIS) { compose.shows(hasTestTag("chime.edit.content")) }
         compose.onNodeWithTag("chime.edit.sound").performScrollTo().performClick()
         waitForList()
         item("chime.ringtones.fallback").assertIsSelected()
         item("chime.ringtones.item.${AlarmContract.SOUND_SILENT}").performClick()
         compose.onNodeWithTag("chime.ringtones.confirm").performClick()
-        compose.waitUntil(WAIT_MILLIS) { compose.onAllNodesWithTag("chime.ringtones.list").fetchSemanticsNodes().isEmpty() }
+        compose.waitUntil(WAIT_MILLIS) { !compose.shows(hasTestTag("chime.ringtones.list")) }
         compose.onNodeWithTag("chime.edit.sound").performScrollTo().assert(hasText(context.getString(R.string.edit_sound_silent), substring = true))
         compose.onNodeWithTag("chime.edit.save").performClick()
         compose.waitUntil(WAIT_MILLIS) { runtime.repository.get(record.id)?.spec?.sound?.source == AlarmContract.SOUND_SILENT }
@@ -163,7 +168,9 @@ class RingtonesActivityTest {
         val store = RingDefaultsStore(context)
         val next = if (store.get().sound == AlarmContract.SOUND_SILENT) AlarmContract.SOUND_DEFAULT else AlarmContract.SOUND_SILENT
         context.startActivity(Intent(context, SettingsActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        compose.waitUntil(WAIT_MILLIS) { compose.onAllNodes(hasTestTag("chime.settings.sound") and isEnabled()).fetchSemanticsNodes().isNotEmpty() }
+        // The edit page has finished and the settings screen may not be resumed yet: no hierarchy means "not yet" (T106).
+        // zh-CN: 编辑页已结束, 设置页可能尚未恢复: 没有层级表示 "尚未" (T106).
+        compose.waitUntil(WAIT_MILLIS) { compose.shows(hasTestTag("chime.settings.sound") and isEnabled()) }
         compose.onNodeWithTag("chime.settings.sound").performScrollTo().performClick()
         waitForList()
         item("chime.ringtones.item.$next").performClick()
@@ -180,7 +187,7 @@ class RingtonesActivityTest {
 
     /** Waits until both lists are read: the import row is enabled then. zh-CN: 等到两个列表都已读取: 此时导入行可用. */
     private fun waitForList() {
-        compose.waitUntil(WAIT_MILLIS) { compose.onAllNodesWithTag("chime.ringtones.list").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(WAIT_MILLIS) { compose.shows(hasTestTag("chime.ringtones.list")) }
         compose.waitUntil(WAIT_MILLIS) {
             runCatching { compose.onNodeWithTag("chime.ringtones.list").performScrollToNode(hasTestTag("chime.ringtones.import") and isEnabled()) }.isSuccess
         }

@@ -8,7 +8,7 @@ import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.isEnabled
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
@@ -43,6 +43,11 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class SettingsActivityTest {
 
+    // The v2 rule (StandardTestDispatcher) runs what the screens' effects do after a read on Dispatchers.IO on the main
+    // thread, as on a device; the v1 rule resumed it on the IO thread, where a state written while the Scaffold content
+    // was being subcomposed could be missed and the screen stayed unloaded (CI API 24 / 33, roadmap T106).
+    // zh-CN: v2 规则 (StandardTestDispatcher) 让界面副作用在 Dispatchers.IO 读取之后的部分在主线程执行, 与设备上一致; v1 规则让它在 IO 线程继续, 在
+    // Scaffold 内容子组合期间写入的状态可能被漏掉, 界面一直停在未加载状态 (CI API 24 / 33, 路线图 T106).
     @get:Rule
     val compose = createEmptyComposeRule()
 
@@ -119,7 +124,7 @@ class SettingsActivityTest {
     private fun open() {
         context.startActivity(Intent(context, SettingsActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         // The default rows are enabled once the stored values are read. zh-CN: 读到存储值后默认值各行才可用.
-        compose.waitUntil(WAIT_MILLIS) { compose.onAllNodes(hasTestTag("chime.settings.snooze") and isEnabled()).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(WAIT_MILLIS) { compose.shows(hasTestTag("chime.settings.snooze") and isEnabled()) }
     }
 
     private fun row(tag: String): SemanticsNodeInteraction = compose.onNodeWithTag(tag).performScrollTo()
