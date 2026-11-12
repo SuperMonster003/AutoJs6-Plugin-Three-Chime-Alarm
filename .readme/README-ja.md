@@ -8,7 +8,7 @@
     </picture>
   </p>
 
-  <p>カレンダー形式の繰り返しルール, 読み上げ付きの鳴動, 鳴動時のスクリプト連携に対応したアラーム</p>
+  <p>カレンダー形式の繰り返しルール, 読み上げ付きの鳴動, 鳴動時のスクリプト連携に対応したアラーム, タイマー, ストップウォッチ</p>
 
   <p>
     <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/releases"><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm?label=Release"/></a>
@@ -42,11 +42,11 @@
 
 ******
 
-3-Chime Alarm は AutoJs6 のアラームプラグインで, AutoJs6 がなくても単独で使えるアラームアプリでもあります. アラームは RFC 5545 のカレンダールールで繰り返し (例えば毎月最後の金曜日, ある日から 3 日おき), 鳴動時にテキストを読み上げたり, スクリプトを起動したり, 実行中のスクリプトに通知したりできます. タイマーとストップウォッチ, 祝日スキップ, 停止チャレンジは今後のバージョンで追加されます.
+3-Chime Alarm は AutoJs6 のアラームプラグインで, AutoJs6 がなくても単独で使えるアラームアプリでもあります. アラームは RFC 5545 のカレンダールールで繰り返し (例えば毎月最後の金曜日, ある日から 3 日おき), 鳴動時にテキストを読み上げたり, スクリプトを起動したり, 実行中のスクリプトに通知したりできます. 1.1.0 からは同時に動く複数のタイマーとストップウォッチも使えます. 祝日スキップと停止チャレンジは今後のバージョンで追加されます.
 
-プラグインは Android の正確なアラームで自らスケジュールして鳴動するため, AutoJs6 が動いていなくてもアラームは時間どおりに鳴ります. AutoJs6 のスクリプトはグローバルモジュール `alarms` でプラグインのアラームを照会, 作成, 変更, 監視します. サブ名前空間 `alarms.system` はシステムの時計アプリを直接呼び出し, プラグインがなくても使えます. プラグインは他のアプリからのアラーム設定リクエストも受け付けます.
+プラグインは Android の正確なアラームで自らスケジュールして鳴動するため, AutoJs6 が動いていなくてもアラームは時間どおりに鳴ります. AutoJs6 のスクリプトはグローバルモジュール `alarms` でプラグインのアラームを照会, 作成, 変更, 監視し, `alarms.timers` と `alarms.stopwatch` でタイマーとストップウォッチを操作します. サブ名前空間 `alarms.system` はシステムの時計アプリを直接呼び出し, プラグインがなくても使えます. プラグインは他のアプリからのアラームとタイマーの設定リクエストも受け付けます.
 
-> 1.0.0 ではアラーム, プラグイン画面, プラグインツール, `alarms` スクリプトモジュールを提供します. プラグインセンターでの有効化, プラグインツール, `alarms` モジュールには AutoJs6 6.8.1 (内部バージョン 6641) 以降が必要です. それより前の AutoJs6 (6.8.0 を含む) では, プラグインは単独のアラームアプリとしてのみ使えます. タイマー, ストップウォッチ, 祝日, 停止チャレンジの進捗は開発ロードマップを参照してください.
+> 1.1.0 ではアラーム, タイマーとストップウォッチ, プラグイン画面, プラグインツール, `alarms` スクリプトモジュールを提供します. プラグインセンターでの有効化, プラグインツール, `alarms` モジュールには AutoJs6 6.8.1 (内部バージョン 6641) 以降が必要です. それより前の AutoJs6 (6.8.0 を含む) では, プラグインは単独のアラームアプリとしてのみ使えます. 祝日と停止チャレンジの進捗は開発ロードマップを参照してください.
 
 ******
 
@@ -57,11 +57,11 @@
 - アラーム: 単発または繰り返しのアラーム. 繰り返しルールは平日, 毎月第 n 何曜日, 月末, 日数間隔, 終了日と回数に対応し, 特定の日を除外したり次の鳴動だけをスキップしたりできます.
 - 鳴動: システムの着信音または取り込んだローカル音声, テキストの読み上げ, 独立した音量とフェードイン, カスタムバイブレーション, スヌーズと自動停止, ロック画面での全画面鳴動画面; 同時に鳴るアラームは順番に鳴動します.
 - 時間どおり: 再起動, 時刻やタイムゾーンの変更, プラグインの更新の後に自動で再スケジュールし, 再起動後のロック解除前でも鳴動します. 電源オフで逃したアラームは 5 分以内なら鳴動し, それを過ぎると通知を残します.
-- スクリプト連携: アラームにスクリプトファイルを登録すると, 鳴動, スヌーズ, 停止などのイベントで AutoJs6 が起動するため, スクリプトを常駐させる必要はありません. 実行中のスクリプトもこれらのイベントをリアルタイムで監視できます.
-- プラグインツール: MCP Server プラグインや `plugins.tools.call` からアラームの作成, 取得, 変更, 削除と鳴動中のアラームの操作ができます (`alarm_*` ツール 9 個).
-- システムの時計との連携: 他のアプリからのアラームの設定, 表示, 停止, スヌーズの要求を処理できます.
+- スクリプト連携: アラームやタイマーにスクリプトファイルを登録すると, 鳴動, スヌーズ, 停止などのイベントで AutoJs6 が起動するため, スクリプトを常駐させる必要はありません. 実行中のスクリプトもこれらのイベントをリアルタイムで監視できます.
+- プラグインツール: MCP Server プラグインや `plugins.tools.call` からアラームの作成, 取得, 変更, 削除と鳴動中のアラームの操作, タイマーの開始, 一覧, 操作ができます (`alarm_*` ツール 9 個と `timer_*` ツール 3 個).
+- システムの時計との連携: 他のアプリからのアラームの設定, 表示, 停止, スヌーズの要求と, タイマーの設定, 表示, 停止の要求を処理できます.
 - 画面: 言語, ダークモード, テーマカラーは既定で AutoJs6 に従い, 個別にも設定できます. ランチャーアイコンを切り替えられ, 設定画面で着信音, バイブレーション, スヌーズ, 自動停止の既定値を設定できます.
-- タイマーとストップウォッチ (1.1.0 で予定): 複数のタイマーの並行動作, 一時停止, 再開, 時間の追加; ストップウォッチのラップ.
+- タイマーとストップウォッチ: 最大 20 個のタイマーを同時に動かし, 一時停止, 再開, 時間の追加, リセットができます. 動作中のタイマーは通知領域にカウントダウンを表示し, そこから一時停止, 1 分追加, キャンセルができます. 再起動後もカウントを続け, 時間になるとアラームと同じように鳴ります. ストップウォッチはラップ (最大 100 周) を記録し, 最速と最遅のラップに印を付けます. 下部のナビゲーションでアラーム, タイマー, ストップウォッチを切り替えます.
 - 祝日 (1.2.0 で予定): 複数地域のオープンな祝日データを内蔵し, 祝日は鳴動をスキップし, 振替出勤日は通常どおり鳴動します. `beforeRing` スクリプトフックで鳴動するかどうかを決めることもできます.
 - 停止チャレンジ (1.3.0 で予定): 計算問題, 振る動作, 文の入力, スクリプト条件. どれも安全弁付きで, アラームは必ず止められます.
 
@@ -77,6 +77,11 @@ Sony XQ-DQ72 で撮影したスクリーンショットです. 上段がライ�
 | :---: | :---: | :---: | :---: |
 | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/list-light.png?raw=true" alt="list-light" width="200" /> | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/edit-light.png?raw=true" alt="edit-light" width="200" /> | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/ring-light.png?raw=true" alt="ring-light" width="200" /> | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/settings-light.png?raw=true" alt="settings-light" width="200" /> |
 | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/list-dark.png?raw=true" alt="list-dark" width="200" /> | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/edit-dark.png?raw=true" alt="edit-dark" width="200" /> | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/ring-dark.png?raw=true" alt="ring-dark" width="200" /> | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/settings-dark.png?raw=true" alt="settings-dark" width="200" /> |
+
+| タイマー | ストップウォッチ |
+| :---: | :---: |
+| <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/timers-light.png?raw=true" alt="timers-light" width="200" /> | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/stopwatch-light.png?raw=true" alt="stopwatch-light" width="200" /> |
+| <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/timers-dark.png?raw=true" alt="timers-dark" width="200" /> | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/stopwatch-dark.png?raw=true" alt="stopwatch-dark" width="200" /> |
 
 ******
 
@@ -107,6 +112,8 @@ alarms.add({ time: "06:10", date: "2026-11-04", repeat: { freq: "daily", interva
 
 alarms.on("ring", (e) => toast(e.label));
 
+alarms.timers.start("25m", { label: "Tea" });
+
 alarms.system.setAlarm({ hour: 6, minute: 50, label: "Flight" });
 ```
 
@@ -114,6 +121,7 @@ alarms.system.setAlarm({ hour: 6, minute: 50, label: "Flight" });
 - `repeat` には RRULE 文字列 (例えば `FREQ=MONTHLY;BYDAY=-1FR`), 曜日番号の配列, 構造化オブジェクトを指定できます. `alarms.preview(options)` は次の鳴動時刻を一覧にするので, ルールの確認に使えます.
 - `alarms.bind(id, script, options)` (またはアラームスナップショットの `bind`) はイベント発生時に AutoJs6 が起動するスクリプトを登録し, スクリプトはイベントデータを `alarms.currentEvent()` で読み取ります. `alarms.on('ring', listener)` はスクリプトの実行中にリアルタイムで監視します.
 - `alarms.ringing`, `dismiss`, `snooze` は鳴動中のアラームを操作し, `alarms.ringtones.list()` は使える着信音を一覧にします.
+- `alarms.timers.start(duration, options)` はタイマーを開始し (時間はミリ秒, または `"25m"`, `"1h 30m"` のような文字列で, 1 秒から 100 時間), `pause`, `resume`, `addTime`, `reset`, `cancel`, `bind` メソッドを持つタイマーのスナップショットを返します. `alarms.stopwatch` はストップウォッチの開始, 一時停止, 再開, ラップ, リセットを行います. どちらもプラグイン 1.1.0 以降が必要です.
 - `alarms.system` はシステムの時計アプリを直接呼び出し (`setAlarm`, `setTimer`, `showAlarms`, `dismissAlarm`, `next` など), プラグインは不要です.
 
 ******
@@ -128,6 +136,9 @@ alarms.system.setAlarm({ hour: 6, minute: 50, label: "Flight" });
 - アラームの表示 (`SHOW_ALARMS`): アラーム一覧を開きます.
 - アラームの停止 (`DISMISS_ALARM`): 鳴動中またはスヌーズ中のアラームを終了します. 鳴動中のアラームがなければ, 24 時間以内に鳴るアラームのその回をスキップします. 複数のアラームが該当するときはユーザーが選びます.
 - スヌーズ (`SNOOZE_ALARM`): 鳴動中のアラームをスヌーズします.
+- タイマーの設定 (`SET_TIMER`): 時間 (1 秒から 100 時間) とラベルを読み取ってタイマーを開始します. 時間とラベルが同じでリセット済みのタイマーがあれば, それを再び開始します. 画面を省略する要求でなければタイマー画面も開き, 時間の指定がなければ新しいタイマーのダイアログを開きます.
+- タイマーの表示 (`SHOW_TIMERS`): タイマー画面を開きます.
+- タイマーの停止 (`DISMISS_TIMER`): 鳴動中のタイマーを終了し, カウント中のタイマーには影響しません.
 - 逆方向の `alarms.system`: スクリプトはこれでシステムの既定の時計アプリ (このプラグインまたは他の時計アプリ) に要求を送り, プラグインは不要です. メーカーごとの時計アプリの違いは AutoJs6 ドキュメントを参照してください.
 
 ******
@@ -138,7 +149,7 @@ alarms.system.setAlarm({ hour: 6, minute: 50, label: "Flight" });
 
 プラグインは Android 7.0 (API 24) 以降に対応します. プラグインセンターでの有効化, プラグインツール, `alarms` モジュールには AutoJs6 6.8.1 (内部バージョン 6641) 以降が必要です. それより前の AutoJs6 (例えば内部バージョン 6640 の 6.8.0) では, プラグインセンターは新しい AutoJs6 が必要だと表示してプラグインを有効にできず, プラグインツールと `alarms` モジュールは使えませんが, プラグインは単独のアラームアプリとして使え, システムの時計の要求も通常どおり処理します. `alarms` モジュールは Rhino エンジンのみに対応し, その中の `alarms.system` はプラグインが不要です.
 
-1.0.0 のリリース前に次のデバイスで検証しました (データは開発ロードマップの付録 D):
+1.0.0 のリリース前に次のデバイスで検証しました (データは開発ロードマップの付録 D). 1.1.0 のタイマーとストップウォッチは Sony XQ-AT72 と Sony G8441 でも検証し, 再起動後もカウントが続くことを確認しました (開発ロードマップの P7):
 
 | デバイス | Android | 結果 |
 | --- | --- | --- |
@@ -192,6 +203,10 @@ Redmi (MIUI) での検証では, 起動後にシステムがプラグインの�
 
 アラームは鳴ります. プラグインは初回のロック解除前でも動作します. 連携スクリプトは起動しません. AutoJs6 は初回のロック解除前にスクリプトを実行できず, ロック解除後にもあとから起動することはありません.
 
+#### 再起動後, タイマーとストップウォッチはどうなりますか?
+
+タイマーはシャットダウン前の終了時刻を保ってカウントを続け, 電源オフの間も時間が進みます. 電源オフの間に終了時刻を過ぎたタイマーは, 起動時の超過が 5 分未満なら鳴り, 5 分を超えていれば逃した通知を残します. 起動後にシステムが時刻を補正すると, 終了時刻も数秒ずれることがあります. ストップウォッチは再起動後に一時停止になり, 今回の起動時刻まで計測するため, 電源オフの時間も含まれます (再起動は通常 1 分未満です).
+
 ******
 
 ### 権限とセキュリティ
@@ -201,7 +216,7 @@ Redmi (MIUI) での検証では, 起動後にシステムがプラグインの�
 プラグインが要求する権限とその用途:
 
 - 正確なアラーム (`USE_EXACT_ALARM`, Android 12 と 12L では `SCHEDULE_EXACT_ALARM`): 時間どおりの鳴動. Android 13 以降はインストール時に許可され, Android 12 と 12L ではシステム設定で "アラームとリマインダー" を許可します.
-- 通知 (`POST_NOTIFICATIONS`): 鳴動中のアラームと逃したアラームの表示. ないとアラームは鳴りますが, 通知も鳴動画面も表示されません.
+- 通知 (`POST_NOTIFICATIONS`): 鳴動中のアラームと逃したアラーム, 動作中のタイマーとストップウォッチの表示. ないとアラームとタイマーは鳴りますが, 通知も鳴動画面も表示されません.
 - 全画面通知 (`USE_FULL_SCREEN_INTENT`): ロック画面への鳴動画面の表示. Android 14 以降は許可されていないことがあり, ないときはヘッドアップ通知で鳴動します.
 - 他のアプリの上に重ねて表示 (`SYSTEM_ALERT_WINDOW`, 任意): システムが全画面通知を表示しないとき (例えば ColorOS でバナー通知がオフのとき) に鳴動画面を開きます. 必要な場合に権限ページからユーザーが許可します.
 - 起動時の受信 (`RECEIVE_BOOT_COMPLETED`): 再起動後に再スケジュールし, 初回のロック解除前でも鳴動できるようにします.
@@ -216,7 +231,7 @@ Redmi (MIUI) での検証では, 起動後にシステムがプラグインの�
 - 保護された入口: 機能サービスと有効化の入口は AutoJs6 のプラグイン権限 (`org.autojs.permission.PLUGIN`) で保護されており, 他のアプリから直接呼び出すことはできません. システムの時計リクエストを受け付ける入口は, 呼び出し元に `com.android.alarm.permission.SET_ALARM` を要求します.
 - ネットワーク: プラグインの更新確認 (GitHub に接続, 自動確認は設定画面でオフにできます) にのみ使い, アラームや個人データはアップロードしません.
 - ストレージ: アラームはプラグインの専用ディレクトリに保存され, クラウドバックアップの対象外です. ローカルの着信音はシステムのファイル選択画面から読み込み, ストレージ権限は要求しません.
-- スクリプトの権限: スクリプトは `alarms` モジュールを通じて, プラグイン画面で作成したものを含むすべてのアラームを読み書きできます. 登録されたスクリプトは AutoJs6 に保存され, プラグイン画面はアラームにスクリプトが紐付いていることを示し, その解除だけができます.
+- スクリプトの権限: スクリプトは `alarms` モジュールを通じて, プラグイン画面で作成したものを含むすべてのアラームとタイマーを読み書きできます. 登録されたスクリプトは AutoJs6 に保存され, プラグイン画面はアラームにスクリプトが紐付いていることを示し, その解除だけができます.
 
 ******
 
@@ -253,6 +268,19 @@ native libraries: libandroidx.graphics.path.so only (Compose graphics-path, 4 AB
 ### リリース履歴
 
 ******
+
+#### v1.1.0
+
+_2026/11/12_
+
+- `ヒント` スクリプトの alarms.timers と alarms.stopwatch には AutoJs6 6.8.1 (内部バージョン 6641) 以降と, このプラグインの 1.1.0 以降が必要です. プラグインが 1.0.x のままだと呼び出しはエラーになり, プラグインの更新を求めるメッセージが出ます
+- `機能` タイマー: 最大 20 個のタイマーを同時に動かせます. 時間はプリセット (1 分から 1 時間) かカスタム (1 秒から 100 時間) で選び, ラベルも付けられます. 一時停止, 再開, 1 分追加, リセットができ, 時間になるとアラームと同じように鳴ります
+- `機能` 動作中のタイマーは通知領域にカウントダウンを表示し, 通知から直接一時停止, 1 分追加, キャンセルができます. 再起動後もタイマーはカウントを続け, 電源オフの間に時間になったタイマーは起動後に鳴ります (5 分を超えて過ぎていた場合は逃した通知だけを残します)
+- `機能` ストップウォッチ: 開始, 一時停止, 再開, リセット, 最大 100 周のラップ記録, 最速と最遅のラップの表示. 動作中は通知領域に表示され, 設定の "タイマーとストップウォッチ" グループでオフにできます
+- `機能` 下部のナビゲーションでアラーム, タイマー, ストップウォッチの 3 つの画面を切り替えます
+- `機能` AutoJs6 のスクリプトモジュールに alarms.timers と alarms.stopwatch を追加 (AutoJs6 6.8.1 が必要): タイマーの開始, 取得, 一時停止, 再開, 時間の追加と短縮, リセット, キャンセル, 鳴動などのイベント発生時に起動するスクリプトのタイマーへの登録, ストップウォッチの操作とラップの記録 ([AutoJs6 ドキュメント](https://docs.autojs6.com/#/alarms) を参照)
+- `機能` プラグインツール timer_start, timer_list, timer_control を追加. MCP Server プラグインや plugins.tools.call からタイマーの開始, 一覧, 一時停止, 再開, 時間の追加, リセット, キャンセルができます
+- `機能` システムの時計との連携でタイマーの要求も処理します: 他のアプリからプラグインのタイマーを開始し, タイマー画面を開き, 鳴動中のタイマーを停止できます
 
 #### v1.0.1
 

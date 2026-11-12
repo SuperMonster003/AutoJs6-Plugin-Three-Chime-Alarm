@@ -602,7 +602,7 @@ P0 (插件骨架, 含 P0.2 评估)          P1.1 - P1.3 (宿主契约, 桥接, �
 
 ### P7.7 文档与 1.1.0 发布
 
-- [ ] (文档) `api/alarms.md` 计时器与秒表章节, d.ts, Ace, Offline Docs; (插件) README / changelog 10 语言; (发布) R1 - R5. 证据: 提交 hash, E5.
+- [ ] (文档) `api/alarms.md` 计时器与秒表章节, d.ts, Ace, Offline Docs; (插件) README / changelog 10 语言; (发布) R1 - R5. 证据: 提交 hash, E5. 进度 (2026-11-12, chime-p7-release, 文档部分完成, 均只在本地): 文档站 `ef46ea2` (`api/alarms.md`: `alarms.timers` 8 个函数, `alarms.stopwatch` 6 个函数, 带方法的 `Timer` 快照, `TimerOptions`, `StopwatchState` / `Lap`, 时长写法与范围, 跨重启的计时 (Q36 (a), T110, T120), `kind: 'timer'` 事件与 `Timer.bind`, 1.0.x 插件报 `PLUGIN_INCOMPATIBLE`, `openPlugin` 的 `timers` / `stopwatch`, 番茄钟示例, `alarms.system` 表格的 1.1.0 行; changelog 10 语言) 与生成提交 `2d745a3` (文档 versionCode 202); d.ts `715571d` (4.88.0, `aj6-int-alarms.d.ts` 与冒烟用例, `npm test` 通过, changelog 10 语言); Ace `885cff1` (2.50.0, 补全索引与 `lib.autojs6.d.ts`, `generate-editor-assets --check` 与 `:app:verifyAutoJs6LspRuntime` 通过); Offline Docs `b3bf69e` (VERSION_BUILD 278, `auto-generate-for-autojs6.bat --verify-offline` 退出码 0: 插件测试与 debug / release APK 门禁通过, 变更 alarms / changelog / progress 三页与搜索索引); 宿主 `89b894c38c` (`tools/api-coverage/policy.json` 去掉 alarms 的名称门延期, Q35 (a)): `check.py --docs-support` 的 alarms 全部通过, 其余失败都是此前积压 (camera 的延期条目已过期, `console.copyEntries` / `restoredEntryCount` / `shareEntries`, `api/console.md` 的运行时支持块). 宿主可选的计时器示例未做: 文档页已有番茄钟示例.
 
 ---
 

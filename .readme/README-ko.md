@@ -8,7 +8,7 @@
     </picture>
   </p>
 
-  <p>달력 반복 규칙, 음성 읽기 알람, 알람이 울릴 때 스크립트 연동을 지원하는 알람 앱</p>
+  <p>달력 반복 규칙, 음성 읽기 알람, 알람이 울릴 때 스크립트 연동을 지원하는 알람, 타이머, 스톱워치 앱</p>
 
   <p>
     <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/releases"><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm?label=Release"/></a>
@@ -42,11 +42,11 @@
 
 ******
 
-3-Chime Alarm은 AutoJs6의 알람 플러그인이자 AutoJs6 없이도 단독으로 쓸 수 있는 알람 앱입니다. 알람은 RFC 5545 달력 규칙으로 반복되며 (예: 매월 마지막 금요일, 특정 날짜부터 3일마다), 울릴 때 텍스트를 읽어 주거나 스크립트를 시작하거나 실행 중인 스크립트에 알릴 수 있습니다. 타이머와 스톱워치, 공휴일 건너뛰기, 끄기 도전 과제는 이후 버전에서 추가됩니다.
+3-Chime Alarm은 AutoJs6의 알람 플러그인이자 AutoJs6 없이도 단독으로 쓸 수 있는 알람 앱입니다. 알람은 RFC 5545 달력 규칙으로 반복되며 (예: 매월 마지막 금요일, 특정 날짜부터 3일마다), 울릴 때 텍스트를 읽어 주거나 스크립트를 시작하거나 실행 중인 스크립트에 알릴 수 있습니다. 1.1.0부터는 동시에 실행되는 여러 타이머와 스톱워치도 제공합니다. 공휴일 건너뛰기와 끄기 도전 과제는 이후 버전에서 추가됩니다.
 
-플러그인은 Android의 정확한 알람으로 직접 일정을 잡고 알람을 울리므로, AutoJs6가 실행 중이 아니어도 알람이 제시간에 울립니다. AutoJs6 스크립트는 전역 모듈 `alarms`로 플러그인의 알람을 조회, 생성, 변경, 감시합니다. 하위 네임스페이스 `alarms.system`은 시스템 시계 앱을 직접 호출하며 플러그인 없이도 쓸 수 있습니다. 플러그인은 다른 앱의 알람 설정 요청도 받습니다.
+플러그인은 Android의 정확한 알람으로 직접 일정을 잡고 알람을 울리므로, AutoJs6가 실행 중이 아니어도 알람이 제시간에 울립니다. AutoJs6 스크립트는 전역 모듈 `alarms`로 플러그인의 알람을 조회, 생성, 변경, 감시하고, `alarms.timers`와 `alarms.stopwatch`로 타이머와 스톱워치를 사용합니다. 하위 네임스페이스 `alarms.system`은 시스템 시계 앱을 직접 호출하며 플러그인 없이도 쓸 수 있습니다. 플러그인은 다른 앱의 알람 설정 요청과 타이머 설정 요청도 받습니다.
 
-> 1.0.0은 알람, 플러그인 화면, 플러그인 도구와 `alarms` 스크립트 모듈을 제공합니다. 플러그인 센터에서 플러그인을 활성화하고 플러그인 도구와 `alarms` 모듈을 쓰려면 AutoJs6 6.8.1 (내부 빌드 6641) 이상이 필요합니다. 그보다 이전의 AutoJs6 (6.8.0 포함)에서는 플러그인을 독립 알람 앱으로만 쓸 수 있습니다. 타이머, 스톱워치, 공휴일, 끄기 도전 과제의 진행 상황은 개발 로드맵을 참고하세요.
+> 1.1.0은 알람, 타이머와 스톱워치, 플러그인 화면, 플러그인 도구와 `alarms` 스크립트 모듈을 제공합니다. 플러그인 센터에서 플러그인을 활성화하고 플러그인 도구와 `alarms` 모듈을 쓰려면 AutoJs6 6.8.1 (내부 빌드 6641) 이상이 필요합니다. 그보다 이전의 AutoJs6 (6.8.0 포함)에서는 플러그인을 독립 알람 앱으로만 쓸 수 있습니다. 공휴일과 끄기 도전 과제의 진행 상황은 개발 로드맵을 참고하세요.
 
 ******
 
@@ -57,11 +57,11 @@
 - 알람: 일회성 또는 반복 알람. 반복 규칙은 평일, 매월 n번째 요일, 월말, 일 간격, 종료 날짜와 횟수를 지원하며, 특정 날짜를 제외하거나 다음 한 번만 건너뛸 수 있습니다.
 - 울림: 시스템 벨소리 또는 가져온 로컬 오디오, 텍스트 읽기, 독립 볼륨과 점점 커지는 소리, 사용자 지정 진동, 다시 알림과 자동 정지, 잠금 화면의 전체 화면 알람 화면; 동시에 울리는 알람은 차례로 울립니다.
 - 정시 보장: 재부팅, 시간이나 시간대 변경, 플러그인 업데이트 후 자동으로 다시 예약하며, 재부팅 후 잠금 해제 전에도 울립니다. 전원이 꺼져 놓친 알람은 5분 이내면 울리고, 그 이후에는 알림만 남깁니다.
-- 스크립트 연동: 알람에 스크립트 파일을 등록하면 울림, 다시 알림, 끄기 등의 이벤트 때 AutoJs6가 시작하므로 스크립트를 상주시킬 필요가 없습니다. 실행 중인 스크립트도 이 이벤트를 실시간으로 받을 수 있습니다.
-- 플러그인 도구: MCP Server 플러그인이나 `plugins.tools.call`로 알람을 추가, 조회, 변경, 삭제하고 울리는 알람을 처리합니다 (`alarm_*` 도구 9개).
-- 시스템 시계 연동: 다른 앱이 보내는 알람 설정, 표시, 끄기, 다시 알림 요청을 처리할 수 있습니다.
+- 스크립트 연동: 알람이나 타이머에 스크립트 파일을 등록하면 울림, 다시 알림, 끄기 등의 이벤트 때 AutoJs6가 시작하므로 스크립트를 상주시킬 필요가 없습니다. 실행 중인 스크립트도 이 이벤트를 실시간으로 받을 수 있습니다.
+- 플러그인 도구: MCP Server 플러그인이나 `plugins.tools.call`로 알람을 추가, 조회, 변경, 삭제하고 울리는 알람을 처리하며, 타이머를 시작, 조회, 제어합니다 (`alarm_*` 도구 9개와 `timer_*` 도구 3개).
+- 시스템 시계 연동: 다른 앱이 보내는 알람 설정, 표시, 끄기, 다시 알림 요청과 타이머 설정, 표시, 끄기 요청을 처리할 수 있습니다.
 - 화면: 언어, 야간 모드, 테마 색상은 기본적으로 AutoJs6를 따르며 따로 설정할 수도 있습니다. 런처 아이콘을 바꿀 수 있고, 설정 화면에서 벨소리, 진동, 다시 알림, 자동 정지의 기본값을 정할 수 있습니다.
-- 타이머와 스톱워치 (1.1.0 예정): 여러 타이머 동시 실행, 일시 정지, 재개, 시간 추가; 스톱워치 랩.
+- 타이머와 스톱워치: 최대 20개의 타이머를 동시에 실행하고 일시 정지, 재개, 시간 추가, 초기화를 할 수 있습니다. 실행 중인 타이머는 알림 영역에 남은 시간을 표시하며, 거기서 바로 일시 정지, 1분 추가, 취소할 수 있습니다. 재부팅 후에도 시간이 계속 흐르고, 시간이 되면 알람처럼 울립니다. 스톱워치는 랩을 기록하고 (최대 100개) 가장 빠른 랩과 가장 느린 랩을 표시합니다. 하단 탐색 메뉴로 알람, 타이머, 스톱워치를 전환합니다.
 - 공휴일 (1.2.0 예정): 여러 지역의 오픈 공휴일 데이터를 내장해 공휴일에는 건너뛰고 대체 근무일에는 그대로 울립니다. `beforeRing` 스크립트 훅으로 울릴지 정할 수도 있습니다.
 - 끄기 도전 과제 (1.3.0 예정): 산수 문제, 흔들기, 문장 따라 입력, 스크립트 조건. 모두 안전장치가 있어 알람은 항상 끌 수 있습니다.
 
@@ -77,6 +77,11 @@ Sony XQ-DQ72에서 찍은 스크린샷입니다. 윗줄은 라이트 테마, 아
 | :---: | :---: | :---: | :---: |
 | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/list-light.png?raw=true" alt="list-light" width="200" /> | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/edit-light.png?raw=true" alt="edit-light" width="200" /> | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/ring-light.png?raw=true" alt="ring-light" width="200" /> | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/settings-light.png?raw=true" alt="settings-light" width="200" /> |
 | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/list-dark.png?raw=true" alt="list-dark" width="200" /> | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/edit-dark.png?raw=true" alt="edit-dark" width="200" /> | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/ring-dark.png?raw=true" alt="ring-dark" width="200" /> | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/settings-dark.png?raw=true" alt="settings-dark" width="200" /> |
+
+| 타이머 | 스톱워치 |
+| :---: | :---: |
+| <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/timers-light.png?raw=true" alt="timers-light" width="200" /> | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/stopwatch-light.png?raw=true" alt="stopwatch-light" width="200" /> |
+| <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/timers-dark.png?raw=true" alt="timers-dark" width="200" /> | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/stopwatch-dark.png?raw=true" alt="stopwatch-dark" width="200" /> |
 
 ******
 
@@ -107,6 +112,8 @@ alarms.add({ time: "06:10", date: "2026-11-04", repeat: { freq: "daily", interva
 
 alarms.on("ring", (e) => toast(e.label));
 
+alarms.timers.start("25m", { label: "Tea" });
+
 alarms.system.setAlarm({ hour: 6, minute: 50, label: "Flight" });
 ```
 
@@ -114,6 +121,7 @@ alarms.system.setAlarm({ hour: 6, minute: 50, label: "Flight" });
 - `repeat`에는 RRULE 문자열 (예: `FREQ=MONTHLY;BYDAY=-1FR`), 요일 번호 배열 또는 구조화된 객체를 쓸 수 있습니다. `alarms.preview(options)`는 다음 울림 시각을 나열해 규칙을 확인하기 쉽게 합니다.
 - `alarms.bind(id, script, options)` (또는 알람 스냅숏의 `bind`)는 이벤트가 일어날 때 AutoJs6가 시작할 스크립트를 등록하며, 스크립트는 이벤트 데이터를 `alarms.currentEvent()`로 읽습니다. `alarms.on('ring', listener)`는 스크립트 실행 중에 실시간으로 받습니다.
 - `alarms.ringing`, `dismiss`, `snooze`는 울리는 알람을 처리하고, `alarms.ringtones.list()`는 쓸 수 있는 벨소리를 나열합니다.
+- `alarms.timers.start(duration, options)`는 타이머를 시작하고 (시간은 밀리초, 또는 `"25m"`, `"1h 30m"` 같은 문자열로 1초부터 100시간까지), `pause`, `resume`, `addTime`, `reset`, `cancel`, `bind` 메서드가 있는 타이머 스냅숏을 반환합니다. `alarms.stopwatch`는 스톱워치의 시작, 일시 정지, 재개, 랩, 초기화를 제공합니다. 둘 다 플러그인 1.1.0 이상이 필요합니다.
 - `alarms.system`은 시스템 시계 앱을 직접 호출하며 (`setAlarm`, `setTimer`, `showAlarms`, `dismissAlarm`, `next` 등), 플러그인이 필요 없습니다.
 
 ******
@@ -128,6 +136,9 @@ alarms.system.setAlarm({ hour: 6, minute: 50, label: "Flight" });
 - 알람 표시 (`SHOW_ALARMS`): 알람 목록을 엽니다.
 - 알람 끄기 (`DISMISS_ALARM`): 울리거나 다시 알림 중인 알람을 끝냅니다. 울리는 알람이 없으면 24시간 안에 울릴 알람의 그 회차를 건너뜁니다. 여러 알람이 해당하면 사용자가 고릅니다.
 - 다시 알림 (`SNOOZE_ALARM`): 울리는 알람을 다시 알림으로 미룹니다.
+- 타이머 설정 (`SET_TIMER`): 시간 (1초부터 100시간까지)과 라벨을 읽어 타이머를 시작합니다. 시간과 라벨이 같고 초기화된 타이머가 있으면 그 타이머를 다시 시작합니다. 화면을 건너뛰라는 요청이 아니면 타이머 화면도 열고, 시간이 없으면 새 타이머 대화상자를 엽니다.
+- 타이머 표시 (`SHOW_TIMERS`): 타이머 화면을 엽니다.
+- 타이머 끄기 (`DISMISS_TIMER`): 울리는 타이머를 끝내며, 진행 중인 타이머에는 영향을 주지 않습니다.
 - 반대 방향의 `alarms.system`: 스크립트는 이것으로 시스템 기본 시계 앱 (이 플러그인 또는 다른 시계 앱)에 요청을 보내며 플러그인이 필요 없습니다. 제조사별 시계 앱의 차이는 AutoJs6 문서를 참고하세요.
 
 ******
@@ -138,7 +149,7 @@ alarms.system.setAlarm({ hour: 6, minute: 50, label: "Flight" });
 
 플러그인은 Android 7.0 (API 24) 이상을 지원합니다. 플러그인 센터에서 활성화하고 플러그인 도구와 `alarms` 모듈을 쓰려면 AutoJs6 6.8.1 (내부 빌드 6641) 이상이 필요합니다. 그보다 이전의 AutoJs6 (예: 내부 빌드 6640인 6.8.0)에서는 플러그인 센터가 더 새로운 AutoJs6가 필요하다고 표시하고 플러그인을 활성화할 수 없으며 플러그인 도구와 `alarms` 모듈도 쓸 수 없지만, 플러그인은 독립 알람 앱으로 쓸 수 있고 시스템 시계 요청도 그대로 처리합니다. `alarms` 모듈은 Rhino 엔진만 지원하며, 그중 `alarms.system`은 플러그인이 필요 없습니다.
 
-1.0.0 출시 전에 다음 기기에서 검증했습니다 (데이터는 개발 로드맵 부록 D):
+1.0.0 출시 전에 다음 기기에서 검증했습니다 (데이터는 개발 로드맵 부록 D). 1.1.0의 타이머와 스톱워치는 Sony XQ-AT72와 Sony G8441에서도 검증했으며, 재부팅 후에도 타이머가 계속 흐르는 것을 확인했습니다 (개발 로드맵 P7):
 
 | 기기 | Android | 결과 |
 | --- | --- | --- |
@@ -192,6 +203,10 @@ Redmi (MIUI) 테스트에서는 부팅 후 시스템이 플러그인 프로세�
 
 알람은 울립니다. 플러그인은 첫 잠금 해제 전에도 동작합니다. 연동된 스크립트는 시작되지 않습니다. AutoJs6는 첫 잠금 해제 전에는 스크립트를 실행할 수 없고, 잠금을 해제한 뒤에도 나중에 시작하지 않습니다.
 
+#### 재부팅 후 타이머와 스톱워치는 어떻게 되나요?
+
+타이머는 종료 전의 만료 시각을 유지해 계속 흐르며, 전원이 꺼져 있던 시간도 포함됩니다. 전원이 꺼진 동안 만료된 타이머는 부팅 때 지난 시간이 5분 미만이면 울리고, 5분을 넘으면 놓친 알림을 남깁니다. 부팅 후 시스템이 시간을 보정하면 만료 시각도 몇 초 움직일 수 있습니다. 스톱워치는 재부팅 후 일시 정지되며, 이번 부팅 시각까지 측정하므로 전원이 꺼져 있던 시간도 포함됩니다 (재부팅은 보통 1분이 걸리지 않습니다).
+
 ******
 
 ### 권한과 보안
@@ -201,7 +216,7 @@ Redmi (MIUI) 테스트에서는 부팅 후 시스템이 플러그인 프로세�
 플러그인이 요청하는 권한과 용도:
 
 - 정확한 알람 (`USE_EXACT_ALARM`, Android 12와 12L에서는 `SCHEDULE_EXACT_ALARM`): 제시간 울림. Android 13부터는 설치 시 허용되며, Android 12와 12L에서는 시스템 설정에서 "알람 및 리마인더"를 허용해야 합니다.
-- 알림 (`POST_NOTIFICATIONS`): 울리는 알람과 놓친 알람 표시. 없으면 알람은 울리지만 알림과 알람 화면이 없습니다.
+- 알림 (`POST_NOTIFICATIONS`): 울리는 알람과 놓친 알람, 실행 중인 타이머와 스톱워치 표시. 없으면 알람과 타이머는 울리지만 알림과 알람 화면이 없습니다.
 - 전체 화면 알림 (`USE_FULL_SCREEN_INTENT`): 잠금 화면에 알람 화면 표시. Android 14부터는 허용되지 않았을 수 있으며, 없으면 헤드업 알림으로 울립니다.
 - 다른 앱 위에 표시 (`SYSTEM_ALERT_WINDOW`, 선택): 시스템이 전체 화면 알림을 띄우지 않을 때 (예: ColorOS에서 배너 알림이 꺼져 있을 때) 알람 화면을 엽니다. 필요할 때 권한 페이지에서 사용자가 허용합니다.
 - 부팅 수신 (`RECEIVE_BOOT_COMPLETED`): 재부팅 후 다시 예약해 첫 잠금 해제 전에도 울릴 수 있게 합니다.
@@ -216,7 +231,7 @@ Redmi (MIUI) 테스트에서는 부팅 후 시스템이 플러그인 프로세�
 - 보호된 진입점: 기능 서비스와 활성화 진입점은 AutoJs6 플러그인 권한 (`org.autojs.permission.PLUGIN`)으로 보호되어 다른 앱이 직접 호출할 수 없습니다. 시스템 시계 요청을 받는 진입점은 호출자에게 `com.android.alarm.permission.SET_ALARM`을 요구합니다.
 - 네트워크: 플러그인 업데이트 확인 (GitHub에 연결, 자동 확인은 설정 화면에서 끌 수 있음)에만 쓰며, 알람이나 개인 데이터는 업로드하지 않습니다.
 - 저장소: 알람은 플러그인 전용 디렉터리에 저장되며 클라우드 백업에서 제외됩니다. 로컬 벨소리는 시스템 파일 선택기로 가져오므로 저장소 권한을 요청하지 않습니다.
-- 스크립트 권한: 스크립트는 `alarms` 모듈로 플러그인 화면에서 만든 것을 포함해 플러그인의 모든 알람을 읽고 바꿀 수 있습니다. 등록된 스크립트는 AutoJs6에 저장되며, 플러그인 화면은 알람에 스크립트가 연결되어 있음을 표시하고 연결을 해제하는 것만 할 수 있습니다.
+- 스크립트 권한: 스크립트는 `alarms` 모듈로 플러그인 화면에서 만든 것을 포함해 플러그인의 모든 알람과 타이머를 읽고 바꿀 수 있습니다. 등록된 스크립트는 AutoJs6에 저장되며, 플러그인 화면은 알람에 스크립트가 연결되어 있음을 표시하고 연결을 해제하는 것만 할 수 있습니다.
 
 ******
 
@@ -253,6 +268,19 @@ native libraries: libandroidx.graphics.path.so only (Compose graphics-path, 4 AB
 ### 릴리스 기록
 
 ******
+
+#### v1.1.0
+
+_2026/11/12_
+
+- `힌트` 스크립트에서 alarms.timers와 alarms.stopwatch를 쓰려면 AutoJs6 6.8.1 (내부 빌드 6641) 이상과 이 플러그인 1.1.0 이상이 필요합니다. 플러그인이 1.0.x이면 호출이 오류로 끝나며 플러그인을 업데이트하라는 메시지가 표시됩니다
+- `기능` 타이머: 최대 20개의 타이머를 동시에 실행할 수 있습니다. 시간은 프리셋 (1분부터 1시간까지) 또는 직접 입력 (1초부터 100시간까지)으로 정하고 라벨을 붙일 수 있으며, 일시 정지, 재개, 1분 추가, 초기화를 할 수 있습니다. 시간이 되면 알람처럼 울립니다
+- `기능` 실행 중인 타이머는 알림 영역에 남은 시간을 표시하며, 알림에서 바로 일시 정지, 1분 추가, 취소할 수 있습니다. 재부팅 후에도 타이머는 계속 흐르고, 전원이 꺼진 동안 만료된 타이머는 부팅 후 울립니다 (5분 넘게 지났으면 놓친 알림만 남깁니다)
+- `기능` 스톱워치: 시작, 일시 정지, 재개, 초기화, 최대 100개 랩 기록, 가장 빠른 랩과 가장 느린 랩 표시. 실행 중에는 알림 영역에 표시되며, 설정의 "타이머 및 스톱워치" 그룹에서 끌 수 있습니다
+- `기능` 하단 탐색 메뉴로 알람, 타이머, 스톱워치 세 화면을 전환합니다
+- `기능` AutoJs6 스크립트 모듈에 alarms.timers와 alarms.stopwatch 추가 (AutoJs6 6.8.1 필요): 타이머의 시작, 조회, 일시 정지, 재개, 시간 추가와 줄이기, 초기화, 취소, 알람이 울리는 등의 이벤트가 일어날 때 시작할 스크립트를 타이머에 등록, 스톱워치 제어와 랩 기록 ([AutoJs6 문서](https://docs.autojs6.com/#/alarms) 참고)
+- `기능` 플러그인 도구 timer_start, timer_list, timer_control 추가. MCP Server 플러그인이나 plugins.tools.call로 타이머를 시작, 조회, 일시 정지, 재개, 시간 추가, 초기화, 취소할 수 있습니다
+- `기능` 시스템 시계 연동에 타이머 요청 추가: 다른 앱이 플러그인에 타이머 시작, 타이머 화면 열기, 울리는 타이머 끄기를 요청할 수 있습니다
 
 #### v1.0.1
 

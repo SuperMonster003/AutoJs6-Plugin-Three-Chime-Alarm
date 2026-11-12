@@ -60,6 +60,11 @@
 | <img src="{{ repo_url }}/blob/master/docs/images/screenshots/list-light.png?raw=true" alt="list-light" width="200" /> | <img src="{{ repo_url }}/blob/master/docs/images/screenshots/edit-light.png?raw=true" alt="edit-light" width="200" /> | <img src="{{ repo_url }}/blob/master/docs/images/screenshots/ring-light.png?raw=true" alt="ring-light" width="200" /> | <img src="{{ repo_url }}/blob/master/docs/images/screenshots/settings-light.png?raw=true" alt="settings-light" width="200" /> |
 | <img src="{{ repo_url }}/blob/master/docs/images/screenshots/list-dark.png?raw=true" alt="list-dark" width="200" /> | <img src="{{ repo_url }}/blob/master/docs/images/screenshots/edit-dark.png?raw=true" alt="edit-dark" width="200" /> | <img src="{{ repo_url }}/blob/master/docs/images/screenshots/ring-dark.png?raw=true" alt="ring-dark" width="200" /> | <img src="{{ repo_url }}/blob/master/docs/images/screenshots/settings-dark.png?raw=true" alt="settings-dark" width="200" /> |
 
+| {{ text_screenshot_timers }} | {{ text_screenshot_stopwatch }} |
+| :---: | :---: |
+| <img src="{{ repo_url }}/blob/master/docs/images/screenshots/timers-light.png?raw=true" alt="timers-light" width="200" /> | <img src="{{ repo_url }}/blob/master/docs/images/screenshots/stopwatch-light.png?raw=true" alt="stopwatch-light" width="200" /> |
+| <img src="{{ repo_url }}/blob/master/docs/images/screenshots/timers-dark.png?raw=true" alt="timers-dark" width="200" /> | <img src="{{ repo_url }}/blob/master/docs/images/screenshots/stopwatch-dark.png?raw=true" alt="stopwatch-dark" width="200" /> |
+
 ******
 
 ### {{ h3_usage }}
@@ -86,6 +91,8 @@ alarms.add({ time: "18:00", repeat: "FREQ=MONTHLY;BYDAY=-1FR", label: "Monthly r
 alarms.add({ time: "06:10", date: "2026-11-04", repeat: { freq: "daily", interval: 3 }, tag: "shift" });
 
 alarms.on("ring", (e) => toast(e.label));
+
+alarms.timers.start("25m", { label: "Tea" });
 
 alarms.system.setAlarm({ hour: 6, minute: 50, label: "Flight" });
 ```

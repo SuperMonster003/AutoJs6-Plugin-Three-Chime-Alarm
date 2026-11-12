@@ -1,7 +1,7 @@
 {
   "$name": "English",
   "text_current_lowercase": "current",
-  "text_plugin_synopsis": "Alarm clock with calendar recurrence rules, spoken ringing and script hooks when an alarm rings",
+  "text_plugin_synopsis": "Alarm clock, timers and stopwatch with calendar recurrence rules, spoken ringing and script hooks when an alarm rings",
   "h3_languages_with_ascii": "Languages",
   "p_languages_all_supported_for_readme": "The README.md file is currently available in the following languages",
   "h3_introduction": "Introduction",
@@ -22,18 +22,18 @@
   "h3_links": "Related links",
   "text_link_autojs6": "AutoJs6 project",
   "p_roadmap": "Plans, design decisions and progress are tracked as a checklist in ROADMAP.md. Unchecked items are plans, not features of the current version.",
-  "p_introduction_what": "3-Chime Alarm is the alarm plugin of AutoJs6 and also an alarm clock app that works on its own without AutoJs6. Alarms repeat by RFC 5545 calendar rules (for example the last Friday of every month, or every 3 days from a given date); a ringing alarm can read text aloud, start a script or notify a running script. Timers and the stopwatch, holiday skipping and dismiss challenges come in later versions.",
-  "p_introduction_how": "The plugin schedules and rings alarms itself with Android exact alarms, so alarms ring on time even when AutoJs6 is not running. AutoJs6 scripts query, create, change and listen to the alarms of the plugin through the global module `alarms`; the sub-namespace `alarms.system` talks to the system clock app directly and works without the plugin. The plugin also accepts set-alarm requests from other apps.",
-  "p_status_note": "Version 1.0.0 provides alarms, the plugin screens, the plugin tools and the `alarms` script module. Enabling the plugin in the Plugin Center, the plugin tools and the `alarms` module need AutoJs6 {{ required_host_version_name }} (internal build {{ required_host_version_code }}) or later; with older AutoJs6 versions (including 6.8.0) the plugin works only as a standalone alarm clock app. See the roadmap for the progress of timers, the stopwatch, holidays and dismiss challenges.",
+  "p_introduction_what": "3-Chime Alarm is the alarm plugin of AutoJs6 and also an alarm clock app that works on its own without AutoJs6. Alarms repeat by RFC 5545 calendar rules (for example the last Friday of every month, or every 3 days from a given date); a ringing alarm can read text aloud, start a script or notify a running script. Since 1.1.0 it also offers several timers running at once and a stopwatch. Holiday skipping and dismiss challenges come in later versions.",
+  "p_introduction_how": "The plugin schedules and rings alarms itself with Android exact alarms, so alarms ring on time even when AutoJs6 is not running. AutoJs6 scripts query, create, change and listen to the alarms of the plugin through the global module `alarms`, and use the timers and the stopwatch through `alarms.timers` and `alarms.stopwatch`; the sub-namespace `alarms.system` talks to the system clock app directly and works without the plugin. The plugin also accepts set-alarm and set-timer requests from other apps.",
+  "p_status_note": "Version 1.1.0 provides alarms, timers and the stopwatch, the plugin screens, the plugin tools and the `alarms` script module. Enabling the plugin in the Plugin Center, the plugin tools and the `alarms` module need AutoJs6 {{ required_host_version_name }} (internal build {{ required_host_version_code }}) or later; with older AutoJs6 versions (including 6.8.0) the plugin works only as a standalone alarm clock app. See the roadmap for the progress of holidays and dismiss challenges.",
   "features": [
     "Alarms: one-time or repeating alarms. Repeat rules cover weekdays, the nth weekday of a month, the end of a month, day intervals, end dates and counts; single dates can be excluded, or only the next ring skipped.",
     "Ringing: a system ringtone or imported local audio, spoken text, independent volume with a fade-in, custom vibration, snooze and auto silence, and a full screen ringing screen on the lock screen; alarms due at the same time ring one after another.",
     "On time: alarms are rescheduled automatically after a reboot, a time or time zone change and a plugin update, and ring even before the first unlock after a reboot; an alarm missed while the device was off rings within 5 minutes, later it only leaves a notification.",
-    "Script hooks: an alarm can register script files that AutoJs6 starts on ring, snooze, dismiss and other events, so scripts need not keep running; a running script can also listen to these events live.",
-    "Plugin tools: add, query, change and remove alarms and handle a ringing alarm through the MCP Server plugin or `plugins.tools.call` (nine `alarm_*` tools).",
-    "System clock: set, show, dismiss and snooze requests from other apps can be handled by the plugin.",
+    "Script hooks: an alarm or a timer can register script files that AutoJs6 starts on ring, snooze, dismiss and other events, so scripts need not keep running; a running script can also listen to these events live.",
+    "Plugin tools: add, query, change and remove alarms, handle a ringing alarm, and start, list and control timers through the MCP Server plugin or `plugins.tools.call` (nine `alarm_*` tools and three `timer_*` tools).",
+    "System clock: set, show, dismiss and snooze requests for alarms and set, show and dismiss requests for timers from other apps can be handled by the plugin.",
     "Screens: language, night mode and theme color follow AutoJs6 by default and can be set separately; the launcher icon can be switched; the settings screen sets the default ringtone, vibration, snooze and auto silence.",
-    "Timers and stopwatch (planned for 1.1.0): several timers in parallel with pause, resume and extra time; laps for the stopwatch.",
+    "Timers and stopwatch: up to 20 timers at once with pause, resume, extra time and reset; a running timer shows its countdown in the notification shade, where it can be paused, extended by 1 minute or cancelled; timers keep counting across a reboot and ring like alarms. The stopwatch records laps (up to 100) and marks the fastest and the slowest lap. The bottom navigation switches between alarms, timers and the stopwatch.",
     "Holidays (planned for 1.2.0): built-in open holiday data for many regions; alarms skip public holidays and ring on make-up workdays; a `beforeRing` script hook can also decide whether to ring.",
     "Dismiss challenges (planned for 1.3.0): arithmetic, shaking, typing a sentence or a script condition, each with a safety valve so that the alarm can always be dismissed."
   ],
@@ -49,6 +49,7 @@
     "`repeat` takes an RRULE string (for example `FREQ=MONTHLY;BYDAY=-1FR`), an array of weekday numbers or a structured object; `alarms.preview(options)` lists the next ring times so that a rule can be checked.",
     "`alarms.bind(id, script, options)` (or `bind` of an alarm snapshot) registers a script that AutoJs6 starts when an event happens; the script reads the event through `alarms.currentEvent()`. `alarms.on('ring', listener)` listens live while a script runs.",
     "`alarms.ringing`, `dismiss` and `snooze` handle a ringing alarm; `alarms.ringtones.list()` lists the available ringtones.",
+    "`alarms.timers.start(duration, options)` starts a timer (milliseconds or a string such as `\"25m\"` or `\"1h 30m\"`, from 1 second to 100 hours) and returns a timer snapshot with the methods `pause`, `resume`, `addTime`, `reset`, `cancel` and `bind`; `alarms.stopwatch` starts, pauses, resumes, records laps of and resets the stopwatch. Both need plugin 1.1.0 or later.",
     "`alarms.system` calls the system clock app directly (`setAlarm`, `setTimer`, `showAlarms`, `dismissAlarm`, `next` and more) and needs no plugin."
   ],
   "faq": [
@@ -87,6 +88,10 @@
     {
       "q": "Do alarms ring after a reboot before the device is unlocked? What about hooked scripts?",
       "a": "Alarms ring, because the plugin runs before the first unlock. Hooked scripts are not started, because AutoJs6 cannot run scripts before the first unlock, and they are not started after the unlock either."
+    },
+    {
+      "q": "What happens to timers and the stopwatch after a reboot?",
+      "a": "Timers keep their end time from before the shutdown, so the time while the device is off counts too. A timer that ended while the device was off rings after the boot if it is less than 5 minutes overdue, otherwise it leaves a missed notification. When the system corrects its clock after the boot, the end time can move by a few seconds with it. The stopwatch is paused after a reboot and counts up to the boot, so the time the device was off is included (a reboot usually takes less than a minute)."
     }
   ],
   "p_security_intro": "The plugin keeps its permission surface as small as possible:",
@@ -94,7 +99,7 @@
     "Protected entry points: the capability service and the activation entry are protected by the AutoJs6 plugin permission (`org.autojs.permission.PLUGIN`), so other apps cannot call them directly; the entry that accepts system clock requests requires the caller to hold `com.android.alarm.permission.SET_ALARM`.",
     "Network: used only to check for plugin updates (on GitHub; automatic checks can be turned off on the settings screen); alarms and personal data are never uploaded.",
     "Storage: alarms are stored in the private directory of the plugin and are excluded from cloud backup; local ringtones are imported through the system file picker without a storage permission.",
-    "Script access: through the `alarms` module, scripts can read and change every alarm of the plugin, including those created on its screens; registered scripts are stored in AutoJs6, and the plugin screens only mark an alarm as having a script binding and can remove it."
+    "Script access: through the `alarms` module, scripts can read and change every alarm and timer of the plugin, including those created on its screens; registered scripts are stored in AutoJs6, and the plugin screens only mark an alarm as having a script binding and can remove it."
   ],
   "p_license": "The project code is licensed under the [Mozilla Public License 2.0]({{ license_url }}). Third-party components and data are listed in the third-party notices.",
   "text_link_third_party": "Third-party notices (THIRD_PARTY_NOTICES.md)",
@@ -105,6 +110,8 @@
   "text_screenshot_edit": "Edit alarm",
   "text_screenshot_ring": "Ringing",
   "text_screenshot_settings": "Settings",
+  "text_screenshot_timers": "Timers",
+  "text_screenshot_stopwatch": "Stopwatch",
   "h3_system_clock": "System clock",
   "p_system_clock_intro": "The plugin can act as the alarm clock app of the system and handle the standard clock requests of other apps (for example calendars, voice assistants and automation tools). The requesting app must hold the `com.android.alarm.permission.SET_ALARM` permission",
   "system_clock_points": [
@@ -112,11 +119,14 @@
     "Show alarms (`SHOW_ALARMS`): opens the alarm list.",
     "Dismiss alarm (`DISMISS_ALARM`): ends a ringing or snoozed alarm; when nothing rings, an alarm due within 24 hours skips that ring instead; when several alarms match, the user chooses.",
     "Snooze (`SNOOZE_ALARM`): snoozes the ringing alarm.",
+    "Set timer (`SET_TIMER`): reads the length (1 second to 100 hours) and the label and starts a timer; a reset timer with the same length and label starts again instead of a new one; unless the request skips the UI, the timers page opens too, and without a length the new timer dialog opens.",
+    "Show timers (`SHOW_TIMERS`): opens the timers page.",
+    "Dismiss timer (`DISMISS_TIMER`): ends the ringing timers and leaves running timers alone.",
     "`alarms.system` works the other way round: a script sends requests to the default clock app of the system (this plugin or another clock app) without the plugin; differences between vendors' clock apps are described in the AutoJs6 documentation."
   ],
   "h3_compatibility": "Compatibility",
   "p_compatibility_host": "The plugin supports Android {{ min_android_version }} (API {{ android_min_sdk }}) and later. Enabling it in the Plugin Center, the plugin tools and the `alarms` module need AutoJs6 {{ required_host_version_name }} (internal build {{ required_host_version_code }}) or later. With older AutoJs6 versions (for example 6.8.0, internal build 6640), the Plugin Center reports that a newer AutoJs6 is required and cannot enable the plugin, and the plugin tools and the `alarms` module are unavailable; the plugin still works as a standalone alarm clock app and still handles system clock requests. The `alarms` module supports the Rhino engine only, and its `alarms.system` needs no plugin.",
-  "p_compatibility_matrix": "Verified on these devices before the 1.0.0 release (data in appendix D of the roadmap)",
+  "p_compatibility_matrix": "Verified on these devices before the 1.0.0 release (data in appendix D of the roadmap); the timers and the stopwatch of 1.1.0 were also verified on a Sony XQ-AT72 and a Sony G8441, including timers that keep counting across a reboot (see P7 of the roadmap)",
   "text_compat_device": "Device",
   "text_compat_android": "Android",
   "text_compat_result": "Result",
@@ -160,7 +170,7 @@
   "p_permissions_intro": "Permissions requested by the plugin and what they are for",
   "permission_points": [
     "Exact alarms (`USE_EXACT_ALARM`, `SCHEDULE_EXACT_ALARM` on Android 12 and 12L): ring on time. Granted at install from Android 13; on Android 12 and 12L allow \"Alarms & reminders\" in the system settings.",
-    "Notifications (`POST_NOTIFICATIONS`): show ringing and missed alarms. Without it alarms still sound, but there is no notification and no ringing screen.",
+    "Notifications (`POST_NOTIFICATIONS`): show ringing and missed alarms and running timers and the stopwatch. Without it alarms and timers still sound, but there is no notification and no ringing screen.",
     "Full screen alerts (`USE_FULL_SCREEN_INTENT`): show the ringing screen on the lock screen. Possibly not granted from Android 14; without it alarms ring with a heads-up notification.",
     "Display over other apps (`SYSTEM_ALERT_WINDOW`, optional): opens the ringing screen when the system holds the full screen alert back (for example with the banner notifications of ColorOS off); only allowed by the user on the permissions page when needed.",
     "Boot (`RECEIVE_BOOT_COMPLETED`): reschedules after a reboot so that alarms ring before the first unlock.",

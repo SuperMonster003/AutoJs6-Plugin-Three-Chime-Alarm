@@ -201,7 +201,7 @@
     <string name="permissions_title">Permisos y segundo plano</string>
     <string name="permissions_vendor_banner">Notificaciones de banner</string>
     <string name="permissions_vendor_banner_guide">El sistema no informa de este estado. Activa \"Banner\" en los ajustes de notificaciones de este complemento; si no, la pantalla de alarma no se abre sola en la pantalla de bloqueo, salvo que se permita mostrar sobre otras apps.</string>
-    <string name="plugin_description">Alarma con reglas de repetición de calendario, lectura en voz alta y scripts al sonar la alarma</string>
+    <string name="plugin_description">Alarma, temporizadores y cronómetro con reglas de repetición de calendario, lectura en voz alta y scripts al sonar la alarma</string>
     <string name="release_history_title">Historial de versiones</string>
     <string name="release_history_unavailable">No se pudo cargar el historial de versiones</string>
     <string name="ring_action_dismiss">Descartar</string>

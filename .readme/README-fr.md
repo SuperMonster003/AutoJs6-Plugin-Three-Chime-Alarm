@@ -8,7 +8,7 @@
     </picture>
   </p>
 
-  <p>Réveil avec règles de répétition de calendrier, sonnerie parlée et scripts déclenchés à la sonnerie</p>
+  <p>Réveil, minuteurs et chronomètre avec règles de répétition de calendrier, sonnerie parlée et scripts déclenchés à la sonnerie</p>
 
   <p>
     <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/releases"><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm?label=Release"/></a>
@@ -42,11 +42,11 @@ Le README.md actuel prend en charge les langues suivantes:
 
 ******
 
-3-Chime Alarm est le plugin de réveil d'AutoJs6 et aussi une application de réveil qui fonctionne seule, sans AutoJs6. Les alarmes se répètent selon les règles de calendrier RFC 5545 (par exemple le dernier vendredi de chaque mois, ou tous les 3 jours à partir d'une date); une alarme qui sonne peut lire un texte à voix haute, lancer un script ou prévenir un script en cours d'exécution. Les minuteurs et le chronomètre, le saut des jours fériés et les défis d'arrêt arriveront dans des versions ultérieures.
+3-Chime Alarm est le plugin de réveil d'AutoJs6 et aussi une application de réveil qui fonctionne seule, sans AutoJs6. Les alarmes se répètent selon les règles de calendrier RFC 5545 (par exemple le dernier vendredi de chaque mois, ou tous les 3 jours à partir d'une date); une alarme qui sonne peut lire un texte à voix haute, lancer un script ou prévenir un script en cours d'exécution. Depuis la version 1.1.0, il propose aussi plusieurs minuteurs simultanés et un chronomètre. Le saut des jours fériés et les défis d'arrêt arriveront dans des versions ultérieures.
 
-Le plugin programme et fait sonner les alarmes lui-même grâce aux alarmes exactes d'Android, si bien que les alarmes sonnent à l'heure même quand AutoJs6 n'est pas lancé. Les scripts AutoJs6 consultent, créent, modifient et écoutent les alarmes du plugin via le module global `alarms`; le sous-espace de noms `alarms.system` s'adresse directement à l'application d'horloge du système et fonctionne sans le plugin. Le plugin accepte aussi les demandes de réglage d'alarme envoyées par d'autres applications.
+Le plugin programme et fait sonner les alarmes lui-même grâce aux alarmes exactes d'Android, si bien que les alarmes sonnent à l'heure même quand AutoJs6 n'est pas lancé. Les scripts AutoJs6 consultent, créent, modifient et écoutent les alarmes du plugin via le module global `alarms`, et utilisent les minuteurs et le chronomètre via `alarms.timers` et `alarms.stopwatch`; le sous-espace de noms `alarms.system` s'adresse directement à l'application d'horloge du système et fonctionne sans le plugin. Le plugin accepte aussi les demandes de réglage d'alarme et de minuteur envoyées par d'autres applications.
 
-> La version 1.0.0 fournit les alarmes, les écrans du plugin, les outils du plugin et le module de script `alarms`. L'activation dans le centre des plugins, les outils du plugin et le module `alarms` demandent AutoJs6 6.8.1 (version interne 6641) ou ultérieure; avec une version plus ancienne d'AutoJs6 (y compris 6.8.0), le plugin ne s'utilise que comme application de réveil autonome. L'avancement des minuteurs, du chronomètre, des jours fériés et des défis d'arrêt figure dans la feuille de route.
+> La version 1.1.0 fournit les alarmes, les minuteurs et le chronomètre, les écrans du plugin, les outils du plugin et le module de script `alarms`. L'activation dans le centre des plugins, les outils du plugin et le module `alarms` demandent AutoJs6 6.8.1 (version interne 6641) ou ultérieure; avec une version plus ancienne d'AutoJs6 (y compris 6.8.0), le plugin ne s'utilise que comme application de réveil autonome. L'avancement des jours fériés et des défis d'arrêt figure dans la feuille de route.
 
 ******
 
@@ -57,11 +57,11 @@ Le plugin programme et fait sonner les alarmes lui-même grâce aux alarmes exac
 - Alarmes: alarmes uniques ou répétées. Les règles de répétition couvrent les jours ouvrés, le n-ième jour de la semaine du mois, la fin du mois, les intervalles en jours, une date de fin et un nombre d'occurrences; on peut exclure des dates ou ne sauter que la prochaine sonnerie.
 - Sonnerie: sonnerie du système ou audio local importé, texte lu à voix haute, volume indépendant avec montée progressive, vibration personnalisée, répétition et arrêt automatique, écran de sonnerie plein écran sur l'écran de verrouillage; les alarmes dues en même temps sonnent l'une après l'autre.
 - À l'heure: les alarmes sont replanifiées automatiquement après un redémarrage, un changement d'heure ou de fuseau horaire et une mise à jour du plugin, et sonnent même avant le premier déverrouillage; une alarme manquée appareil éteint sonne dans les 5 minutes, au-delà elle laisse seulement une notification.
-- Scripts liés: une alarme peut enregistrer des fichiers de script qu'AutoJs6 lance lors de la sonnerie, de la répétition, de l'arrêt et d'autres événements, sans qu'ils restent en mémoire; un script en cours d'exécution peut aussi écouter ces événements en direct.
-- Outils du plugin: créer, consulter, modifier et supprimer des alarmes et gérer une alarme qui sonne via le plugin MCP Server ou `plugins.tools.call` (neuf outils `alarm_*`).
-- Horloge du système: le plugin peut traiter les demandes de réglage, d'affichage, d'arrêt et de répétition d'alarme envoyées par d'autres applications.
+- Scripts liés: une alarme ou un minuteur peut enregistrer des fichiers de script qu'AutoJs6 lance lors de la sonnerie, de la répétition, de l'arrêt et d'autres événements, sans qu'ils restent en mémoire; un script en cours d'exécution peut aussi écouter ces événements en direct.
+- Outils du plugin: créer, consulter, modifier et supprimer des alarmes, gérer une alarme qui sonne, et démarrer, lister et contrôler des minuteurs via le plugin MCP Server ou `plugins.tools.call` (neuf outils `alarm_*` et trois outils `timer_*`).
+- Horloge du système: le plugin peut traiter les demandes de réglage, d'affichage, d'arrêt et de répétition d'alarme, ainsi que de réglage, d'affichage et d'arrêt de minuteur, envoyées par d'autres applications.
 - Écrans: la langue, le mode nuit et la couleur du thème suivent AutoJs6 par défaut et peuvent être réglés séparément; l'icône du lanceur est interchangeable; l'écran des paramètres fixe la sonnerie, la vibration, la répétition et l'arrêt automatique par défaut.
-- Minuteurs et chronomètre (prévus en 1.1.0): plusieurs minuteurs en parallèle avec pause, reprise et temps supplémentaire; tours pour le chronomètre.
+- Minuteurs et chronomètre: jusqu'à 20 minuteurs simultanés avec pause, reprise, temps supplémentaire et réinitialisation; un minuteur en cours affiche son compte à rebours dans le volet des notifications, d'où il peut être mis en pause, prolongé d'une minute ou annulé; les minuteurs continuent après un redémarrage et sonnent comme les alarmes. Le chronomètre enregistre des tours (jusqu'à 100) et signale le plus rapide et le plus lent. La barre de navigation du bas passe des alarmes aux minuteurs et au chronomètre.
 - Jours fériés (prévus en 1.2.0): données ouvertes de jours fériés pour de nombreuses régions; les alarmes sautent les jours fériés et sonnent les jours ouvrés de récupération; un crochet de script `beforeRing` peut aussi décider de sonner ou non.
 - Défis d'arrêt (prévus en 1.3.0): calcul, secousse, recopie d'une phrase ou condition de script, chacun avec une soupape de sécurité pour que l'alarme puisse toujours être arrêtée.
 
@@ -77,6 +77,11 @@ Captures prises sur un Sony XQ-DQ72; le thème clair en haut, le thème sombre e
 | :---: | :---: | :---: | :---: |
 | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/list-light.png?raw=true" alt="list-light" width="200" /> | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/edit-light.png?raw=true" alt="edit-light" width="200" /> | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/ring-light.png?raw=true" alt="ring-light" width="200" /> | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/settings-light.png?raw=true" alt="settings-light" width="200" /> |
 | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/list-dark.png?raw=true" alt="list-dark" width="200" /> | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/edit-dark.png?raw=true" alt="edit-dark" width="200" /> | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/ring-dark.png?raw=true" alt="ring-dark" width="200" /> | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/settings-dark.png?raw=true" alt="settings-dark" width="200" /> |
+
+| Minuteurs | Chronomètre |
+| :---: | :---: |
+| <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/timers-light.png?raw=true" alt="timers-light" width="200" /> | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/stopwatch-light.png?raw=true" alt="stopwatch-light" width="200" /> |
+| <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/timers-dark.png?raw=true" alt="timers-dark" width="200" /> | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/stopwatch-dark.png?raw=true" alt="stopwatch-dark" width="200" /> |
 
 ******
 
@@ -107,6 +112,8 @@ alarms.add({ time: "06:10", date: "2026-11-04", repeat: { freq: "daily", interva
 
 alarms.on("ring", (e) => toast(e.label));
 
+alarms.timers.start("25m", { label: "Tea" });
+
 alarms.system.setAlarm({ hour: 6, minute: 50, label: "Flight" });
 ```
 
@@ -114,6 +121,7 @@ alarms.system.setAlarm({ hour: 6, minute: 50, label: "Flight" });
 - `repeat` accepte une chaîne RRULE (par exemple `FREQ=MONTHLY;BYDAY=-1FR`), un tableau de numéros de jours ou un objet structuré; `alarms.preview(options)` liste les prochaines sonneries pour vérifier une règle.
 - `alarms.bind(id, script, options)` (ou `bind` d'un instantané d'alarme) enregistre un script qu'AutoJs6 lance quand un événement survient; le script lit l'événement avec `alarms.currentEvent()`. `alarms.on('ring', listener)` écoute en direct pendant l'exécution d'un script.
 - `alarms.ringing`, `dismiss` et `snooze` gèrent une alarme qui sonne; `alarms.ringtones.list()` liste les sonneries disponibles.
+- `alarms.timers.start(duration, options)` démarre un minuteur (en millisecondes ou avec une chaîne comme `"25m"` ou `"1h 30m"`, de 1 seconde à 100 heures) et renvoie un instantané de minuteur doté des méthodes `pause`, `resume`, `addTime`, `reset`, `cancel` et `bind`; `alarms.stopwatch` démarre, met en pause, reprend, enregistre les tours et réinitialise le chronomètre. Les deux demandent le plugin 1.1.0 ou ultérieur.
 - `alarms.system` appelle directement l'application d'horloge du système (`setAlarm`, `setTimer`, `showAlarms`, `dismissAlarm`, `next`, etc.) et ne demande aucun plugin.
 
 ******
@@ -128,6 +136,9 @@ Le plugin peut servir d'application de réveil du système et traiter les demand
 - Afficher les alarmes (`SHOW_ALARMS`): ouvre la liste des alarmes.
 - Arrêter une alarme (`DISMISS_ALARM`): termine une alarme qui sonne ou en répétition; si rien ne sonne, une alarme due dans les 24 heures saute cette sonnerie; si plusieurs alarmes correspondent, l'utilisateur choisit.
 - Répéter (`SNOOZE_ALARM`): met l'alarme qui sonne en répétition.
+- Régler un minuteur (`SET_TIMER`): lit la durée (de 1 seconde à 100 heures) et le libellé et démarre un minuteur; un minuteur réinitialisé de même durée et de même libellé redémarre au lieu d'en créer un nouveau; sauf si la demande saute l'interface, l'écran des minuteurs s'ouvre aussi, et sans durée la boîte de dialogue de nouveau minuteur s'ouvre.
+- Afficher les minuteurs (`SHOW_TIMERS`): ouvre l'écran des minuteurs.
+- Arrêter un minuteur (`DISMISS_TIMER`): termine les minuteurs qui sonnent, sans toucher à ceux qui décomptent encore.
 - `alarms.system` fonctionne dans l'autre sens: un script envoie des demandes à l'application d'horloge par défaut du système (ce plugin ou une autre horloge) sans plugin; les différences entre les horloges des fabricants sont décrites dans la documentation d'AutoJs6.
 
 ******
@@ -138,7 +149,7 @@ Le plugin peut servir d'application de réveil du système et traiter les demand
 
 Le plugin prend en charge Android 7.0 (API 24) et ultérieur. L'activation dans le centre des plugins, les outils du plugin et le module `alarms` demandent AutoJs6 6.8.1 (version interne 6641) ou ultérieure. Avec une version plus ancienne d'AutoJs6 (par exemple 6.8.0, version interne 6640), le centre des plugins indique qu'une version plus récente d'AutoJs6 est requise et ne peut pas activer le plugin, et les outils du plugin et le module `alarms` ne sont pas disponibles; le plugin reste utilisable comme application de réveil autonome et traite toujours les demandes de l'horloge du système. Le module `alarms` ne prend en charge que le moteur Rhino, et son `alarms.system` ne demande aucun plugin.
 
-Vérifié sur ces appareils avant la sortie de la version 1.0.0 (données dans l'annexe D de la feuille de route):
+Vérifié sur ces appareils avant la sortie de la version 1.0.0 (données dans l'annexe D de la feuille de route); les minuteurs et le chronomètre de la version 1.1.0 ont aussi été vérifiés sur un Sony XQ-AT72 et un Sony G8441, y compris les minuteurs qui continuent après un redémarrage (voir P7 de la feuille de route):
 
 | Appareil | Android | Résultat |
 | --- | --- | --- |
@@ -192,6 +203,10 @@ Sur un appareil de test Redmi (MIUI), le système a arrêté plusieurs fois le p
 
 Les alarmes sonnent, car le plugin fonctionne avant le premier déverrouillage. Les scripts liés ne sont pas lancés, car AutoJs6 ne peut pas exécuter de scripts avant le premier déverrouillage, et ils ne sont pas lancés après coup non plus.
 
+#### Que deviennent les minuteurs et le chronomètre après un redémarrage?
+
+Les minuteurs gardent leur heure de fin d'avant l'arrêt, si bien que le temps passé appareil éteint compte aussi. Un minuteur arrivé à échéance pendant l'arrêt sonne au démarrage s'il a moins de 5 minutes de retard, sinon il laisse une notification manquée. Quand le système corrige son horloge après le démarrage, l'heure de fin peut se décaler de quelques secondes avec elle. Le chronomètre est mis en pause après un redémarrage et compte jusqu'au démarrage, le temps passé appareil éteint est donc inclus (un redémarrage prend en général moins d'une minute).
+
 ******
 
 ### Permissions Et Sécurité
@@ -201,7 +216,7 @@ Les alarmes sonnent, car le plugin fonctionne avant le premier déverrouillage. 
 Autorisations demandées par le plugin et leur usage:
 
 - Alarmes exactes (`USE_EXACT_ALARM`, `SCHEDULE_EXACT_ALARM` sur Android 12 et 12L): sonner à l'heure. Accordée à l'installation depuis Android 13; sur Android 12 et 12L, autorisez "Alarmes et rappels" dans les paramètres du système.
-- Notifications (`POST_NOTIFICATIONS`): afficher les alarmes qui sonnent et les alarmes manquées. Sans elle, les alarmes sonnent quand même, mais sans notification ni écran de sonnerie.
+- Notifications (`POST_NOTIFICATIONS`): afficher les alarmes qui sonnent et les alarmes manquées, ainsi que les minuteurs en cours et le chronomètre. Sans elle, les alarmes et les minuteurs sonnent quand même, mais sans notification ni écran de sonnerie.
 - Alertes plein écran (`USE_FULL_SCREEN_INTENT`): afficher l'écran de sonnerie sur l'écran de verrouillage. Parfois non accordée depuis Android 14; sans elle, les alarmes sonnent avec une notification flottante.
 - Affichage par-dessus les autres applis (`SYSTEM_ALERT_WINDOW`, facultatif): ouvre l'écran de sonnerie quand le système retient l'alerte plein écran (par exemple avec les notifications en bannière de ColorOS désactivées); accordée seulement par l'utilisateur depuis la page des autorisations, au besoin.
 - Démarrage (`RECEIVE_BOOT_COMPLETED`): replanifie après un redémarrage pour sonner même avant le premier déverrouillage.
@@ -216,7 +231,7 @@ Le plugin réduit autant que possible ses autorisations:
 - Entrées protégées: le service de capacité et l'entrée d'activation exigent l'autorisation de plugin d'AutoJs6 (`org.autojs.permission.PLUGIN`), les autres applications ne peuvent donc pas les appeler directement; l'entrée qui reçoit les demandes de l'horloge système exige que l'appelant détienne `com.android.alarm.permission.SET_ALARM`.
 - Réseau: utilisé uniquement pour rechercher les mises à jour du plugin (sur GitHub; la recherche automatique peut être désactivée dans les paramètres); les alarmes et les données personnelles ne sont jamais envoyées.
 - Stockage: les alarmes sont enregistrées dans le répertoire privé du plugin et exclues de la sauvegarde dans le cloud; les sonneries locales sont importées via le sélecteur de fichiers du système, sans autorisation de stockage.
-- Accès des scripts: via le module `alarms`, les scripts peuvent lire et modifier toutes les alarmes du plugin, y compris celles créées depuis ses écrans; les scripts enregistrés sont stockés dans AutoJs6, et les écrans du plugin se contentent d'indiquer qu'une alarme a un script lié et de permettre de supprimer ce lien.
+- Accès des scripts: via le module `alarms`, les scripts peuvent lire et modifier toutes les alarmes et tous les minuteurs du plugin, y compris ceux créés depuis ses écrans; les scripts enregistrés sont stockés dans AutoJs6, et les écrans du plugin se contentent d'indiquer qu'une alarme a un script lié et de permettre de supprimer ce lien.
 
 ******
 
@@ -253,6 +268,19 @@ Les plans, décisions de conception et l'avancement sont suivis sous forme de li
 ### Historique Des Versions
 
 ******
+
+#### v1.1.0
+
+_2026/11/12_
+
+- `Note` alarms.timers et alarms.stopwatch dans les scripts demandent AutoJs6 6.8.1 (version interne 6641) ou ultérieure et ce plugin en version 1.1.0 ou ultérieure; avec le plugin 1.0.x, les appels échouent avec un message invitant à mettre à jour le plugin
+- `Fonctionnalité` Minuteurs: jusqu'à 20 minuteurs simultanés, avec une durée prédéfinie (de 1 minute à 1 heure) ou personnalisée (de 1 seconde à 100 heures) et un libellé facultatif; ils se mettent en pause, reprennent, se prolongent d'une minute et se réinitialisent, et sonnent comme les alarmes à la fin
+- `Fonctionnalité` Un minuteur en cours affiche son compte à rebours dans le volet des notifications, d'où il peut être mis en pause, prolongé d'une minute ou annulé; les minuteurs continuent après un redémarrage, et un minuteur arrivé à échéance pendant que l'appareil était éteint sonne après le démarrage (avec plus de 5 minutes de retard, il ne laisse qu'une notification manquée)
+- `Fonctionnalité` Chronomètre: démarrage, pause, reprise et réinitialisation, jusqu'à 100 tours, avec le tour le plus rapide et le plus lent signalés; pendant qu'il tourne, il s'affiche dans le volet des notifications, ce qui se désactive dans le groupe "Minuteurs et chronomètre" des paramètres
+- `Fonctionnalité` La barre de navigation du bas passe entre les pages des alarmes, des minuteurs et du chronomètre
+- `Fonctionnalité` Nouveaux alarms.timers et alarms.stopwatch dans le module de script AutoJs6 (demande AutoJs6 6.8.1): démarrage, consultation, pause, reprise, ajout ou retrait de temps, réinitialisation et annulation des minuteurs, scripts enregistrés sur un minuteur et lancés à la sonnerie et à d'autres événements, et contrôle du chronomètre avec ses tours (voir la [documentation d'AutoJs6](https://docs.autojs6.com/#/alarms))
+- `Fonctionnalité` Nouveaux outils du plugin timer_start, timer_list et timer_control pour démarrer, lister, mettre en pause, reprendre, prolonger, réinitialiser et annuler des minuteurs via le plugin MCP Server ou plugins.tools.call
+- `Fonctionnalité` Horloge du système: les demandes de minuteur sont aussi traitées; d'autres applications peuvent faire démarrer un minuteur au plugin, ouvrir l'écran des minuteurs ou arrêter un minuteur qui sonne
 
 #### v1.0.1
 

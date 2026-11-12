@@ -5,6 +5,21 @@
   "changelog_label_improvement": "優化",
   "changelog_label_dependency": "依賴",
   "$data": {
+    "v1.1.0": {
+      "released_date": "2026/11/12",
+      "hint": [
+        "腳本中的 alarms.timers 與 alarms.stopwatch 需要 AutoJs6 {{ required_host_version_name }} (內部版本號 {{ required_host_version_code }}) 或更高版本, 並需要本插件 1.1.0 或更高版本; 插件仍為 1.0.x 時呼叫會報錯並提示升級插件"
+      ],
+      "feature": [
+        "計時器: 最多 20 個計時器同時運行, 時長可以選預設 (1 分鐘至 1 小時) 或自訂 (1 秒至 100 小時), 可以加標籤, 可以暫停, 繼續, 加 1 分鐘與重置; 到時後與鬧鐘一樣響鈴",
+        "運行中的計時器在通知欄顯示倒數, 可以直接在通知上暫停, 加 1 分鐘或取消; 裝置重新開機後計時器繼續計時, 關機期間到時的計時器在開機後補響 (過時超過 5 分鐘的只留下一條錯過的通知)",
+        "秒錶: 開始, 暫停, 繼續與重置, 最多記錄 100 圈, 標出最快與最慢的一圈; 運行時在通知欄顯示, 可以在設定頁的 \"計時器與秒錶\" 分組中關閉",
+        "底部導覽列在鬧鐘, 計時器與秒錶三個頁面之間切換",
+        "AutoJs6 腳本模組新增 alarms.timers 與 alarms.stopwatch (需要 AutoJs6 {{ required_host_version_name }}): 開始, 查詢, 暫停, 繼續, 加減時間, 重置與取消計時器, 為計時器登記在響鈴等事件發生時啟動的腳本, 控制秒錶並記錄計圈 (參閱 [AutoJs6 文件](https://docs.autojs6.com/#/alarms))",
+        "插件工具新增 timer_start, timer_list 與 timer_control, 可經 MCP Server 插件或 plugins.tools.call 開始, 查看, 暫停, 繼續, 加時, 重置與取消計時器",
+        "系統時鐘對接新增計時器要求: 其他應用程式可以讓插件開始計時器, 開啟計時器頁或關閉正在響的計時器"
+      ]
+    },
     "v1.0.1": {
       "released_date": "2026/11/08",
       "fix": [

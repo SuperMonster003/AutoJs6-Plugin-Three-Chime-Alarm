@@ -8,7 +8,7 @@
     </picture>
   </p>
 
-  <p>Alarma con reglas de repetición de calendario, lectura en voz alta y scripts al sonar la alarma</p>
+  <p>Alarma, temporizadores y cronómetro con reglas de repetición de calendario, lectura en voz alta y scripts al sonar la alarma</p>
 
   <p>
     <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/releases"><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm?label=Release"/></a>
@@ -42,11 +42,11 @@ El README.md actual admite los siguientes idiomas:
 
 ******
 
-3-Chime Alarm es el complemento de alarmas de AutoJs6 y también una aplicación de alarmas que funciona por sí sola, sin AutoJs6. Las alarmas se repiten según las reglas de calendario RFC 5545 (por ejemplo, el último viernes de cada mes o cada 3 días a partir de una fecha); una alarma que suena puede leer un texto en voz alta, iniciar un script o avisar a un script en ejecución. Los temporizadores y el cronómetro, la omisión de festivos y los retos para apagar llegarán en versiones posteriores.
+3-Chime Alarm es el complemento de alarmas de AutoJs6 y también una aplicación de alarmas que funciona por sí sola, sin AutoJs6. Las alarmas se repiten según las reglas de calendario RFC 5545 (por ejemplo, el último viernes de cada mes o cada 3 días a partir de una fecha); una alarma que suena puede leer un texto en voz alta, iniciar un script o avisar a un script en ejecución. Desde la versión 1.1.0 también ofrece varios temporizadores simultáneos y un cronómetro. La omisión de festivos y los retos para apagar llegarán en versiones posteriores.
 
-El complemento programa y hace sonar las alarmas por sí mismo con las alarmas exactas de Android, así que las alarmas suenan a tiempo aunque AutoJs6 no esté en ejecución. Los scripts de AutoJs6 consultan, crean, modifican y escuchan las alarmas del complemento mediante el módulo global `alarms`; el subespacio de nombres `alarms.system` se comunica directamente con la aplicación de reloj del sistema y funciona sin el complemento. El complemento también acepta solicitudes para configurar alarmas enviadas por otras aplicaciones.
+El complemento programa y hace sonar las alarmas por sí mismo con las alarmas exactas de Android, así que las alarmas suenan a tiempo aunque AutoJs6 no esté en ejecución. Los scripts de AutoJs6 consultan, crean, modifican y escuchan las alarmas del complemento mediante el módulo global `alarms`, y usan los temporizadores y el cronómetro mediante `alarms.timers` y `alarms.stopwatch`; el subespacio de nombres `alarms.system` se comunica directamente con la aplicación de reloj del sistema y funciona sin el complemento. El complemento también acepta solicitudes para configurar alarmas y temporizadores enviadas por otras aplicaciones.
 
-> La versión 1.0.0 ofrece las alarmas, las pantallas del complemento, las herramientas del complemento y el módulo de scripts `alarms`. Activar el complemento en el centro de complementos, las herramientas del complemento y el módulo `alarms` requieren AutoJs6 6.8.1 (compilación interna 6641) o posterior; con versiones anteriores de AutoJs6 (incluida 6.8.0), el complemento solo se puede usar como aplicación de alarmas independiente. El avance de los temporizadores, el cronómetro, los festivos y los retos para apagar se encuentra en la hoja de ruta.
+> La versión 1.1.0 ofrece las alarmas, los temporizadores y el cronómetro, las pantallas del complemento, las herramientas del complemento y el módulo de scripts `alarms`. Activar el complemento en el centro de complementos, las herramientas del complemento y el módulo `alarms` requieren AutoJs6 6.8.1 (compilación interna 6641) o posterior; con versiones anteriores de AutoJs6 (incluida 6.8.0), el complemento solo se puede usar como aplicación de alarmas independiente. El avance de los festivos y los retos para apagar se encuentra en la hoja de ruta.
 
 ******
 
@@ -57,11 +57,11 @@ El complemento programa y hace sonar las alarmas por sí mismo con las alarmas e
 - Alarmas: alarmas únicas o repetidas. Las reglas de repetición cubren días laborables, el n-ésimo día de la semana del mes, el fin de mes, intervalos de días, fecha de fin y número de repeticiones; se pueden excluir fechas o saltar solo la próxima alarma.
 - Sonido: tono del sistema o audio local importado, texto leído en voz alta, volumen independiente con aumento gradual, vibración personalizada, posponer y silencio automático, y pantalla de alarma a pantalla completa sobre la pantalla de bloqueo; las alarmas que coinciden suenan una tras otra.
 - Puntualidad: las alarmas se reprograman automáticamente tras un reinicio, un cambio de hora o de zona horaria y una actualización del complemento, y suenan incluso antes del primer desbloqueo; una alarma perdida con el dispositivo apagado suena en los 5 minutos siguientes, después solo deja una notificación.
-- Scripts vinculados: una alarma puede registrar archivos de script que AutoJs6 inicia al sonar, posponer, apagar y otros eventos, sin que tengan que seguir en ejecución; un script en ejecución también puede escuchar estos eventos en directo.
-- Herramientas del complemento: crear, consultar, modificar y eliminar alarmas y atender una alarma que suena mediante el complemento MCP Server o `plugins.tools.call` (nueve herramientas `alarm_*`).
-- Reloj del sistema: el complemento puede atender las solicitudes de configurar, mostrar, apagar y posponer alarmas que envían otras aplicaciones.
+- Scripts vinculados: una alarma o un temporizador puede registrar archivos de script que AutoJs6 inicia al sonar, posponer, apagar y otros eventos, sin que tengan que seguir en ejecución; un script en ejecución también puede escuchar estos eventos en directo.
+- Herramientas del complemento: crear, consultar, modificar y eliminar alarmas, atender una alarma que suena, e iniciar, listar y controlar temporizadores mediante el complemento MCP Server o `plugins.tools.call` (nueve herramientas `alarm_*` y tres herramientas `timer_*`).
+- Reloj del sistema: el complemento puede atender las solicitudes de configurar, mostrar, apagar y posponer alarmas, y de configurar, mostrar y apagar temporizadores, que envían otras aplicaciones.
 - Pantallas: el idioma, el modo nocturno y el color del tema siguen a AutoJs6 de forma predeterminada y se pueden ajustar por separado; el icono del lanzador se puede cambiar; la pantalla de ajustes fija el tono, la vibración, el aplazamiento y el silencio automático predeterminados.
-- Temporizadores y cronómetro (previstos para 1.1.0): varios temporizadores en paralelo con pausa, reanudación y tiempo extra; vueltas en el cronómetro.
+- Temporizadores y cronómetro: hasta 20 temporizadores a la vez con pausa, reanudación, tiempo extra y restablecimiento; un temporizador en marcha muestra su cuenta atrás en el panel de notificaciones, desde donde se puede pausar, alargar 1 minuto o cancelar; los temporizadores siguen contando tras un reinicio y suenan como las alarmas. El cronómetro marca vueltas (hasta 100) y señala la más rápida y la más lenta. La barra de navegación inferior cambia entre alarmas, temporizadores y cronómetro.
 - Festivos (previstos para 1.2.0): datos abiertos de festivos de muchas regiones; las alarmas omiten los festivos y suenan en los días laborables de recuperación; un gancho de script `beforeRing` también puede decidir si suena.
 - Retos para apagar (previstos para 1.3.0): aritmética, agitar, escribir una frase o una condición de script, todos con una válvula de seguridad para que la alarma siempre se pueda apagar.
 
@@ -77,6 +77,11 @@ Capturas tomadas en un Sony XQ-DQ72; el tema claro arriba y el tema oscuro abajo
 | :---: | :---: | :---: | :---: |
 | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/list-light.png?raw=true" alt="list-light" width="200" /> | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/edit-light.png?raw=true" alt="edit-light" width="200" /> | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/ring-light.png?raw=true" alt="ring-light" width="200" /> | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/settings-light.png?raw=true" alt="settings-light" width="200" /> |
 | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/list-dark.png?raw=true" alt="list-dark" width="200" /> | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/edit-dark.png?raw=true" alt="edit-dark" width="200" /> | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/ring-dark.png?raw=true" alt="ring-dark" width="200" /> | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/settings-dark.png?raw=true" alt="settings-dark" width="200" /> |
+
+| Temporizadores | Cronómetro |
+| :---: | :---: |
+| <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/timers-light.png?raw=true" alt="timers-light" width="200" /> | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/stopwatch-light.png?raw=true" alt="stopwatch-light" width="200" /> |
+| <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/timers-dark.png?raw=true" alt="timers-dark" width="200" /> | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/stopwatch-dark.png?raw=true" alt="stopwatch-dark" width="200" /> |
 
 ******
 
@@ -107,6 +112,8 @@ alarms.add({ time: "06:10", date: "2026-11-04", repeat: { freq: "daily", interva
 
 alarms.on("ring", (e) => toast(e.label));
 
+alarms.timers.start("25m", { label: "Tea" });
+
 alarms.system.setAlarm({ hour: 6, minute: 50, label: "Flight" });
 ```
 
@@ -114,6 +121,7 @@ alarms.system.setAlarm({ hour: 6, minute: 50, label: "Flight" });
 - `repeat` acepta una cadena RRULE (por ejemplo `FREQ=MONTHLY;BYDAY=-1FR`), un arreglo de números de día o un objeto estructurado; `alarms.preview(options)` enumera las próximas horas de alarma para comprobar una regla.
 - `alarms.bind(id, script, options)` (o `bind` de una instantánea de alarma) registra un script que AutoJs6 inicia cuando ocurre un evento; el script lee el evento con `alarms.currentEvent()`. `alarms.on('ring', listener)` escucha en directo mientras se ejecuta un script.
 - `alarms.ringing`, `dismiss` y `snooze` atienden una alarma que suena; `alarms.ringtones.list()` enumera los tonos disponibles.
+- `alarms.timers.start(duration, options)` inicia un temporizador (en milisegundos o con una cadena como `"25m"` o `"1h 30m"`, de 1 segundo a 100 horas) y devuelve una instantánea del temporizador con los métodos `pause`, `resume`, `addTime`, `reset`, `cancel` y `bind`; `alarms.stopwatch` inicia, pausa, reanuda, marca vueltas y restablece el cronómetro. Ambos requieren el complemento 1.1.0 o posterior.
 - `alarms.system` llama directamente a la aplicación de reloj del sistema (`setAlarm`, `setTimer`, `showAlarms`, `dismissAlarm`, `next` y más) y no necesita el complemento.
 
 ******
@@ -128,6 +136,9 @@ El complemento puede actuar como aplicación de alarmas del sistema y atender la
 - Mostrar alarmas (`SHOW_ALARMS`): abre la lista de alarmas.
 - Apagar alarma (`DISMISS_ALARM`): termina una alarma que suena o está pospuesta; si no suena ninguna, una alarma que debe sonar en las próximas 24 horas omite esa vez; si coinciden varias, elige el usuario.
 - Posponer (`SNOOZE_ALARM`): pospone la alarma que suena.
+- Configurar temporizador (`SET_TIMER`): lee la duración (de 1 segundo a 100 horas) y la etiqueta e inicia un temporizador; si hay un temporizador restablecido con la misma duración y etiqueta, lo vuelve a iniciar en lugar de crear otro; salvo que la solicitud omita la interfaz, también se abre la pantalla de temporizadores, y sin duración se abre el diálogo de nuevo temporizador.
+- Mostrar temporizadores (`SHOW_TIMERS`): abre la pantalla de temporizadores.
+- Apagar temporizador (`DISMISS_TIMER`): termina los temporizadores que suenan, sin afectar a los que siguen contando.
 - `alarms.system` funciona en sentido contrario: un script envía solicitudes a la aplicación de reloj predeterminada del sistema (este complemento u otro reloj) sin el complemento; las diferencias entre los relojes de cada fabricante se describen en la documentación de AutoJs6.
 
 ******
@@ -138,7 +149,7 @@ El complemento puede actuar como aplicación de alarmas del sistema y atender la
 
 El complemento es compatible con Android 7.0 (API 24) y posteriores. Activarlo en el centro de complementos, las herramientas del complemento y el módulo `alarms` requieren AutoJs6 6.8.1 (compilación interna 6641) o posterior. Con versiones anteriores de AutoJs6 (por ejemplo 6.8.0, compilación interna 6640), el centro de complementos indica que se necesita un AutoJs6 más reciente y no puede activar el complemento, y las herramientas del complemento y el módulo `alarms` no están disponibles; el complemento sigue funcionando como aplicación de alarmas independiente y sigue atendiendo las solicitudes del reloj del sistema. El módulo `alarms` solo es compatible con el motor Rhino, y su `alarms.system` no necesita el complemento.
 
-Verificado en estos dispositivos antes de publicar la versión 1.0.0 (datos en el apéndice D de la hoja de ruta):
+Verificado en estos dispositivos antes de publicar la versión 1.0.0 (datos en el apéndice D de la hoja de ruta); los temporizadores y el cronómetro de la versión 1.1.0 también se verificaron en un Sony XQ-AT72 y un Sony G8441, incluidos los temporizadores que siguen contando tras un reinicio (ver P7 de la hoja de ruta):
 
 | Dispositivo | Android | Resultado |
 | --- | --- | --- |
@@ -192,6 +203,10 @@ En un dispositivo de prueba Redmi (MIUI), el sistema cerró varias veces el proc
 
 Las alarmas suenan, porque el complemento funciona antes del primer desbloqueo. Los scripts vinculados no se inician, porque AutoJs6 no puede ejecutar scripts antes del primer desbloqueo, y tampoco se inician después.
 
+#### Qué pasa con los temporizadores y el cronómetro tras un reinicio?
+
+Los temporizadores conservan la hora de fin de antes del apagado, así que el tiempo con el dispositivo apagado también cuenta. Un temporizador que terminó con el dispositivo apagado suena al arrancar si lleva menos de 5 minutos de retraso; si no, deja una notificación de perdido. Cuando el sistema corrige su reloj tras el arranque, la hora de fin puede moverse unos segundos con él. El cronómetro queda en pausa tras un reinicio y cuenta hasta el arranque, por lo que incluye el tiempo apagado (un reinicio suele durar menos de un minuto).
+
 ******
 
 ### Permisos Y Seguridad
@@ -201,7 +216,7 @@ Las alarmas suenan, porque el complemento funciona antes del primer desbloqueo. 
 Permisos que solicita el complemento y para qué sirven:
 
 - Alarmas exactas (`USE_EXACT_ALARM`, `SCHEDULE_EXACT_ALARM` en Android 12 y 12L): sonar a tiempo. Se concede al instalar desde Android 13; en Android 12 y 12L hay que permitir "Alarmas y recordatorios" en los ajustes del sistema.
-- Notificaciones (`POST_NOTIFICATIONS`): mostrar las alarmas que suenan y las perdidas. Sin él, las alarmas suenan igualmente, pero sin notificación ni pantalla de alarma.
+- Notificaciones (`POST_NOTIFICATIONS`): mostrar las alarmas que suenan y las perdidas, y los temporizadores en marcha y el cronómetro. Sin él, las alarmas y los temporizadores suenan igualmente, pero sin notificación ni pantalla de alarma.
 - Alertas a pantalla completa (`USE_FULL_SCREEN_INTENT`): mostrar la pantalla de alarma sobre la pantalla de bloqueo. Puede que no esté concedido desde Android 14; sin él, las alarmas suenan con una notificación emergente.
 - Mostrar sobre otras apps (`SYSTEM_ALERT_WINDOW`, opcional): abre la pantalla de alarma cuando el sistema retiene la alerta a pantalla completa (por ejemplo con las notificaciones de banner de ColorOS desactivadas); solo lo concede el usuario desde la página de permisos cuando hace falta.
 - Arranque (`RECEIVE_BOOT_COMPLETED`): reprograma tras un reinicio para sonar incluso antes del primer desbloqueo.
@@ -216,7 +231,7 @@ El complemento reduce al máximo sus permisos:
 - Entradas protegidas: el servicio de capacidad y la entrada de activación exigen el permiso de complemento de AutoJs6 (`org.autojs.permission.PLUGIN`), así que otras aplicaciones no pueden llamarlos directamente; la entrada que recibe solicitudes del reloj del sistema exige que quien llama tenga `com.android.alarm.permission.SET_ALARM`.
 - Red: solo se usa para buscar actualizaciones del complemento (en GitHub; la búsqueda automática se puede desactivar en los ajustes); las alarmas y los datos personales nunca se envían.
 - Almacenamiento: las alarmas se guardan en el directorio privado del complemento y se excluyen de la copia de seguridad en la nube; los tonos locales se importan con el selector de archivos del sistema, sin permiso de almacenamiento.
-- Acceso de scripts: mediante el módulo `alarms`, los scripts pueden leer y modificar todas las alarmas del complemento, incluidas las creadas en sus pantallas; los scripts registrados se guardan en AutoJs6, y las pantallas del complemento solo indican que una alarma tiene un script vinculado y permiten quitar ese vínculo.
+- Acceso de scripts: mediante el módulo `alarms`, los scripts pueden leer y modificar todas las alarmas y todos los temporizadores del complemento, incluidos los creados en sus pantallas; los scripts registrados se guardan en AutoJs6, y las pantallas del complemento solo indican que una alarma tiene un script vinculado y permiten quitar ese vínculo.
 
 ******
 
@@ -253,6 +268,19 @@ Los planes, las decisiones de diseño y el progreso se registran como lista de v
 ### Historial De Versiones
 
 ******
+
+#### v1.1.0
+
+_2026/11/12_
+
+- `Aviso` alarms.timers y alarms.stopwatch en los scripts requieren AutoJs6 6.8.1 (compilación interna 6641) o posterior y este complemento en la versión 1.1.0 o posterior; con el complemento 1.0.x las llamadas fallan con un mensaje que pide actualizar el complemento
+- `Función` Temporizadores: hasta 20 temporizadores a la vez, con una duración predefinida (de 1 minuto a 1 hora) o personalizada (de 1 segundo a 100 horas) y una etiqueta opcional; se pueden pausar, reanudar, alargar 1 minuto y restablecer, y al terminar suenan como las alarmas
+- `Función` Un temporizador en marcha muestra su cuenta atrás en el panel de notificaciones, desde donde se puede pausar, alargar 1 minuto o cancelar; los temporizadores siguen contando tras un reinicio, y uno que terminó con el dispositivo apagado suena después del arranque (si lleva más de 5 minutos de retraso, solo deja una notificación de perdido)
+- `Función` Cronómetro: iniciar, pausar, reanudar y restablecer, hasta 100 vueltas, con la vuelta más rápida y la más lenta señaladas; mientras está en marcha aparece en el panel de notificaciones, lo que se puede desactivar en el grupo "Temporizadores y cronómetro" de los ajustes
+- `Función` La barra de navegación inferior cambia entre las páginas de alarmas, temporizadores y cronómetro
+- `Función` Nuevos alarms.timers y alarms.stopwatch en el módulo de scripts de AutoJs6 (requiere AutoJs6 6.8.1): iniciar, consultar, pausar, reanudar, añadir o quitar tiempo, restablecer y cancelar temporizadores, scripts registrados en un temporizador que se inician al sonar y en otros eventos, y control del cronómetro con sus vueltas (consulte la [documentación de AutoJs6](https://docs.autojs6.com/#/alarms))
+- `Función` Nuevas herramientas del complemento timer_start, timer_list y timer_control para iniciar, listar, pausar, reanudar, alargar, restablecer y cancelar temporizadores mediante el complemento MCP Server o plugins.tools.call
+- `Función` Reloj del sistema: también atiende solicitudes de temporizador; otras aplicaciones pueden hacer que el complemento inicie un temporizador, abra la pantalla de temporizadores o apague un temporizador que suena
 
 #### v1.0.1
 

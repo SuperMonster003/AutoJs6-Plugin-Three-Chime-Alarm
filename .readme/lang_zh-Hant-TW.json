@@ -1,7 +1,7 @@
 {
   "$name": "繁體中文 (台灣)",
   "text_current_lowercase": "目前",
-  "text_plugin_synopsis": "鬧鐘應用程式, 支援日曆重複規則, 朗讀響鈴與響鈴時連動指令碼",
+  "text_plugin_synopsis": "鬧鐘, 計時器與碼錶, 支援日曆重複規則, 朗讀響鈴與響鈴時連動指令碼",
   "h3_languages_with_ascii": "語言 (Languages)",
   "p_languages_all_supported_for_readme": "目前 README.md 支援以下語言",
   "h3_introduction": "簡介",
@@ -22,18 +22,18 @@
   "h3_links": "相關連結",
   "text_link_autojs6": "AutoJs6 專案",
   "p_roadmap": "功能規劃, 設計決策與完成情況以可勾選清單維護在 ROADMAP.md 中. 未勾選的項目表示規劃意向, 不代表目前版本的能力.",
-  "p_introduction_what": "3-Chime Alarm 是 AutoJs6 的鬧鐘外掛, 也是不安裝 AutoJs6 也能獨立使用的鬧鐘應用程式. 鬧鐘按 RFC 5545 日曆規則重複 (例如每月最後一個星期五, 或從某天起每隔 3 天), 響鈴時可以朗讀文字, 也可以啟動指令碼或通知正在執行的指令碼. 計時器與碼錶, 假日略過與關閉挑戰將在後續版本加入.",
-  "p_introduction_how": "外掛使用 Android 精確鬧鐘自行排程並響鈴, 因此 AutoJs6 沒有執行時鬧鐘也會準時響. AutoJs6 指令碼透過全域模組 `alarms` 查詢, 新增, 修改與監聽外掛中的鬧鐘; 子命名空間 `alarms.system` 直接呼叫系統時鐘應用程式, 未安裝外掛時也能使用. 外掛也可以接收其他應用程式發出的設定鬧鐘要求.",
-  "p_status_note": "1.0.0 提供鬧鐘, 外掛介面, 外掛工具與 `alarms` 指令碼模組. 在外掛中心啟用本外掛, 使用外掛工具與 `alarms` 模組需要 AutoJs6 {{ required_host_version_name }} (內部版本號 {{ required_host_version_code }}) 或更新版本; 在較早的 AutoJs6 上 (包括 6.8.0), 外掛只能作為獨立的鬧鐘應用程式使用. 計時器, 碼錶, 假日與關閉挑戰的進度見開發路線圖.",
+  "p_introduction_what": "3-Chime Alarm 是 AutoJs6 的鬧鐘外掛, 也是不安裝 AutoJs6 也能獨立使用的鬧鐘應用程式. 鬧鐘按 RFC 5545 日曆規則重複 (例如每月最後一個星期五, 或從某天起每隔 3 天), 響鈴時可以朗讀文字, 也可以啟動指令碼或通知正在執行的指令碼. 1.1.0 起也提供多個同時執行的計時器與一個碼錶. 假日略過與關閉挑戰將在後續版本加入.",
+  "p_introduction_how": "外掛使用 Android 精確鬧鐘自行排程並響鈴, 因此 AutoJs6 沒有執行時鬧鐘也會準時響. AutoJs6 指令碼透過全域模組 `alarms` 查詢, 新增, 修改與監聽外掛中的鬧鐘, 透過 `alarms.timers` 與 `alarms.stopwatch` 使用計時器與碼錶; 子命名空間 `alarms.system` 直接呼叫系統時鐘應用程式, 未安裝外掛時也能使用. 外掛也可以接收其他應用程式發出的設定鬧鐘與計時器要求.",
+  "p_status_note": "1.1.0 提供鬧鐘, 計時器與碼錶, 外掛介面, 外掛工具與 `alarms` 指令碼模組. 在外掛中心啟用本外掛, 使用外掛工具與 `alarms` 模組需要 AutoJs6 {{ required_host_version_name }} (內部版本號 {{ required_host_version_code }}) 或更新版本; 在較早的 AutoJs6 上 (包括 6.8.0), 外掛只能作為獨立的鬧鐘應用程式使用. 假日與關閉挑戰的進度見開發路線圖.",
   "features": [
     "鬧鐘: 單次或重複鬧鐘. 重複規則支援工作日, 每月第幾個星期幾, 月底, 間隔天數, 截止日期與次數, 也可以排除指定日期或只略過下一次響鈴.",
     "響鈴: 系統鈴聲或匯入的本機音訊, 朗讀文字, 獨立音量與漸強, 自訂震動, 貪睡與自動停止, 鎖定時顯示全螢幕響鈴畫面; 多個鬧鐘同時到期時依序響鈴.",
     "準時可靠: 裝置重新開機, 修改時間或時區, 外掛升級後自動重新排程, 開機後未解鎖也會響鈴; 關機錯過的鬧鐘在 5 分鐘內補響, 超過則留下一則通知.",
-    "指令碼連動: 鬧鐘可以登記指令碼檔案, 響鈴, 貪睡, 關閉等事件發生時由 AutoJs6 啟動, 指令碼不必常駐; 正在執行的指令碼也可以即時監聽這些事件.",
-    "外掛工具: 經 MCP Server 外掛或 `plugins.tools.call` 新增, 查詢, 修改與刪除鬧鐘, 處理正在響的鬧鐘 (9 個 `alarm_*` 工具).",
-    "系統時鐘對接: 可以處理其他應用程式發出的設定, 顯示, 關閉與貪睡鬧鐘要求.",
+    "指令碼連動: 鬧鐘與計時器可以登記指令碼檔案, 響鈴, 貪睡, 關閉等事件發生時由 AutoJs6 啟動, 指令碼不必常駐; 正在執行的指令碼也可以即時監聽這些事件.",
+    "外掛工具: 經 MCP Server 外掛或 `plugins.tools.call` 新增, 查詢, 修改與刪除鬧鐘, 處理正在響的鬧鐘, 開始, 檢視與控制計時器 (9 個 `alarm_*` 工具與 3 個 `timer_*` 工具).",
+    "系統時鐘對接: 可以處理其他應用程式發出的設定, 顯示, 關閉與貪睡鬧鐘要求, 以及設定, 顯示與關閉計時器要求.",
     "介面: 語言, 深色模式與主題色預設跟隨 AutoJs6, 也可以單獨設定; 可以切換啟動器圖示; 設定頁可以設定鈴聲, 震動, 貪睡與自動停止的預設值.",
-    "計時器與碼錶 (1.1.0 規劃): 多個計時器並行, 可以暫停, 繼續與延長時間; 碼錶支援分圈.",
+    "計時器與碼錶: 最多 20 個計時器同時執行, 可以暫停, 繼續, 延長時間與重設; 執行中的計時器在通知欄顯示倒數, 可以直接暫停, 加 1 分鐘或取消; 重新開機後繼續計時, 時間到時與鬧鐘一樣響鈴. 碼錶支援分圈 (最多 100 圈), 標出最快與最慢的一圈. 底部導覽列在鬧鐘, 計時器與碼錶之間切換.",
     "假日 (1.2.0 規劃): 內建多地區開源假日資料, 國定假日略過響鈴, 調整放假的補班日照常響鈴; 也可以用 `beforeRing` 指令碼掛鉤決定是否響鈴.",
     "關閉挑戰 (1.3.0 規劃): 算術題, 搖一搖, 照打一句話或指令碼條件, 都帶安全閥, 確保鬧鐘總能被關閉."
   ],
@@ -49,6 +49,7 @@
     "`repeat` 接受 RRULE 字串 (例如 `FREQ=MONTHLY;BYDAY=-1FR`), 星期編號陣列或結構化物件; `alarms.preview(options)` 列出接下來的響鈴時間, 方便核對規則.",
     "`alarms.bind(id, script, options)` (或鬧鐘快照的 `bind`) 登記指令碼, 事件發生時由 AutoJs6 啟動, 事件資料可透過 `alarms.currentEvent()` 讀取; `alarms.on('ring', listener)` 在指令碼執行期間即時監聽.",
     "`alarms.ringing`, `dismiss` 與 `snooze` 處理正在響的鬧鐘; `alarms.ringtones.list()` 列出可用的鈴聲.",
+    "`alarms.timers.start(duration, options)` 開始計時器 (時長為毫秒數或 `\"25m\"`, `\"1h 30m\"` 這樣的字串, 1 秒至 100 小時), 傳回帶有 `pause`, `resume`, `addTime`, `reset`, `cancel` 與 `bind` 方法的計時器快照; `alarms.stopwatch` 提供碼錶的開始, 暫停, 繼續, 分圈與重設. 兩者都需要外掛 1.1.0 或更新版本.",
     "`alarms.system` 直接呼叫系統時鐘應用程式 (`setAlarm`, `setTimer`, `showAlarms`, `dismissAlarm`, `next` 等), 不需要安裝外掛."
   ],
   "faq": [
@@ -87,6 +88,10 @@
     {
       "q": "裝置重新開機後還沒解鎖, 鬧鐘會響嗎? 連動的指令碼呢?",
       "a": "鬧鐘會響, 外掛在首次解鎖之前也能執行. 連動的指令碼不會啟動, 因為 AutoJs6 在首次解鎖之前不能執行指令碼, 解鎖後也不會補啟動."
+    },
+    {
+      "q": "裝置重新開機後, 計時器和碼錶會怎樣?",
+      "a": "計時器按關機前的到期時刻繼續計時, 關機期間也計算在內. 關機期間已到期的計時器, 開機時逾時不到 5 分鐘的會補響, 超過 5 分鐘的留下一則錯過的通知. 開機後系統校正時間時, 到期時刻可能隨之移動幾秒. 碼錶重新開機後轉為暫停, 讀數計到本次開機為止, 因此會多計關機的那段時間 (重新開機通常不到 1 分鐘)."
     }
   ],
   "p_security_intro": "外掛在設計上盡量縮小權限範圍:",
@@ -94,7 +99,7 @@
     "受保護的入口: 能力服務與啟用入口受 AutoJs6 外掛權限 (`org.autojs.permission.PLUGIN`) 保護, 其他應用程式無法直接呼叫; 接收系統時鐘要求的入口要求呼叫端持有 `com.android.alarm.permission.SET_ALARM`.",
     "網路: 只用於檢查外掛更新 (連線到 GitHub, 可在設定頁關閉自動檢查), 不上傳鬧鐘或任何個人資料.",
     "儲存空間: 鬧鐘儲存在外掛私有目錄, 不參與雲端備份; 本機鈴聲透過系統檔案選擇器匯入, 不申請儲存權限.",
-    "指令碼權限: 指令碼可以透過 `alarms` 模組讀寫外掛中的所有鬧鐘, 包括在外掛介面建立的鬧鐘; 登記的指令碼儲存在 AutoJs6 中, 外掛介面只標記鬧鐘有指令碼綁定並可以解除."
+    "指令碼權限: 指令碼可以透過 `alarms` 模組讀寫外掛中的所有鬧鐘與計時器, 包括在外掛介面建立的鬧鐘與計時器; 登記的指令碼儲存在 AutoJs6 中, 外掛介面只標記鬧鐘有指令碼綁定並可以解除."
   ],
   "p_license": "專案程式碼採用 [Mozilla Public License 2.0]({{ license_url }}). 第三方元件與資料的授權見第三方聲明.",
   "text_link_third_party": "第三方聲明 (THIRD_PARTY_NOTICES.md)",
@@ -105,6 +110,8 @@
   "text_screenshot_edit": "編輯鬧鐘",
   "text_screenshot_ring": "響鈴",
   "text_screenshot_settings": "設定",
+  "text_screenshot_timers": "計時器",
+  "text_screenshot_stopwatch": "碼錶",
   "h3_system_clock": "系統時鐘對接",
   "p_system_clock_intro": "外掛可以作為系統的鬧鐘應用程式, 處理其他應用程式 (例如日曆, 語音助理與自動化工具) 發出的標準時鐘要求. 發出要求的應用程式需要持有 `com.android.alarm.permission.SET_ALARM` 權限",
   "system_clock_points": [
@@ -112,11 +119,14 @@
     "顯示鬧鐘 (`SHOW_ALARMS`): 開啟鬧鐘清單.",
     "關閉鬧鐘 (`DISMISS_ALARM`): 結束正在響或貪睡中的鬧鐘; 沒有正在響的鬧鐘時, 24 小時內要響的鬧鐘改為略過這一次; 符合多個鬧鐘時由使用者選擇.",
     "貪睡 (`SNOOZE_ALARM`): 讓正在響的鬧鐘貪睡.",
+    "設定計時器 (`SET_TIMER`): 讀取時長 (1 秒至 100 小時) 與標籤並開始計時器; 已有時長與標籤都相同且已重設的計時器時重新開始它; 要求沒有略過介面時同時開啟計時器頁, 沒有時長時開啟新增計時器對話方塊.",
+    "顯示計時器 (`SHOW_TIMERS`): 開啟計時器頁.",
+    "關閉計時器 (`DISMISS_TIMER`): 結束正在響的計時器, 不影響仍在計時的計時器.",
     "方向相反的 `alarms.system`: 指令碼用它把要求傳給系統預設的時鐘應用程式 (本外掛或其他時鐘應用程式), 不需要安裝外掛; 各品牌時鐘應用程式的差異見 AutoJs6 文件."
   ],
   "h3_compatibility": "相容性",
   "p_compatibility_host": "外掛支援 Android {{ min_android_version }} (API {{ android_min_sdk }}) 以上. 在外掛中心啟用本外掛, 使用外掛工具與 `alarms` 模組需要 AutoJs6 {{ required_host_version_name }} (內部版本號 {{ required_host_version_code }}) 或更新版本. 在較早的 AutoJs6 上 (例如內部版本號為 6640 的 6.8.0), 外掛中心提示需要更新版本的 AutoJs6 且不能啟用本外掛, 外掛工具與 `alarms` 模組無法使用, 但外掛仍可作為獨立的鬧鐘應用程式使用, 也照常處理系統時鐘要求. `alarms` 模組只支援 Rhino 引擎, 其中的 `alarms.system` 不需要安裝外掛.",
-  "p_compatibility_matrix": "1.0.0 發布前在以下裝置上完成驗證 (數據見開發路線圖附錄 D)",
+  "p_compatibility_matrix": "1.0.0 發布前在以下裝置上完成驗證 (數據見開發路線圖附錄 D); 1.1.0 的計時器與碼錶另在 Sony XQ-AT72 與 Sony G8441 上驗證, 包括重新開機後繼續計時 (見開發路線圖 P7)",
   "text_compat_device": "裝置",
   "text_compat_android": "Android",
   "text_compat_result": "結果",
@@ -160,7 +170,7 @@
   "p_permissions_intro": "外掛申請的權限與用途",
   "permission_points": [
     "精確鬧鐘 (`USE_EXACT_ALARM`, Android 12 與 12L 為 `SCHEDULE_EXACT_ALARM`): 準時響鈴. Android 13 起安裝即授予, Android 12 與 12L 需要在系統設定中允許 \"鬧鐘與提醒\".",
-    "通知 (`POST_NOTIFICATIONS`): 顯示正在響的鬧鐘與錯過的鬧鐘. 缺少時鬧鐘照常發聲, 但沒有通知與響鈴畫面.",
+    "通知 (`POST_NOTIFICATIONS`): 顯示正在響的鬧鐘與錯過的鬧鐘, 以及執行中的計時器與碼錶. 缺少時鬧鐘與計時器照常發聲, 但沒有通知與響鈴畫面.",
     "全螢幕提醒 (`USE_FULL_SCREEN_INTENT`): 在鎖定畫面顯示響鈴畫面. Android 14 起可能未授予, 缺少時以浮動通知響鈴.",
     "懸浮視窗 (`SYSTEM_ALERT_WINDOW`, 選用): 系統不顯示全螢幕提醒時 (例如 ColorOS 的橫幅通知關閉) 用來開啟響鈴畫面, 只在權限頁由使用者視需要允許.",
     "開機啟動 (`RECEIVE_BOOT_COMPLETED`): 重新開機後重新排程, 首次解鎖前也能響鈴.",

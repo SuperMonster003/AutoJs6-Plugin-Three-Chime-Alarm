@@ -8,7 +8,7 @@
     </picture>
   </p>
 
-  <p>鬧鐘應用程式, 支援日曆重複規則, 朗讀響鈴與響鈴時聯動腳本</p>
+  <p>鬧鐘, 計時器與秒錶, 支援日曆重複規則, 朗讀響鈴與響鈴時聯動腳本</p>
 
   <p>
     <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/releases"><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm?label=Release"/></a>
@@ -42,11 +42,11 @@
 
 ******
 
-3-Chime Alarm 是 AutoJs6 的鬧鐘插件, 也是不安裝 AutoJs6 也能獨立使用的鬧鐘應用程式. 鬧鐘按 RFC 5545 日曆規則重複 (例如每月最後一個星期五, 或從某天起每隔 3 天), 響鈴時可以朗讀文字, 也可以啟動腳本或通知正在運行的腳本. 計時器與秒錶, 假期略過與關閉挑戰將在後續版本加入.
+3-Chime Alarm 是 AutoJs6 的鬧鐘插件, 也是不安裝 AutoJs6 也能獨立使用的鬧鐘應用程式. 鬧鐘按 RFC 5545 日曆規則重複 (例如每月最後一個星期五, 或從某天起每隔 3 天), 響鈴時可以朗讀文字, 也可以啟動腳本或通知正在運行的腳本. 1.1.0 起亦提供多個同時運行的計時器與一個秒錶. 假期略過與關閉挑戰將在後續版本加入.
 
-插件使用 Android 精確鬧鐘自行排程並響鈴, 因此 AutoJs6 沒有執行時鬧鐘亦會準時響. AutoJs6 腳本透過全域模組 `alarms` 查詢, 新增, 修改與監聽插件中的鬧鐘; 子命名空間 `alarms.system` 直接調用系統時鐘應用程式, 未安裝插件時亦可使用. 插件亦可以接收其他應用程式發出的設定鬧鐘請求.
+插件使用 Android 精確鬧鐘自行排程並響鈴, 因此 AutoJs6 沒有執行時鬧鐘亦會準時響. AutoJs6 腳本透過全域模組 `alarms` 查詢, 新增, 修改與監聽插件中的鬧鐘, 透過 `alarms.timers` 與 `alarms.stopwatch` 使用計時器與秒錶; 子命名空間 `alarms.system` 直接調用系統時鐘應用程式, 未安裝插件時亦可使用. 插件亦可以接收其他應用程式發出的設定鬧鐘與計時器請求.
 
-> 1.0.0 提供鬧鐘, 插件介面, 插件工具與 `alarms` 腳本模組. 在插件中心啟用本插件, 使用插件工具與 `alarms` 模組需要 AutoJs6 6.8.1 (內部版本號 6641) 或更高版本; 在較早的 AutoJs6 上 (包括 6.8.0), 插件只能作為獨立的鬧鐘應用程式使用. 計時器, 秒錶, 假期與關閉挑戰的進度見開發路線圖.
+> 1.1.0 提供鬧鐘, 計時器與秒錶, 插件介面, 插件工具與 `alarms` 腳本模組. 在插件中心啟用本插件, 使用插件工具與 `alarms` 模組需要 AutoJs6 6.8.1 (內部版本號 6641) 或更高版本; 在較早的 AutoJs6 上 (包括 6.8.0), 插件只能作為獨立的鬧鐘應用程式使用. 假期與關閉挑戰的進度見開發路線圖.
 
 ******
 
@@ -57,11 +57,11 @@
 - 鬧鐘: 單次或重複鬧鐘. 重複規則支援工作日, 每月第幾個星期幾, 月底, 間隔日數, 截止日期與次數, 也可以排除指定日期或只略過下一次響鈴.
 - 響鈴: 系統鈴聲或匯入的本機音訊, 朗讀文字, 獨立音量與漸強, 自訂震動, 貪睡與自動停止, 上鎖時顯示全螢幕響鈴介面; 多個鬧鐘同時到期時依次響鈴.
 - 準時可靠: 裝置重新開機, 修改時間或時區, 插件升級後自動重新排程, 開機後未解鎖也會響鈴; 關機錯過的鬧鐘在 5 分鐘內補響, 超過則留下一則通知.
-- 腳本聯動: 鬧鐘可以登記腳本檔案, 響鈴, 貪睡, 關閉等事件發生時由 AutoJs6 啟動, 腳本不必常駐; 正在運行的腳本也可以即時監聽這些事件.
-- 插件工具: 經 MCP Server 插件或 `plugins.tools.call` 新增, 查詢, 修改與刪除鬧鐘, 處理正在響的鬧鐘 (9 個 `alarm_*` 工具).
-- 系統時鐘對接: 可以處理其他應用程式發出的設定, 顯示, 關閉與貪睡鬧鐘要求.
+- 腳本聯動: 鬧鐘與計時器可以登記腳本檔案, 響鈴, 貪睡, 關閉等事件發生時由 AutoJs6 啟動, 腳本不必常駐; 正在運行的腳本也可以即時監聽這些事件.
+- 插件工具: 經 MCP Server 插件或 `plugins.tools.call` 新增, 查詢, 修改與刪除鬧鐘, 處理正在響的鬧鐘, 開始, 查看與控制計時器 (9 個 `alarm_*` 工具與 3 個 `timer_*` 工具).
+- 系統時鐘對接: 可以處理其他應用程式發出的設定, 顯示, 關閉與貪睡鬧鐘要求, 以及設定, 顯示與關閉計時器要求.
 - 介面: 語言, 夜間模式與主題色預設跟隨 AutoJs6, 也可以單獨設定; 可以切換啟動器圖標; 設定頁可以設定鈴聲, 震動, 貪睡與自動停止的預設值.
-- 計時器與秒錶 (1.1.0 規劃): 多個計時器並行, 可以暫停, 繼續與加時; 秒錶支援計圈.
+- 計時器與秒錶: 最多 20 個計時器同時運行, 可以暫停, 繼續, 加時與重置; 運行中的計時器在通知欄顯示倒數, 可以直接暫停, 加 1 分鐘或取消; 重新開機後繼續計時, 到時與鬧鐘一樣響鈴. 秒錶支援計圈 (最多 100 圈), 標出最快與最慢的一圈. 底部導覽列在鬧鐘, 計時器與秒錶之間切換.
 - 假期 (1.2.0 規劃): 內置多地區開源假期資料, 法定假期略過響鈴, 調休補班日照常響鈴; 也可以用 `beforeRing` 腳本鈎子決定是否響鈴.
 - 關閉挑戰 (1.3.0 規劃): 算術題, 搖一搖, 照打一句話或腳本條件, 都帶安全閥, 確保鬧鐘總能被關閉.
 
@@ -77,6 +77,11 @@
 | :---: | :---: | :---: | :---: |
 | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/list-light.png?raw=true" alt="list-light" width="200" /> | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/edit-light.png?raw=true" alt="edit-light" width="200" /> | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/ring-light.png?raw=true" alt="ring-light" width="200" /> | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/settings-light.png?raw=true" alt="settings-light" width="200" /> |
 | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/list-dark.png?raw=true" alt="list-dark" width="200" /> | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/edit-dark.png?raw=true" alt="edit-dark" width="200" /> | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/ring-dark.png?raw=true" alt="ring-dark" width="200" /> | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/settings-dark.png?raw=true" alt="settings-dark" width="200" /> |
+
+| 計時器 | 秒錶 |
+| :---: | :---: |
+| <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/timers-light.png?raw=true" alt="timers-light" width="200" /> | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/stopwatch-light.png?raw=true" alt="stopwatch-light" width="200" /> |
+| <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/timers-dark.png?raw=true" alt="timers-dark" width="200" /> | <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/docs/images/screenshots/stopwatch-dark.png?raw=true" alt="stopwatch-dark" width="200" /> |
 
 ******
 
@@ -107,6 +112,8 @@ alarms.add({ time: "06:10", date: "2026-11-04", repeat: { freq: "daily", interva
 
 alarms.on("ring", (e) => toast(e.label));
 
+alarms.timers.start("25m", { label: "Tea" });
+
 alarms.system.setAlarm({ hour: 6, minute: 50, label: "Flight" });
 ```
 
@@ -114,6 +121,7 @@ alarms.system.setAlarm({ hour: 6, minute: 50, label: "Flight" });
 - `repeat` 接受 RRULE 字串 (例如 `FREQ=MONTHLY;BYDAY=-1FR`), 星期編號陣列或結構化物件; `alarms.preview(options)` 列出接下來的響鈴時間, 方便核對規則.
 - `alarms.bind(id, script, options)` (或鬧鐘快照的 `bind`) 登記腳本, 事件發生時由 AutoJs6 啟動, 事件資料可透過 `alarms.currentEvent()` 讀取; `alarms.on('ring', listener)` 在腳本運行期間即時監聽.
 - `alarms.ringing`, `dismiss` 與 `snooze` 處理正在響的鬧鐘; `alarms.ringtones.list()` 列出可用的鈴聲.
+- `alarms.timers.start(duration, options)` 開始計時器 (時長為毫秒數或 `"25m"`, `"1h 30m"` 這樣的字串, 1 秒至 100 小時), 返回帶 `pause`, `resume`, `addTime`, `reset`, `cancel` 與 `bind` 方法的計時器快照; `alarms.stopwatch` 提供秒錶的開始, 暫停, 繼續, 計圈與重置. 兩者都需要插件 1.1.0 或更高版本.
 - `alarms.system` 直接呼叫系統時鐘應用程式 (`setAlarm`, `setTimer`, `showAlarms`, `dismissAlarm`, `next` 等), 不需要安裝插件.
 
 ******
@@ -128,6 +136,9 @@ alarms.system.setAlarm({ hour: 6, minute: 50, label: "Flight" });
 - 顯示鬧鐘 (`SHOW_ALARMS`): 開啟鬧鐘列表.
 - 關閉鬧鐘 (`DISMISS_ALARM`): 結束正在響或貪睡中的鬧鐘; 沒有正在響的鬧鐘時, 24 小時內要響的鬧鐘改為略過這一次; 符合多個鬧鐘時由用戶選擇.
 - 貪睡 (`SNOOZE_ALARM`): 讓正在響的鬧鐘貪睡.
+- 設定計時器 (`SET_TIMER`): 讀取時長 (1 秒至 100 小時) 與標籤並開始計時器; 已有時長與標籤都相同且已重置的計時器時重新開始它; 要求沒有略過介面時同時開啟計時器頁, 沒有時長時開啟新增計時器對話框.
+- 顯示計時器 (`SHOW_TIMERS`): 開啟計時器頁.
+- 關閉計時器 (`DISMISS_TIMER`): 結束正在響的計時器, 不影響仍在計時的計時器.
 - 方向相反的 `alarms.system`: 腳本用它把要求發給系統預設的時鐘應用程式 (本插件或其他時鐘應用程式), 不需要安裝插件; 各品牌時鐘應用程式的差異見 AutoJs6 文件.
 
 ******
@@ -138,7 +149,7 @@ alarms.system.setAlarm({ hour: 6, minute: 50, label: "Flight" });
 
 插件支援 Android 7.0 (API 24) 或以上. 在插件中心啟用本插件, 使用插件工具與 `alarms` 模組需要 AutoJs6 6.8.1 (內部版本號 6641) 或更高版本. 在較早的 AutoJs6 上 (例如內部版本號為 6640 的 6.8.0), 插件中心提示需要更高版本的 AutoJs6 且不能啟用本插件, 插件工具與 `alarms` 模組不可用, 但插件仍可作為獨立的鬧鐘應用程式使用, 也照常處理系統時鐘要求. `alarms` 模組只支援 Rhino 引擎, 其中的 `alarms.system` 不需要安裝插件.
 
-1.0.0 發佈前在以下裝置上完成驗證 (數據見開發路線圖附錄 D):
+1.0.0 發佈前在以下裝置上完成驗證 (數據見開發路線圖附錄 D); 1.1.0 的計時器與秒錶另在 Sony XQ-AT72 與 Sony G8441 上驗證, 包括重新開機後繼續計時 (見開發路線圖 P7):
 
 | 裝置 | Android | 結果 |
 | --- | --- | --- |
@@ -192,6 +203,10 @@ ColorOS 新安裝應用程式的 "橫幅" 通知預設關閉, 系統因此不顯
 
 鬧鐘會響, 插件在首次解鎖之前也能運行. 聯動的腳本不會啟動, 因為 AutoJs6 在首次解鎖之前不能運行腳本, 解鎖後也不會補啟動.
 
+#### 裝置重新開機後, 計時器和秒錶會怎樣?
+
+計時器按關機前的到時時刻繼續計時, 關機期間亦計算在內. 關機期間已到時的計時器, 開機時過時不足 5 分鐘的會補響, 超過 5 分鐘的留下一條錯過的通知. 開機後系統校準時間時, 到時時刻可能隨之移動幾秒. 秒錶重新開機後轉為暫停, 讀數計到本次開機為止, 因此會多計關機的那段時間 (重新開機通常不到 1 分鐘).
+
 ******
 
 ### 權限與安全
@@ -201,7 +216,7 @@ ColorOS 新安裝應用程式的 "橫幅" 通知預設關閉, 系統因此不顯
 插件申請的權限與用途:
 
 - 精確鬧鐘 (`USE_EXACT_ALARM`, Android 12 與 12L 為 `SCHEDULE_EXACT_ALARM`): 準時響鈴. Android 13 起安裝即授予, Android 12 與 12L 需要在系統設定中允許 "鬧鐘和提醒".
-- 通知 (`POST_NOTIFICATIONS`): 顯示正在響的鬧鐘與錯過的鬧鐘. 缺少時鬧鐘照常發聲, 但沒有通知與響鈴介面.
+- 通知 (`POST_NOTIFICATIONS`): 顯示正在響的鬧鐘與錯過的鬧鐘, 以及運行中的計時器與秒錶. 缺少時鬧鐘與計時器照常發聲, 但沒有通知與響鈴介面.
 - 全螢幕提醒 (`USE_FULL_SCREEN_INTENT`): 在上鎖畫面顯示響鈴介面. Android 14 起可能未授予, 缺少時以浮動通知響鈴.
 - 懸浮視窗 (`SYSTEM_ALERT_WINDOW`, 可選): 系統不顯示全螢幕提醒時 (例如 ColorOS 的橫幅通知關閉) 用來開啟響鈴介面, 只在權限頁由用戶按需允許.
 - 開機啟動 (`RECEIVE_BOOT_COMPLETED`): 重新開機後重新排程, 首次解鎖前也能響鈴.
@@ -216,7 +231,7 @@ ColorOS 新安裝應用程式的 "橫幅" 通知預設關閉, 系統因此不顯
 - 受保護的入口: 能力服務與啟動入口受 AutoJs6 插件權限 (`org.autojs.permission.PLUGIN`) 保護, 其他應用程式無法直接調用; 接收系統時鐘請求的入口要求調用方持有 `com.android.alarm.permission.SET_ALARM`.
 - 網絡: 只用於檢查插件更新 (連接 GitHub, 可在設定頁關閉自動檢查), 不上傳鬧鐘或任何個人資料.
 - 儲存: 鬧鐘保存在插件私有目錄, 不參與雲端備份; 本機鈴聲透過系統檔案選擇器匯入, 不申請儲存權限.
-- 腳本權限: 腳本可以透過 `alarms` 模組讀寫插件中的全部鬧鐘, 包括在插件介面建立的鬧鐘; 登記的腳本保存在 AutoJs6 中, 插件介面只標記鬧鐘有腳本綁定並可以解除.
+- 腳本權限: 腳本可以透過 `alarms` 模組讀寫插件中的全部鬧鐘與計時器, 包括在插件介面建立的鬧鐘與計時器; 登記的腳本保存在 AutoJs6 中, 插件介面只標記鬧鐘有腳本綁定並可以解除.
 
 ******
 
@@ -253,6 +268,19 @@ native libraries: libandroidx.graphics.path.so only (Compose graphics-path, 4 AB
 ### 發行歷史
 
 ******
+
+#### v1.1.0
+
+_2026/11/12_
+
+- `提示` 腳本中的 alarms.timers 與 alarms.stopwatch 需要 AutoJs6 6.8.1 (內部版本號 6641) 或更高版本, 並需要本插件 1.1.0 或更高版本; 插件仍為 1.0.x 時呼叫會報錯並提示升級插件
+- `新增` 計時器: 最多 20 個計時器同時運行, 時長可以選預設 (1 分鐘至 1 小時) 或自訂 (1 秒至 100 小時), 可以加標籤, 可以暫停, 繼續, 加 1 分鐘與重置; 到時後與鬧鐘一樣響鈴
+- `新增` 運行中的計時器在通知欄顯示倒數, 可以直接在通知上暫停, 加 1 分鐘或取消; 裝置重新開機後計時器繼續計時, 關機期間到時的計時器在開機後補響 (過時超過 5 分鐘的只留下一條錯過的通知)
+- `新增` 秒錶: 開始, 暫停, 繼續與重置, 最多記錄 100 圈, 標出最快與最慢的一圈; 運行時在通知欄顯示, 可以在設定頁的 "計時器與秒錶" 分組中關閉
+- `新增` 底部導覽列在鬧鐘, 計時器與秒錶三個頁面之間切換
+- `新增` AutoJs6 腳本模組新增 alarms.timers 與 alarms.stopwatch (需要 AutoJs6 6.8.1): 開始, 查詢, 暫停, 繼續, 加減時間, 重置與取消計時器, 為計時器登記在響鈴等事件發生時啟動的腳本, 控制秒錶並記錄計圈 (參閱 [AutoJs6 文件](https://docs.autojs6.com/#/alarms))
+- `新增` 插件工具新增 timer_start, timer_list 與 timer_control, 可經 MCP Server 插件或 plugins.tools.call 開始, 查看, 暫停, 繼續, 加時, 重置與取消計時器
+- `新增` 系統時鐘對接新增計時器要求: 其他應用程式可以讓插件開始計時器, 開啟計時器頁或關閉正在響的計時器
 
 #### v1.0.1
 

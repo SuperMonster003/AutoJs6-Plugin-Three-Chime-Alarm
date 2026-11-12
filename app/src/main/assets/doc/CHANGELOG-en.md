@@ -4,6 +4,19 @@
 
 ******
 
+# v1.1.0
+
+###### 2026/11/12
+
+* `Hint` alarms.timers and alarms.stopwatch in scripts need AutoJs6 6.8.1 (internal build 6641) or later and this plugin 1.1.0 or later; with plugin 1.0.x the calls fail with a message asking to update the plugin
+* `Feature` Timers: up to 20 timers at once, with a preset length (1 minute to 1 hour) or a custom one (1 second to 100 hours) and an optional label; timers can be paused, resumed, extended by 1 minute and reset, and ring like alarms when they end
+* `Feature` A running timer shows its countdown in the notification shade, where it can be paused, extended by 1 minute or cancelled; timers keep counting after a reboot, and a timer that ended while the device was off rings after the boot (if it is more than 5 minutes overdue, only a missed notification is left)
+* `Feature` Stopwatch: start, pause, resume and reset, up to 100 laps, with the fastest and the slowest lap marked; while it runs it shows in the notification shade, which can be turned off in the "Timers and stopwatch" group of the settings
+* `Feature` The bottom navigation switches between the alarms, timers and stopwatch pages
+* `Feature` New alarms.timers and alarms.stopwatch in the AutoJs6 script module (needs AutoJs6 6.8.1): starting, querying, pausing, resuming, adding or removing time, resetting and cancelling timers, scripts registered for a timer to start on ring and other events, and controlling the stopwatch with laps (see [AutoJs6 documentation](https://docs.autojs6.com/#/alarms))
+* `Feature` New plugin tools timer_start, timer_list and timer_control to start, list, pause, resume, extend, reset and cancel timers through the MCP Server plugin or plugins.tools.call
+* `Feature` System clock: timer requests are handled too; other apps can have the plugin start a timer, open the timers page or dismiss a ringing timer
+
 # v1.0.1
 
 ###### 2026/11/08
