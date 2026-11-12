@@ -12,7 +12,11 @@ run: installs the debug APK (`adb install -r`, unless --no-install) and drives t
     1. the boot count grew by one;
     2. A runs with the same end (`endsAt`, wall clock, within 1 s since every reconcile realigns it from the
        elapsed-realtime clock): the time while the device was off counts (T110), its time left shrank by the wall time
-       between the two readings, its alarm clock is set again and it carries the new boot;
+       between the two readings, its alarm clock is set again and it carries the new boot. The clock the device kept
+       while off can be seconds off until network time corrects it shortly after the boot; within one boot the
+       elapsed-realtime clock counts (T110), so that correction moves the end by the same amount (roadmap Q36). The
+       script measures the device clock against the PC's before the reboot and as soon as adb is back, accepts the end
+       either unmoved or moved by that difference, and compares the alarm clock with A's end read again;
     3. B is still paused with exactly the time left it had;
     4. C, past its end by less than the 5 minute window, rings late (T16, log `ChimeTimer ring <id> ... late=`); the
        hook dismisses it like the notification button, and the dismissed timer is removed;
@@ -127,6 +131,18 @@ def timer_notifications(serial):
     return len(re.findall(rf"NotificationRecord\([^\n]*pkg={re.escape(PLUGIN)}[^\n]*tag=timer\b", text))
 
 
+def clock_offset(serial):
+    """The device's wall clock minus the PC's in ms (the median of three readings, each against the middle of its adb call)."""
+    offsets = []
+    for _ in range(3):
+        sent = time.time()
+        answer = shell(serial, "date", "+%s%3N", check=False)
+        received = time.time()
+        if answer.isdigit():
+            offsets.append(int(answer) - round((sent + received) / 2 * 1000))
+    return sorted(offsets)[len(offsets) // 2] if offsets else None
+
+
 def wait_for(predicate, seconds=20):
     deadline = time.time() + seconds
     while time.time() < deadline:
@@ -173,11 +189,16 @@ def run(serial, args):
         hook("timer_clear")
         return False
 
+    offset_before = clock_offset(serial)
     print(f"{serial}: reboot", flush=True)
     rebooted = time.time()
     adb(serial, "reboot", check=False)
     time.sleep(10)
     adb(serial, "wait-for-device", timeout=300)
+    offset_boot = clock_offset(serial)
+    # How far the clock the device kept while off is from the clock before the reboot (0 when unknown).
+    # zh-CN: 关机期间设备保持的时钟与重启前时钟之差 (未知时为 0).
+    boot_error = offset_boot - offset_before if offset_boot is not None and offset_before is not None else 0
     wait_for(lambda: shell(serial, "getprop", "sys.boot_completed", check=False) == "1", 240)
     boot_seconds = time.time() - rebooted
     after = wait_for(lambda: timers(hook, seconds=5), 90)
@@ -194,13 +215,25 @@ def run(serial, args):
     # Within one boot the end follows the elapsed-realtime clock and `endsAt` is realigned to the wall clock on every
     # reconcile (T110), so it may move by a few milliseconds; after the reboot it must not move further.
     # zh-CN: 同一次开机内到点时刻以开机时长时钟为准, 每次对账都把 `endsAt` 校准到墙钟 (T110), 可能移动几毫秒; 重启后不应再有更大的移动.
+    # A correction of the boot clock before this reading moves the end by -boot_error and adds boot_error to the drift.
+    # zh-CN: 在本次读数之前校正开机时钟会让到点时刻移动 -boot_error, 偏差多出 boot_error.
     moved = None if a2["endsAt"] is None else a2["endsAt"] - a["endsAt"]
+    unmoved = moved is not None and abs(moved) <= 1000 and abs(drift) <= 1500
+    corrected = moved is not None and abs(boot_error) > 1000 and abs(moved + boot_error) <= 1000 and abs(drift - boot_error) <= 1500
     report.check("after: A keeps its end, the time while off counts",
-                 a2["state"] == "running" and moved is not None and abs(moved) <= 1000 and abs(drift) <= 1500,
-                 f"{elapsed // 1000} s between the readings, A {a2['remaining'] // 1000} s left (drift {drift} ms), end moved {moved} ms")
+                 a2["state"] == "running" and (unmoved or corrected),
+                 f"{elapsed // 1000} s between the readings, A {a2['remaining'] // 1000} s left (drift {drift} ms), end moved {moved} ms, "
+                 f"boot clock {boot_error:+d} ms{' (corrected before the reading)' if corrected and not unmoved else ''}")
     report.check("after: A carries the new boot", a2["boot"] == after["bootCount"], f"boot {a2['boot']}")
-    report.check("after: alarm clock of A", wait_for(lambda: clock_near(serial, a2["endsAt"]), 20),
-                 f"clocks {len(timer_clocks(serial))}")
+    def clock_of_a():
+        # A's end read again: a correction of the wall clock after the first reading realigns it (T110).
+        # zh-CN: 重新读取 A 的到点时刻: 第一次读数之后校正墙钟会重新校准它 (T110).
+        current = timers(hook, seconds=5)
+        a_now = current["timers"].get(f"{PREFIX}-a") if current else None
+        return a_now is not None and clock_near(serial, a_now["endsAt"]) and a_now["endsAt"]
+    clock_end = wait_for(clock_of_a, 20)
+    report.check("after: alarm clock of A", bool(clock_end),
+                 f"clocks {len(timer_clocks(serial))}" + (f", end moved {clock_end - a['endsAt']} ms since the reboot" if clock_end else ""))
     report.check("after: B still paused with the same time left", b2["state"] == "paused" and b2["remaining"] == b["remaining"],
                  f"B {b2['remaining']} ms (before {b['remaining']} ms)")
 
