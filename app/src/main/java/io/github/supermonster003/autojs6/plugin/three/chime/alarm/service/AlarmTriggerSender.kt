@@ -19,12 +19,13 @@ import java.util.concurrent.ConcurrentHashMap
  * The `ALARM_TRIGGER` broadcasts of bound scripts (roadmap P2.5, T11, T12, appendix A section 5.3): for every event of
  * [AlarmEventBus], each host package whose hint table binds the alarm to the event type gets an explicit ordered
  * broadcast protected by the plugin signature permission, with the event JSON and its `occurrence`. A `change` with
- * action `remove` goes to every host with a row for the alarm, then the rows are dropped here too. Live callbacks do
+ * action `remove`, or the `dismiss` / `silence` that ends a timer (roadmap P7.3, T125), goes to every host with a row for
+ * it, then the rows are dropped here too. Live callbacks do
  * not wait for the answer (T76): the host's counts, or `scriptSkipped` (`locked` before the first unlock, `unavailable`
  * when no host answered), only reach the log (`adb logcat -s ChimeTrigger`) and [lastOutcome]; nothing is retried.
  * zh-CN: 绑定脚本的 `ALARM_TRIGGER` 广播 (路线图 P2.5, T11, T12, 附录 A 第 5.3 节): 对 [AlarmEventBus] 的每个事件, 凡提示表把该闹钟绑定到该事件类型的
- * 宿主包都会收到一条显式的有序广播, 受插件签名权限保护, 带事件 JSON 与 `occurrence`. action 为 `remove` 的 `change` 发给所有登记了该闹钟的宿主, 随后
- * 这里也删除这些行. 实时回调不等待应答 (T76): 宿主的计数, 或 `scriptSkipped` (首次解锁前为 `locked`, 没有宿主应答时为 `unavailable`), 只写入日志
+ * 宿主包都会收到一条显式的有序广播, 受插件签名权限保护, 带事件 JSON 与 `occurrence`. action 为 `remove` 的 `change`, 或结束计时器的 `dismiss` / `silence` (路线图 P7.3,
+ * T125), 发给所有登记了它的宿主, 随后这里也删除这些行. 实时回调不等待应答 (T76): 宿主的计数, 或 `scriptSkipped` (首次解锁前为 `locked`, 没有宿主应答时为 `unavailable`), 只写入日志
  * (`adb logcat -s ChimeTrigger`) 与 [lastOutcome]; 不重试.
  */
 class AlarmTriggerSender(context: Context, private val hints: BindingHints, bus: AlarmEventBus) {
@@ -54,7 +55,7 @@ class AlarmTriggerSender(context: Context, private val hints: BindingHints, bus:
 
     private fun send(event: AlarmEvent) {
         val owners = hints.targets(event)
-        val removal = event.type == AlarmContract.EVENT_CHANGE && event.action == AlarmContract.CHANGE_REMOVE
+        val removal = hints.ends(event)
         if (owners.isNotEmpty()) {
             val json = event.toJson()
             if (json.toByteArray(Charsets.UTF_8).size > AlarmLimits.MAX_EVENT_JSON_BYTES) {

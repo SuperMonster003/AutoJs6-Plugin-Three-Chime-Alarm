@@ -182,7 +182,7 @@ class RingService : Service() {
             .setOnlyAlertOnce(true)
             .setShowWhen(false)
         if (ring == null) return builder.setContentTitle(texts.getString(R.string.alarm_default_label)).build()
-        val label = ring.record.spec.label?.takeIf { it.isNotBlank() } ?: texts.getString(R.string.alarm_default_label)
+        val label = ring.label?.takeIf { it.isNotBlank() } ?: texts.getString(if (ring.isTimer) R.string.timer_default_label else R.string.alarm_default_label)
         val screen = ringScreen()
         val fullScreen = fullScreenAllowed(this)
         val snooze = ring.canSnooze && runtime.schedule.canSnooze()

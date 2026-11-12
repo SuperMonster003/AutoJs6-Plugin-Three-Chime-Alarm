@@ -30,16 +30,19 @@ class KeepAliveSettings(private val storage: Storage) {
 }
 
 /**
- * When the keep-alive service runs (T100): while the setting is on and at least one alarm is enabled. Without an enabled
- * alarm nothing is due, so the service and its notification go away; the host's `alarms` calls never depend on it.
- * zh-CN: 保活服务何时运行 (T100): 设置打开且至少有一个启用的闹钟时. 没有启用的闹钟时不会有闹钟到点, 服务与其通知随之消失; 宿主的 `alarms` 调用从不依赖它.
+ * When the keep-alive service runs (T100): while the setting is on and at least one alarm is enabled or a timer is
+ * running or snoozed (T117). Otherwise nothing is due, so the service and its notification go away; the host's `alarms`
+ * calls never depend on it.
+ * zh-CN: 保活服务何时运行 (T100): 设置打开, 且至少有一个启用的闹钟或一个运行中 / 贪睡中的计时器时 (T117). 否则不会有东西到点, 服务与其通知随之消失;
+ * 宿主的 `alarms` 调用从不依赖它.
  */
 object KeepAlivePolicy {
 
     /** What to do with the service. zh-CN: 对服务的处理. */
     enum class Action { START, STOP, NONE }
 
-    fun shouldRun(enabled: Boolean, alarms: Collection<AlarmRecord>): Boolean = enabled && alarms.any { it.enabled }
+    fun shouldRun(enabled: Boolean, alarms: Collection<AlarmRecord>, timersActive: Boolean = false): Boolean =
+        enabled && (timersActive || alarms.any { it.enabled })
 
     /**
      * The action for a service that is [running] in the foreground now. A running service is never started again, and a

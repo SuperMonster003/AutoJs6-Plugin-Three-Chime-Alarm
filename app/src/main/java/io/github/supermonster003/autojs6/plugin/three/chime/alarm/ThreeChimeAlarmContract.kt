@@ -46,13 +46,13 @@ internal object ThreeChimeAlarmContract {
     const val CAPABILITY_FEATURES = AlarmCapabilityKeys.FEATURES
 
     /**
-     * Features this build implements (roadmap T25): `alarms` (1.0.0, roadmap P2.5); `timers` and `stopwatch` (1.1.0),
-     * `holidays` and `beforeRing` (1.2.0) and `challenges` (1.3.0) join as each one lands, and the host never calls a
-     * method whose feature is not advertised (the plugin answers such a call `UNSUPPORTED`).
-     * zh-CN: 本构建实现的功能 (路线图 T25): `alarms` (1.0.0, 路线图 P2.5); `timers` 与 `stopwatch` (1.1.0), `holidays` 与 `beforeRing` (1.2.0),
-     * `challenges` (1.3.0) 在各自落地时加入, 宿主不调用未声明功能的方法 (插件对这类调用答 `UNSUPPORTED`).
+     * Features this build implements (roadmap T25): `alarms` (1.0.0, roadmap P2.5), `timers` and `stopwatch` (1.1.0,
+     * roadmap P7.3); `holidays` and `beforeRing` (1.2.0) and `challenges` (1.3.0) join as each one lands, and the host
+     * never calls a method whose feature is not advertised (the plugin answers such a call `UNSUPPORTED`).
+     * zh-CN: 本构建实现的功能 (路线图 T25): `alarms` (1.0.0, 路线图 P2.5), `timers` 与 `stopwatch` (1.1.0, 路线图 P7.3); `holidays` 与 `beforeRing`
+     * (1.2.0), `challenges` (1.3.0) 在各自落地时加入, 宿主不调用未声明功能的方法 (插件对这类调用答 `UNSUPPORTED`).
      */
-    val FEATURES: List<String> = listOf(AlarmFeatures.ALARMS)
+    val FEATURES: List<String> = listOf(AlarmFeatures.ALARMS, AlarmFeatures.TIMERS, AlarmFeatures.STOPWATCH)
 
     /** Resource reference of the localized Plugin Center instruction. zh-CN: 插件中心本地化说明的资源引用. */
     const val INSTRUCTION_REFERENCE = "@raw/plugin_instruction"

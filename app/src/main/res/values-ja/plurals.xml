@@ -45,6 +45,9 @@
     <plurals name="ringtones_import_full">
         <item quantity="other">インポートできるアラーム音は %1$d 件までです. 先に 1 件削除してください</item>
     </plurals>
+    <plurals name="stopwatch_laps">
+        <item quantity="other">%1$d ラップ</item>
+    </plurals>
     <plurals name="update_ignored_count">
         <item quantity="other">無視したリリース %1$d 件</item>
     </plurals>

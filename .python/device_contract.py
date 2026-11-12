@@ -11,7 +11,8 @@ activity to the front, waits for its result file and prints one PASS / FAIL / SK
   false, add / list fail with PLUGIN_UNAVAILABLE, an unknown key still fails with INVALID_OPTIONS first.
 - full: isAvailable() and capabilities(); the examples of roadmap appendix A section 12 (example 1 as written fails
   with PLUGIN_INCOMPATIBLE: the host refuses the option of the 1.2.0 feature holidays before the call; then as in
-  1.0.0 with a weekday rule and its binding; the monthly and the shift rule with preview(); alarms.holidays and alarms.timers are absent, the list / skipNext /
+  1.0.0 with a weekday rule and its binding; the monthly and the shift rule with preview(); alarms.holidays is absent and alarms.timers is absent or
+  an object (it comes with the host timer API of roadmap P7.3, checked by the host's device_alarms_timers_check.py), the list / skipNext /
   cancelSkip part runs on the test alarms; the pomodoro as a one-shot alarm with speech; alarms.system.setAlarm to
   the plugin's package and next()); the error codes INVALID_OPTIONS, INVALID_RULE, NOT_FOUND (host and plugin side),
   IO_FAILED (missing file on the host, a file that is not audio in the plugin), LIMIT_EXCEEDED (a 21 MiB file on the
@@ -235,9 +236,10 @@ function examples() {
         return listed.length + ' skipped and restored';
     });
 
-    check('example 3: alarms.timers absent in 1.0.0', function () {
-        assert(alarms.timers === undefined || alarms.timers === null, typeof alarms.timers);
-        return 'alarms.timers ' + typeof alarms.timers;
+    check('example 3: alarms.timers absent or an object', function () {
+        var t = alarms.timers;
+        assert(t === undefined || t === null || typeof t === 'object', typeof t);
+        return 'alarms.timers ' + (t === undefined || t === null ? 'absent (host without the timer API)' : typeof t);
     });
     check('example 3 in 1.0.0: pomodoro as a one-shot alarm', function () {
         var due = Date.now() + 25 * 60e3;

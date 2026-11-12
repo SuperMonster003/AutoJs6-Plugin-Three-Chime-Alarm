@@ -13,6 +13,7 @@ import org.autojs.plugin.alarm.api.AlarmSpeak
 import org.autojs.plugin.alarm.api.AlarmSpec
 import org.autojs.plugin.alarm.api.AlarmTime
 import org.autojs.plugin.alarm.api.AlarmValues
+import org.autojs.plugin.alarm.api.TimerSpec
 import java.time.DateTimeException
 import java.time.LocalDate
 import java.time.ZoneId
@@ -96,6 +97,26 @@ class AlarmOptionsValidator(
             autoSilenceMinutes = autoSilence,
             dismiss = dismiss,
         )
+    }
+
+    /**
+     * Checks the ring options of a timer (protocol `TimerSpec`, roadmap P7.1): `label`, `sound`, `vibrate`,
+     * `vibratePattern`, `speak` and `autoSilenceMinutes`, with the same rules as for an alarm; any other key throws
+     * `INVALID_OPTIONS`.
+     * zh-CN: 校验计时器的响铃选项 (协议 `TimerSpec`, 路线图 P7.1): `label`, `sound`, `vibrate`, `vibratePattern`, `speak`, `autoSilenceMinutes`,
+     * 规则与闹钟相同; 其他键报 `INVALID_OPTIONS`.
+     */
+    fun timerOptions(values: Map<String, Any?>): TimerSpec {
+        val reader = Reader(values, "")
+        reader.rejectUnknown(TimerSpec.KEYS)
+        val label = reader.text(AlarmOptionKeys.LABEL, AlarmLimits.MAX_LABEL_CHARS)
+        val sound = reader.group(AlarmOptionKeys.SOUND)?.let { sound(it) }
+        val vibrate = reader.boolean(AlarmOptionKeys.VIBRATE)
+        val vibratePattern = vibratePattern(reader)
+        if (vibrate == false && vibratePattern != null) throw invalid("vibratePattern implies vibrate, but vibrate is false")
+        val speak = reader.group(AlarmOptionKeys.SPEAK)?.let { speak(it) }
+        val autoSilence = reader.int(AlarmOptionKeys.AUTO_SILENCE_MINUTES, AlarmLimits.MIN_AUTO_SILENCE_MINUTES, AlarmLimits.MAX_AUTO_SILENCE_MINUTES)
+        return TimerSpec(label, sound, vibrate, vibratePattern, speak, autoSilence)
     }
 
     /**

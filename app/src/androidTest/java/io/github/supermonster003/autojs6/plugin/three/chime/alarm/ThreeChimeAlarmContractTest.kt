@@ -90,8 +90,8 @@ class ThreeChimeAlarmContractTest {
             )
             assertEquals(ThreeChimeAlarmContract.REQUIRED_HOST_VERSION, capabilities.getLong(PluginCapabilityKeys.REQUIRES_HOST_VERSION))
             assertEquals(1, capabilities.getInt(ThreeChimeAlarmContract.CAPABILITY_CONTRACT_VERSION))
-            // Roadmap T25: version 1.0.0 declares the alarms feature only (P2.5).
-            assertArrayEquals(arrayOf(AlarmFeatures.ALARMS), capabilities.getStringArray(ThreeChimeAlarmContract.CAPABILITY_FEATURES))
+            // Roadmap T25: version 1.1.0 adds timers and stopwatch once they work end to end (P7.3).
+            assertArrayEquals(FEATURES, capabilities.getStringArray(ThreeChimeAlarmContract.CAPABILITY_FEATURES))
         }
     }
 
@@ -110,7 +110,7 @@ class ThreeChimeAlarmContractTest {
             val capabilities = plugin.capabilities
             assertEquals(ThreeChimeAlarmContract.REQUIRED_HOST_VERSION, capabilities.getLong(PluginCapabilityKeys.REQUIRES_HOST_VERSION))
             assertEquals(1, capabilities.getInt(ThreeChimeAlarmContract.CAPABILITY_CONTRACT_VERSION))
-            assertArrayEquals(arrayOf(AlarmFeatures.ALARMS), capabilities.getStringArray(ThreeChimeAlarmContract.CAPABILITY_FEATURES))
+            assertArrayEquals(FEATURES, capabilities.getStringArray(ThreeChimeAlarmContract.CAPABILITY_FEATURES))
             val permissions = requireNotNull(capabilities.getBundle(AlarmCapabilityKeys.PERMISSIONS))
             assertEquals(AlarmContract.PERMISSIONS, permissions.keySet())
         }
@@ -215,6 +215,9 @@ class ThreeChimeAlarmContractTest {
 
     private companion object {
         const val PLUGIN_PERMISSION = "org.autojs.permission.PLUGIN"
+
+        /** Roadmap T25 / P7.3: what version 1.1.0 declares. zh-CN: 路线图 T25 / P7.3: 1.1.0 版声明的功能. */
+        val FEATURES = arrayOf(AlarmFeatures.ALARMS, AlarmFeatures.TIMERS, AlarmFeatures.STOPWATCH)
 
         @Suppress("UNCHECKED_CAST")
         val pluginInfoCreator: Parcelable.Creator<PluginInfo> =

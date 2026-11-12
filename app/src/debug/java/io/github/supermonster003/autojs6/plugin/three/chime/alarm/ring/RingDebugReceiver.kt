@@ -127,7 +127,7 @@ class RingDebugReceiver : BroadcastReceiver() {
         }
         return listOf(
             "sounding=${sounding?.alarmId ?: "none"}",
-            "label=${sounding?.record?.spec?.label ?: "none"}",
+            "label=${sounding?.label ?: "none"}",
             "occurrence=${sounding?.occurrence ?: "none"}",
             "queued=${rings.queued.joinToString(",") { it.alarmId }.ifEmpty { "none" }}",
             "ringing=${rings.ringing().joinToString(",") { "${it.label}:${if (it.snoozed) "snoozed" else "ringing"}:${it.snoozeCount}" }.ifEmpty { "none" }}",

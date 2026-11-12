@@ -114,15 +114,15 @@ class AlarmPluginBinder(context: Context) : IAlarmPlugin.Stub() {
 
     override fun decideBeforeRing(decision: Bundle?): Bundle = unsupported("decideBeforeRing", "beforeRing")
 
-    override fun startTimer(request: Bundle?): Bundle = unsupported("startTimer", "timers")
+    override fun startTimer(request: Bundle?): Bundle = call("startTimer", request) { runtime.timerApi.startTimer(it) }
 
-    override fun getTimer(request: Bundle?): Bundle = unsupported("getTimer", "timers")
+    override fun getTimer(request: Bundle?): Bundle = call("getTimer", request) { runtime.timerApi.getTimer(it) }
 
-    override fun listTimers(query: Bundle?): Bundle = unsupported("listTimers", "timers")
+    override fun listTimers(query: Bundle?): Bundle = call("listTimers", query) { runtime.timerApi.listTimers(it) }
 
-    override fun controlTimer(request: Bundle?): Bundle = unsupported("controlTimer", "timers")
+    override fun controlTimer(request: Bundle?): Bundle = call("controlTimer", request) { runtime.timerApi.controlTimer(it) }
 
-    override fun stopwatch(request: Bundle?): Bundle = unsupported("stopwatch", "stopwatch")
+    override fun stopwatch(request: Bundle?): Bundle = call("stopwatch", request) { runtime.timerApi.stopwatch(it) }
 
     override fun holidayRegions(query: Bundle?): Bundle = unsupported("holidayRegions", "holidays")
 

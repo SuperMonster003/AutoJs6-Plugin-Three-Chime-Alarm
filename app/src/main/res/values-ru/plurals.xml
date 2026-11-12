@@ -90,6 +90,12 @@
         <item quantity="many">Можно импортировать не более %1$d мелодий. Сначала удалите одну</item>
         <item quantity="other">Можно импортировать не более %1$d мелодии. Сначала удалите одну</item>
     </plurals>
+    <plurals name="stopwatch_laps">
+        <item quantity="one">%1$d круг</item>
+        <item quantity="few">%1$d круга</item>
+        <item quantity="many">%1$d кругов</item>
+        <item quantity="other">%1$d круга</item>
+    </plurals>
     <plurals name="update_ignored_count">
         <item quantity="one">Игнорируется %1$d выпуск</item>
         <item quantity="few">Игнорируется %1$d выпуска</item>

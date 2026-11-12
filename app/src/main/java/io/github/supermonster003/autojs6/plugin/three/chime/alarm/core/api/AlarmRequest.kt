@@ -34,6 +34,13 @@ class AlarmRequest private constructor(val values: Map<String, Any?>) {
         return AlarmValues.int(values, key) ?: throw AlarmException.invalidOptions("'$key' must be an integer")
     }
 
+    fun long(key: String): Long? {
+        if (values[key] == null) return null
+        return AlarmValues.long(values, key) ?: throw AlarmException.invalidOptions("'$key' must be an integer")
+    }
+
+    fun requireLong(key: String): Long = long(key) ?: throw missing(key)
+
     fun map(key: String): Map<String, Any?>? {
         if (values[key] == null) return null
         return AlarmValues.map(values, key) ?: throw AlarmException.invalidOptions("'$key' must be an object")

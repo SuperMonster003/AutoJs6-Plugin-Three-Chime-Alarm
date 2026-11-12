@@ -12,7 +12,8 @@
 4. activation and getInfo: an AutoJs6 script (RunIntentActivity, as in 3-Macaw Speech) starts the Wake activity (it
    needs org.autojs.permission.PLUGIN, which the shell lacks), binds the INFO service explicitly and calls getInfo(),
    then binds the ALARM service, checks the IAlarmPlugin descriptor and, on a host with the alarm contract, reads the
-   capabilities (alarmFeatures [alarms], the permission states) and calls listAlarms once (roadmap P2.5). The
+   capabilities (alarmFeatures [alarms, timers, stopwatch] since 1.1.0, the permission states) and calls listAlarms once
+   (roadmap P2.5, P7.3). The
    Wake start is confirmed from the ActivityManager log lines after a marker.
 5. --screenshot <dir>: the script opens AutoJs6's Plugin Center and the screen is saved as
    plugin-center-<serial>-system-<light|dark>.png. The name records the system night mode, which picks the launcher
@@ -47,6 +48,8 @@ DISCOVERY = (
     ("org.autojs.plugin.ALARM", "alarm", f"{PLUGIN}/.service.ThreeChimeAlarmService"),
 )
 CAPABILITY_DESCRIPTOR = "org.autojs.plugin.alarm.api.IAlarmPlugin"
+# T25: the features the plugin declares, alarms since 1.0.0, timers and stopwatch since 1.1.0 (roadmap P7.3).
+FEATURES = "alarms,timers,stopwatch"
 PLUGIN_CENTER = "org.autojs.autojs.core.plugin.center.PluginCenterActivity"
 
 SCRIPT = """
@@ -300,7 +303,7 @@ def run(serial, args):
            f"[{info.get('capabilityKeys')}], {info.get('ms')} ms {info.get('error') or ''}".rstrip())
     alarm = steps.get("alarm", {})
     if alarm.get("proxy"):
-        alarm_ok = alarm.get("features") == "alarms" and alarm.get("listError") == ""
+        alarm_ok = alarm.get("features") == FEATURES and alarm.get("listError") == ""
         alarm_detail = (f"features [{alarm.get('features')}], permissions [{alarm.get('permissions')}], listAlarms "
                         f"{alarm.get('listError') or 'ok'}")
     else:

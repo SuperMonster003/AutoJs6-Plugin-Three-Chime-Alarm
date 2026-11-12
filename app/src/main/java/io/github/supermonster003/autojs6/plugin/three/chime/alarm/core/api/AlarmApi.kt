@@ -48,6 +48,7 @@ class AlarmApi(
     private val locale: () -> Locale = Locale::getDefault,
     private val source: String = AlarmContract.SOURCE_SCRIPT,
     private val by: String = AlarmContract.BY_SCRIPT,
+    private val timerExists: (String) -> Boolean = { false },
 ) {
 
     fun addAlarm(values: Map<String, Any?>): Map<String, Any?> {
@@ -163,7 +164,7 @@ class AlarmApi(
     /** `setBindingHints` of the host package [owner]. zh-CN: 宿主包 [owner] 的 `setBindingHints`. */
     fun setBindingHints(owner: String, values: Map<String, Any?>): Map<String, Any?> {
         val request = AlarmRequest.of(values, HINTS_KEYS)
-        val unknown = hints.replace(owner, request.values) { repository.get(it) != null }
+        val unknown = hints.replace(owner, request.values) { repository.get(it) != null || timerExists(it) }
         return mapOf(AlarmResultKeys.UNKNOWN_IDS to unknown)
     }
 

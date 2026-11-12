@@ -274,12 +274,19 @@ class ManifestContractTest {
     fun `the scheduling receivers are private, direct boot aware and hear the T8 broadcasts`() {
         val receivers = application.children("receiver").associateBy { it.android("name") }
         assertEquals(
-            listOf(".schedule.AlarmTriggerReceiver", ".ring.RingKickReceiver", ".schedule.AlarmRescheduleReceiver", ".ui.appearance.LauncherIconUpdateReceiver"),
+            listOf(
+                ".schedule.AlarmTriggerReceiver", ".ring.RingKickReceiver", ".schedule.AlarmRescheduleReceiver",
+                ".timer.TimerTriggerReceiver", ".timer.TimerActionReceiver", ".ui.appearance.LauncherIconUpdateReceiver",
+            ),
             receivers.keys.toList(),
         )
         // Roadmap T97: the ring service restart receiver is private and direct boot aware like the scheduling ones.
         assertTrue(receivers.getValue(".ring.RingKickReceiver").children("intent-filter").isEmpty())
-        listOf(".schedule.AlarmTriggerReceiver", ".ring.RingKickReceiver", ".schedule.AlarmRescheduleReceiver").map(receivers::getValue).forEach {
+        // Roadmap P7.1 / P7.2: the timer wake-ups and notification actions are private and direct boot aware too.
+        listOf(".timer.TimerTriggerReceiver", ".timer.TimerActionReceiver").forEach { assertTrue(receivers.getValue(it).children("intent-filter").isEmpty()) }
+        listOf(
+            ".schedule.AlarmTriggerReceiver", ".ring.RingKickReceiver", ".schedule.AlarmRescheduleReceiver", ".timer.TimerTriggerReceiver", ".timer.TimerActionReceiver",
+        ).map(receivers::getValue).forEach {
             assertEquals("false", it.android("exported"))
             assertEquals("true", it.android("directBootAware"))
         }

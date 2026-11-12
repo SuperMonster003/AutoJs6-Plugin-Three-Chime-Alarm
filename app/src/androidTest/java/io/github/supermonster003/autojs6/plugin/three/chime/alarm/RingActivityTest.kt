@@ -128,7 +128,7 @@ class RingActivityTest {
         val ids = setOf(first.id, second.id)
         waitFor("both alarms ring", RING_WAIT_MILLIS) { runtime.rings.sounding?.alarmId in ids && runtime.rings.queued.size == 1 }
         val screen = showRingScreen()
-        val sounding = runtime.rings.sounding!!.record.spec.label!!
+        val sounding = runtime.rings.sounding!!.label!!
         val waiting = if (sounding == first.spec.label) second.spec.label!! else first.spec.label!!
 
         compose.onNodeWithTag(RingActivity.TAG_LABEL).assert(hasText(sounding))
@@ -136,7 +136,7 @@ class RingActivityTest {
 
         val rtl = screen.window.decorView.layoutDirection == View.LAYOUT_DIRECTION_RTL
         compose.onNodeWithTag(RingActivity.TAG_DISMISS).performTouchInput { if (rtl) swipeLeft() else swipeRight() }
-        waitFor("the second alarm sounds", WAIT_MILLIS) { runtime.rings.sounding?.record?.spec?.label == waiting }
+        waitFor("the second alarm sounds", WAIT_MILLIS) { runtime.rings.sounding?.label == waiting }
         compose.waitUntil(WAIT_MILLIS) {
             compose.onAllNodesWithTag(RingActivity.TAG_LABEL).fetchSemanticsNodes().any { node ->
                 node.config.getOrNull(SemanticsProperties.Text)?.any { it.text == waiting } == true

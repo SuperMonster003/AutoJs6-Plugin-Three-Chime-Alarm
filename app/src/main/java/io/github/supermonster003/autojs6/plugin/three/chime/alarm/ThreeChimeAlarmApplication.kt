@@ -42,13 +42,22 @@ class ThreeChimeAlarmApplication : Application() {
             enableVibration(false)
             setShowBadge(false)
         }
-        getSystemService(NotificationManager::class.java).createNotificationChannels(listOf(ring, missed, keepAlive))
+        // The ongoing timer and stopwatch notifications (roadmap P7.1 / P7.2, T121): low importance, silent, no badge.
+        // zh-CN: 计时器与秒表的常驻通知 (路线图 P7.1 / P7.2, T121): 低重要性, 静音, 不显示角标.
+        val timer = NotificationChannel(CHANNEL_TIMER, getString(R.string.notification_channel_timer_name), NotificationManager.IMPORTANCE_LOW).apply {
+            description = getString(R.string.notification_channel_timer_description)
+            setSound(null, null)
+            enableVibration(false)
+            setShowBadge(false)
+        }
+        getSystemService(NotificationManager::class.java).createNotificationChannels(listOf(ring, missed, keepAlive, timer))
     }
 
     internal companion object {
         const val CHANNEL_RING = "ring"
         const val CHANNEL_MISSED = "missed"
         const val CHANNEL_KEEP_ALIVE = "keep-alive"
+        const val CHANNEL_TIMER = "timer"
     }
 
 }

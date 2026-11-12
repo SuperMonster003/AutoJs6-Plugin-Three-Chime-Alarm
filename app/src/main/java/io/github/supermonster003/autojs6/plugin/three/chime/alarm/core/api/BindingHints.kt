@@ -3,6 +3,7 @@ package io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.api
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmException
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmRecord
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.io.AtomicFiles
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.timer.TimerRecord
 import org.autojs.plugin.alarm.api.AlarmContract
 import org.autojs.plugin.alarm.api.AlarmEvent
 import org.autojs.plugin.alarm.api.AlarmJson
@@ -32,10 +33,12 @@ class BindingHints(private val file: File) {
 
     /**
      * Replaces the table of [owner] with the `hints` of [values] (`setBindingHints`) and answers the `unknownIds`: rows
-     * whose alarm [known] does not report (timer ids included) are left out of the table. A malformed row refuses the
+     * whose alarm or timer [known] does not report are left out of the table (an existing timer id is kept since 1.1.0,
+     * T124; 1.0.x reported every timer id). A malformed row refuses the
      * whole call with `INVALID_OPTIONS`: an unknown key or event, a repeated alarm, `leadSeconds` outside 15 - 300 or
      * without the `beforeRing` event (T32); more than [MAX_ROWS] rows is `LIMIT_EXCEEDED`, a failed save `IO_FAILED`.
-     * zh-CN: 以 [values] 的 `hints` 替换 [owner] 的提示表 (`setBindingHints`), 返回 `unknownIds`: [known] 不认识的闹钟 (包括计时器 id) 的行不进表.
+     * zh-CN: 以 [values] 的 `hints` 替换 [owner] 的提示表 (`setBindingHints`), 返回 `unknownIds`: [known] 不认识的闹钟或计时器的行不进表 (自 1.1.0 起
+     * 存在的计时器 id 保留, T124; 1.0.x 报告全部计时器 id).
      * 格式错误的行使整个调用报 `INVALID_OPTIONS`: 未知键或事件, 重复的闹钟, `leadSeconds` 不在 15 - 300 或没有 `beforeRing` 事件 (T32); 超过
      * [MAX_ROWS] 行报 `LIMIT_EXCEEDED`, 保存失败报 `IO_FAILED`.
      */
@@ -44,7 +47,7 @@ class BindingHints(private val file: File) {
         val kept = ArrayList<BindingHint>()
         val unknown = ArrayList<String>()
         for (row in rows) {
-            if (AlarmRecord.isValidId(row.alarmId) && known(row.alarmId)) kept += row else unknown += row.alarmId
+            if (isValidId(row.alarmId) && known(row.alarmId)) kept += row else unknown += row.alarmId
         }
         synchronized(lock) {
             val next = LinkedHashMap(loaded())
@@ -56,17 +59,28 @@ class BindingHints(private val file: File) {
     }
 
     /**
-     * The host packages that get the trigger broadcast of [event]: a row of the alarm whose events contain the event
-     * type, or any row of the alarm for a `change` with action `remove`, so the host can drop the bindings.
-     * zh-CN: 应收到 [event] 触发广播的宿主包: 该闹钟有一行且其事件包含该事件类型; 对 action 为 `remove` 的 `change`, 只要该闹钟有任何一行即可,
-     * 以便宿主删除绑定.
+     * The host packages that get the trigger broadcast of [event]: a row of the alarm or timer whose events contain the
+     * event type, or any row of it for an event that [ends] it (a `change` with action `remove`, the `dismiss` or
+     * `silence` of a timer, T125), so the host can drop the bindings.
+     * zh-CN: 应收到 [event] 触发广播的宿主包: 该闹钟或计时器有一行且其事件包含该事件类型; 对 [ends] 的事件 (action 为 `remove` 的 `change`, 计时器的
+     * `dismiss` 或 `silence`, T125), 只要有任何一行即可, 以便宿主删除绑定.
      */
     fun targets(event: AlarmEvent): List<String> {
-        if (event.kind != AlarmContract.KIND_ALARM) return emptyList()
-        val removal = event.type == AlarmContract.EVENT_CHANGE && event.action == AlarmContract.CHANGE_REMOVE
+        val removal = ends(event)
         return synchronized(lock) {
             loaded().filterValues { rows -> rows.any { it.alarmId == event.alarmId && (removal || event.type in it.events) } }.keys.toList()
         }
+    }
+
+    /**
+     * Whether [event] ends its alarm or timer, after which the rows are dropped: a `change` with action `remove`, or
+     * the `dismiss` or `silence` of a timer, which removes it (T125).
+     * zh-CN: [event] 是否结束其闹钟或计时器 (之后删除其行): action 为 `remove` 的 `change`, 或计时器的 `dismiss` / `silence` (计时器随之删除, T125).
+     */
+    fun ends(event: AlarmEvent): Boolean = when (event.kind) {
+        AlarmContract.KIND_ALARM -> event.type == AlarmContract.EVENT_CHANGE && event.action == AlarmContract.CHANGE_REMOVE
+        AlarmContract.KIND_TIMER -> event.type == AlarmContract.EVENT_DISMISS || event.type == AlarmContract.EVENT_SILENCE
+        else -> false
     }
 
     /** Whether any host has a row for [alarmId] (the snapshot's `hasBindings`). zh-CN: 是否有宿主为 [alarmId] 登记了行. */
@@ -149,7 +163,7 @@ class BindingHints(private val file: File) {
                         val owner = AlarmValues.string(entry, KEY_PACKAGE)?.takeIf { it.isNotEmpty() } ?: continue
                         val rows = AlarmValues.mapList(entry, AlarmOptionKeys.HINTS).orEmpty()
                             .mapNotNull { runCatching { BindingHint.fromValues(it) }.getOrNull() }
-                            .filter { AlarmRecord.isValidId(it.alarmId) }
+                            .filter { isValidId(it.alarmId) }
                         if (rows.isNotEmpty()) map[owner] = rows
                     }
                 }
@@ -193,6 +207,9 @@ class BindingHints(private val file: File) {
         private const val KEY_OWNERS = "owners"
         private const val KEY_PACKAGE = "package"
         private const val TEMP_PREFIX = ".hints-"
+
+        /** An alarm id or, since 1.1.0, a timer id (T124). zh-CN: 闹钟 id, 或自 1.1.0 起的计时器 id (T124). */
+        private fun isValidId(id: String): Boolean = AlarmRecord.isValidId(id) || TimerRecord.isValidId(id)
 
         private val ROW_KEYS: Set<String> = linkedSetOf(AlarmOptionKeys.HINT_ALARM_ID, AlarmOptionKeys.EVENTS, AlarmOptionKeys.LEAD_SECONDS)
     }

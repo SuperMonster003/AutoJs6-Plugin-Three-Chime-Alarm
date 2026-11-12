@@ -4,6 +4,7 @@ import org.autojs.plugin.alarm.api.AlarmContract
 import org.autojs.plugin.alarm.api.AlarmLimits
 import org.autojs.plugin.alarm.api.AlarmSpeak
 import org.autojs.plugin.alarm.api.AlarmSpec
+import org.autojs.plugin.alarm.api.TimerSpec
 
 /**
  * What one alarm sounds like (roadmap P2.4, appendix A section 4.4), the plugin defaults applied to the stored options:
@@ -82,6 +83,30 @@ data class RingSettings(
                 snoozeMinutes = snooze?.minutes ?: defaults.snoozeMinutes,
                 snoozeMax = snooze?.max ?: defaults.snoozeMax,
                 autoSilenceMinutes = spec.autoSilenceMinutes ?: defaults.autoSilenceFor(challenge != null),
+            )
+        }
+
+        /**
+         * The settings of a timer (roadmap P7.1, T116): its own sound, vibration, speech and auto silence, the rest from
+         * the plugin [defaults]; a timer snoozes with the default snooze (a timer has no snooze options).
+         * zh-CN: 计时器的响铃设置 (路线图 P7.1, T116): 铃声, 振动, 朗读与自动停止取其自身选项, 其余取插件默认值 [defaults]; 计时器没有贪睡选项, 按默认贪睡.
+         */
+        fun ofTimer(spec: TimerSpec, defaults: RingDefaults = RingDefaults.PROTOCOL): RingSettings {
+            val sound = spec.sound
+            return RingSettings(
+                source = sound?.source ?: defaults.sound,
+                volume = sound?.volume,
+                rampSeconds = sound?.rampSeconds ?: 0,
+                vibration = when {
+                    spec.vibratePattern != null -> spec.vibratePattern
+                    spec.vibrate ?: defaults.vibrate -> DEFAULT_VIBRATION
+                    else -> null
+                },
+                speak = spec.speak?.takeIf { it.text.isNotBlank() },
+                snoozeEnabled = defaults.snoozeEnabled,
+                snoozeMinutes = defaults.snoozeMinutes,
+                snoozeMax = defaults.snoozeMax,
+                autoSilenceMinutes = spec.autoSilenceMinutes ?: defaults.autoSilenceFor(false),
             )
         }
     }

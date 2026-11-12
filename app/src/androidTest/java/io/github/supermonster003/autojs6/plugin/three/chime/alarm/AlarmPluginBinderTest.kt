@@ -41,15 +41,16 @@ import java.util.concurrent.atomic.AtomicReference
  * `list` -> `update` -> `setAlarmEnabled` -> `remove` with its `change` events, refused requests and their error codes,
  * the limits, the methods of undeclared features (`UNSUPPORTED`), bounded event callbacks that are released again,
  * ringtone imports that close the descriptor and outlive the original file (T15), binding hints, and repeated binds
- * that leave no descriptor behind.
+ * that leave no descriptor behind. Since 1.1.0 (roadmap P7.3) the timer and stopwatch methods round-trip too.
  *
- * Every alarm here carries the label prefix `p25-probe`; [cleanUp] removes them, the hint table of this package and
- * the imported test tone, so a run leaves the alarm list as it found it.
+ * Every alarm and timer here carries the label prefix `p25-probe`; [cleanUp] removes them, the hint table of this
+ * package and the imported test tone, so a run leaves the alarm and timer lists as it found them. The stopwatch is
+ * touched only while it is idle, and left idle.
  *
  * zh-CN: 经 Parcel 调用已安装插件的 `IAlarmPlugin` 方法 (路线图 P2.5): happy path `add` -> `get` -> `list` -> `update` -> `setAlarmEnabled` ->
  * `remove` 及其 `change` 事件, 被拒请求与错误码, 上限, 未声明功能的方法 (`UNSUPPORTED`), 有上限且会释放的事件回调, 关闭描述符并比原文件存活更久的
- * 铃声导入 (T15), 绑定提示, 以及不留下描述符的反复绑定. 这里的闹钟都带标签前缀 `p25-probe`; [cleanUp] 删除它们, 本包的提示表与导入的测试铃声,
- * 运行后闹钟列表保持原样.
+ * 铃声导入 (T15), 绑定提示, 以及不留下描述符的反复绑定. 1.1.0 起 (路线图 P7.3) 计时器与秒表方法也做往返. 这里的闹钟与计时器都带标签前缀
+ * `p25-probe`; [cleanUp] 删除它们, 本包的提示表与导入的测试铃声, 运行后闹钟与计时器列表保持原样. 只在秒表空闲时动它, 并让它回到空闲.
  */
 @RunWith(AndroidJUnit4::class)
 class AlarmPluginBinderTest {
@@ -69,6 +70,7 @@ class AlarmPluginBinderTest {
     @After
     fun cleanUp() {
         runtime.repository.list().filter { it.spec.label?.startsWith(LABEL_PREFIX) == true }.forEach { runtime.repository.remove(it.id, AlarmContract.SOURCE_TOOL) }
+        runtime.timers.list().filter { it.spec.label?.startsWith(LABEL_PREFIX) == true }.forEach { runtime.toolTimerApi.cancel(it.id) }
         runtime.hints.replace(context.packageName, mapOf("hints" to emptyList<Map<String, Any?>>())) { true }
         importedIds.forEach { File(runtime.ringtones.directory, it).delete() }
         tempFiles.forEach { it.delete() }
@@ -136,12 +138,57 @@ class AlarmPluginBinderTest {
     }
 
     @Test
+    fun timersAndTheStopwatchRoundTripThroughParcels() = withPlugin { plugin ->
+        val started = timerOf(plugin.startTimer(request("durationMillis" to 25 * 60_000L, "label" to label, "vibrate" to false)))
+        val id = started["id"] as String
+        assertEquals(25 * 60_000L, started[AlarmResultKeys.DURATION_MILLIS])
+        assertEquals(AlarmContract.TIMER_RUNNING, started[AlarmResultKeys.STATE])
+        assertNotNull(started[AlarmResultKeys.ENDS_AT])
+        assertEquals(label, started[AlarmResultKeys.LABEL])
+        assertEquals(id, timerOf(plugin.getTimer(request("id" to id)))["id"])
+        val listed = answerOf(plugin.listTimers(request()))[AlarmResultKeys.TIMERS] as List<*>
+        assertTrue(listed.any { (it as Map<*, *>)["id"] == id })
+
+        val paused = timerOf(plugin.controlTimer(request("id" to id, "action" to AlarmContract.TIMER_ACTION_PAUSE)))
+        assertEquals(AlarmContract.TIMER_PAUSED, paused[AlarmResultKeys.STATE])
+        assertNull(paused[AlarmResultKeys.ENDS_AT])
+        val added = timerOf(plugin.controlTimer(request("id" to id, "action" to AlarmContract.TIMER_ACTION_ADD_TIME, "millis" to -60_000L)))
+        assertEquals(paused[AlarmResultKeys.REMAINING_MILLIS] as Long - 60_000L, added[AlarmResultKeys.REMAINING_MILLIS])
+        assertEquals(AlarmContract.TIMER_RUNNING, timerOf(plugin.controlTimer(request("id" to id, "action" to AlarmContract.TIMER_ACTION_RESUME)))[AlarmResultKeys.STATE])
+        assertEquals(25 * 60_000L, timerOf(plugin.controlTimer(request("id" to id, "action" to AlarmContract.TIMER_ACTION_RESET)))[AlarmResultKeys.REMAINING_MILLIS])
+
+        assertError(AlarmErrorCodes.INVALID_OPTIONS, plugin.startTimer(request("durationMillis" to 999L, "label" to label)))
+        assertError(AlarmErrorCodes.INVALID_OPTIONS, plugin.startTimer(request("durationMillis" to "25m", "label" to label)))
+        assertError(AlarmErrorCodes.INVALID_OPTIONS, plugin.controlTimer(request("id" to id, "action" to "stop")))
+        assertError(AlarmErrorCodes.INVALID_OPTIONS, plugin.controlTimer(request("id" to id, "action" to AlarmContract.TIMER_ACTION_ADD_TIME, "millis" to -100L * 3_600_000L)))
+        assertError(AlarmErrorCodes.NOT_FOUND, plugin.controlTimer(request("id" to "t_p25missing", "action" to AlarmContract.TIMER_ACTION_PAUSE)))
+        assertNull("an unknown id answers no timer", answerOf(plugin.getTimer(request("id" to "t_p25missing")))[AlarmResultKeys.TIMER])
+
+        assertEquals(true, answerOf(plugin.controlTimer(request("id" to id, "action" to AlarmContract.TIMER_ACTION_CANCEL)))[AlarmResultKeys.REMOVED])
+        assertEquals(false, answerOf(plugin.controlTimer(request("id" to id, "action" to AlarmContract.TIMER_ACTION_CANCEL)))[AlarmResultKeys.REMOVED])
+        assertNull(runtime.timers.get(id))
+
+        val state = stopwatchOf(plugin.stopwatch(request("action" to AlarmContract.STOPWATCH_ACTION_STATE)))
+        assertNotNull(state[AlarmResultKeys.STATE])
+        assertError(AlarmErrorCodes.INVALID_OPTIONS, plugin.stopwatch(request("action" to "stop")))
+        if (state[AlarmResultKeys.STATE] == AlarmContract.STOPWATCH_IDLE) {
+            try {
+                assertEquals(AlarmContract.STOPWATCH_RUNNING, stopwatchOf(plugin.stopwatch(request("action" to AlarmContract.STOPWATCH_ACTION_START)))[AlarmResultKeys.STATE])
+                val lapAnswer = answerOf(plugin.stopwatch(request("action" to AlarmContract.STOPWATCH_ACTION_LAP)))
+                assertEquals(1, (lapAnswer[AlarmResultKeys.LAP] as Map<*, *>)[AlarmResultKeys.LAP_INDEX])
+                assertEquals(AlarmContract.STOPWATCH_PAUSED, stopwatchOf(plugin.stopwatch(request("action" to AlarmContract.STOPWATCH_ACTION_PAUSE)))[AlarmResultKeys.STATE])
+            } finally {
+                assertEquals(AlarmContract.STOPWATCH_IDLE, stopwatchOf(plugin.stopwatch(request("action" to AlarmContract.STOPWATCH_ACTION_RESET)))[AlarmResultKeys.STATE])
+            }
+        }
+    }
+
+    @Test
     fun featuresThisBuildDoesNotDeclareAnswerUnsupported() = withPlugin { plugin ->
         val empty = request()
         listOf(
-            plugin.decideBeforeRing(empty), plugin.startTimer(empty), plugin.getTimer(empty), plugin.listTimers(empty),
-            plugin.controlTimer(empty), plugin.stopwatch(empty), plugin.holidayRegions(empty), plugin.checkDate(empty),
-            plugin.listHolidays(empty), plugin.holidayInfo(empty),
+            plugin.decideBeforeRing(empty), plugin.holidayRegions(empty), plugin.checkDate(empty), plugin.listHolidays(empty),
+            plugin.holidayInfo(empty),
         ).forEach { assertError(AlarmErrorCodes.UNSUPPORTED, it) }
         val failed = AtomicReference<Bundle>()
         val latch = CountDownLatch(1)
@@ -249,6 +296,10 @@ class AlarmPluginBinderTest {
     }
 
     private fun alarmOf(bundle: Bundle?): Map<*, *> = answerOf(bundle)[AlarmResultKeys.ALARM] as Map<*, *>
+
+    private fun timerOf(bundle: Bundle?): Map<*, *> = answerOf(bundle)[AlarmResultKeys.TIMER] as Map<*, *>
+
+    private fun stopwatchOf(bundle: Bundle?): Map<*, *> = answerOf(bundle)[AlarmResultKeys.STOPWATCH] as Map<*, *>
 
     private fun assertNoError(bundle: Bundle?) {
         assertNotNull(bundle)

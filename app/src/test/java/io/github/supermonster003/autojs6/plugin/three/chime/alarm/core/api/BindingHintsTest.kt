@@ -15,9 +15,9 @@ import org.junit.rules.TemporaryFolder
 import java.io.File
 
 /**
- * Roadmap P2.5 (T12, T32, T71): the hint tables of the hosts decide which trigger broadcasts go out, one table per
+ * Roadmap P2.5 (T12, T32, T71) and P7.3 (T124, T125): the hint tables of the hosts decide which trigger broadcasts go out, one table per
  * host package, kept across processes; malformed rows refuse the whole call.
- * zh-CN: 路线图 P2.5 (T12, T32, T71): 各宿主的提示表决定发出哪些触发广播, 每个宿主包一张表, 跨进程保留; 格式错误的行使整个调用失败.
+ * zh-CN: 路线图 P2.5 (T12, T32, T71) 与 P7.3 (T124, T125): 各宿主的提示表决定发出哪些触发广播, 每个宿主包一张表, 跨进程保留; 格式错误的行使整个调用失败.
  */
 class BindingHintsTest {
 
@@ -46,7 +46,7 @@ class BindingHintsTest {
         assertEquals(listOf(HOST, OTHER), hints.targets(event("dismiss")))
         assertEquals(emptyList<String>(), hints.targets(event("snooze")))
         assertEquals(listOf(OTHER), hints.targets(event("change", B, AlarmContract.CHANGE_UPDATE)))
-        assertEquals(emptyList<String>(), hints.targets(event("ring", kind = AlarmContract.KIND_TIMER)))
+        assertEquals("a timer without rows reaches no host", emptyList<String>(), hints.targets(event("ring", "t_none", kind = AlarmContract.KIND_TIMER)))
         assertEquals("a removal reaches every host with a row", listOf(HOST, OTHER), hints.targets(event("change", A, AlarmContract.CHANGE_REMOVE)))
         assertEquals(emptyList<String>(), hints.targets(event("change", A, AlarmContract.CHANGE_UPDATE)))
         assertTrue(hints.hasBindings(A))
@@ -56,6 +56,30 @@ class BindingHintsTest {
         assertEquals(emptyList<String>(), hints.replace(HOST, table(), known::contains))
         assertEquals(listOf(OTHER), hints.owners())
         assertEquals(listOf(OTHER), hints.targets(event("dismiss")))
+    }
+
+    @Test
+    fun `timer rows are kept for existing timers and their dismiss or silence reaches every host with a row (T124, T125)`() {
+        val hints = BindingHints(file)
+        val timers = known + TIMER
+        assertEquals(listOf("t_gone"), hints.replace(HOST, table(row(TIMER, "ring"), row("t_gone", "ring")), timers::contains))
+        assertEquals(emptyList<String>(), hints.replace(OTHER, table(row(TIMER, "snooze")), timers::contains))
+        assertTrue(hints.hasBindings(TIMER))
+
+        assertEquals(listOf(HOST), hints.targets(event("ring", TIMER, kind = AlarmContract.KIND_TIMER)))
+        assertEquals(listOf(OTHER), hints.targets(event("snooze", TIMER, kind = AlarmContract.KIND_TIMER)))
+        assertEquals("the dismiss of a timer ends it", listOf(HOST, OTHER), hints.targets(event("dismiss", TIMER, kind = AlarmContract.KIND_TIMER)))
+        assertEquals(listOf(HOST, OTHER), hints.targets(event("silence", TIMER, kind = AlarmContract.KIND_TIMER)))
+
+        assertTrue(hints.ends(event("dismiss", TIMER, kind = AlarmContract.KIND_TIMER)))
+        assertTrue(hints.ends(event("silence", TIMER, kind = AlarmContract.KIND_TIMER)))
+        assertFalse(hints.ends(event("snooze", TIMER, kind = AlarmContract.KIND_TIMER)))
+        assertFalse("an alarm outlives its dismiss", hints.ends(event("dismiss")))
+        assertTrue(hints.ends(event("change", A, AlarmContract.CHANGE_REMOVE)))
+        assertFalse(hints.ends(event("change", A, AlarmContract.CHANGE_UPDATE)))
+
+        assertTrue(hints.forget(TIMER))
+        assertEquals(emptyList<String>(), BindingHints(file).owners())
     }
 
     @Test
@@ -123,5 +147,6 @@ class BindingHintsTest {
         const val OTHER = "org.autojs.autojs6.inrt"
         const val A = "a_morning"
         const val B = "a_evening"
+        const val TIMER = "t_tea"
     }
 }

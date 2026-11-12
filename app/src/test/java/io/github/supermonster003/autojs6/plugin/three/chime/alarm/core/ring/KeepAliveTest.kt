@@ -72,6 +72,15 @@ class KeepAliveTest {
     }
 
     @Test
+    fun `a running or snoozed timer keeps the service running like an enabled alarm (T117)`() {
+        val off = alarm("a_off", enabled = false)
+        assertTrue(KeepAlivePolicy.shouldRun(true, emptyList(), timersActive = true))
+        assertTrue(KeepAlivePolicy.shouldRun(true, listOf(off), timersActive = true))
+        assertFalse("setting off", KeepAlivePolicy.shouldRun(false, emptyList(), timersActive = true))
+        assertFalse(KeepAlivePolicy.shouldRun(true, listOf(off), timersActive = false))
+    }
+
+    @Test
     fun `starts only a service that is not running and stops only a running one`() {
         assertEquals(KeepAlivePolicy.Action.START, KeepAlivePolicy.action(shouldRun = true, running = false))
         assertEquals(KeepAlivePolicy.Action.NONE, KeepAlivePolicy.action(shouldRun = true, running = true))

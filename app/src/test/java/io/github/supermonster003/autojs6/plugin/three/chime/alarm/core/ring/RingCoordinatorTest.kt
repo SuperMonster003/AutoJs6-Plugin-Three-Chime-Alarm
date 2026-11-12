@@ -281,7 +281,7 @@ class RingCoordinatorTest {
         take()
 
         repository.update(relabeled.id, mapOf("label" to "new"), "user")
-        assertEquals("new", rings.queued.single { it.alarmId == relabeled.id }.record.spec.label)
+        assertEquals("new", rings.queued.single { it.alarmId == relabeled.id }.label)
         assertTrue(take().isEmpty())
 
         assertTrue(repository.remove(removed.id, "intent"))

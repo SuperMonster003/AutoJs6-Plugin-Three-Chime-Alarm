@@ -137,7 +137,8 @@ class KeepAliveService : Service() {
          */
         fun sync(context: Context, rearm: Boolean = true) {
             val app = context.applicationContext
-            val shouldRun = KeepAlivePolicy.shouldRun(settings(app).enabled, AlarmRuntime.get(app).repository.list())
+            val runtime = AlarmRuntime.get(app)
+            val shouldRun = KeepAlivePolicy.shouldRun(settings(app).enabled, runtime.repository.list(), runtime.timers.active())
             when (KeepAlivePolicy.action(shouldRun, running)) {
                 KeepAlivePolicy.Action.START -> try {
                     ContextCompat.startForegroundService(app, Intent(app, KeepAliveService::class.java))

@@ -317,6 +317,18 @@
                 <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
             </intent-filter>
         </receiver>
+        <!--
+            Roadmap P7.1 / P7.2: the timer wake-ups and the actions of the timer and stopwatch notifications. Only the
+            plugin's own pending intents reach them; direct boot aware like the alarms (T7).
+        -->
+        <receiver
+            android:name=".timer.TimerTriggerReceiver"
+            android:directBootAware="true"
+            android:exported="false" />
+        <receiver
+            android:name=".timer.TimerActionReceiver"
+            android:directBootAware="true"
+            android:exported="false" />
         <!-- Package replacement repairs the launcher alias state only (no screen). -->
         <receiver
             android:name=".ui.appearance.LauncherIconUpdateReceiver"

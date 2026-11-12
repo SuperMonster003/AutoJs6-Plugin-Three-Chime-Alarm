@@ -7,6 +7,8 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.Ala
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.event.AlarmEventBus
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.schedule.AlarmPlanner
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.schedule.AlarmSchedule
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.timer.TimerRecord
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.timer.TimerRounds
 import org.autojs.plugin.alarm.api.AlarmContract
 import org.autojs.plugin.alarm.api.AlarmEvent
 import org.autojs.plugin.alarm.api.AlarmLimits
@@ -35,22 +37,27 @@ class RingCoordinator(
     private val events: AlarmEventBus,
     private val clock: () -> Long = System::currentTimeMillis,
     private val defaults: () -> RingDefaults = { RingDefaults.PROTOCOL },
+    private val timers: TimerRounds? = null,
 ) {
 
     /**
      * One due ring: [request] from the scheduler, the [record] and [settings] it rings with, [since] (when the instance
      * first became due, kept through its snoozes) and [startedAt] (when this round began to sound, null while queued).
+     * A timer rings the same way (roadmap P7.1, T111): [kind] is `timer`, [record] is null and [label] comes from the timer.
      * zh-CN: 一次到时的响铃: 调度器给出的 [request], 响铃所用的 [record] 与 [settings], [since] (该次响铃首次到时的时刻, 贪睡期间保留) 与 [startedAt]
-     * (本轮开始发声的时刻, 排队时为 null).
+     * (本轮开始发声的时刻, 排队时为 null). 计时器以同样方式响铃 (路线图 P7.1, T111): [kind] 为 `timer`, [record] 为 null, [label] 取自计时器.
      */
     data class Ring(
-        val record: AlarmRecord,
+        val record: AlarmRecord?,
         val request: AlarmPlanner.RingRequest,
         val settings: RingSettings,
         val since: Long,
         val startedAt: Long? = null,
+        val kind: String = AlarmContract.KIND_ALARM,
+        val label: String? = record?.spec?.label,
     ) {
         val alarmId: String get() = request.alarmId
+        val isTimer: Boolean get() = kind == AlarmContract.KIND_TIMER
         val occurrence: String get() = request.occurrence
 
         /** When the sounding round stops by itself. zh-CN: 发声的一轮自动停止的时刻. */
@@ -96,15 +103,17 @@ class RingCoordinator(
      * zh-CN: 接收调度器给出的到时响铃: 没有其他闹钟发声时立即发声, 否则排队. 正在发声或排队的闹钟又来新的一轮时取代旧的一轮; 同一轮再来不做改变.
      */
     fun offer(record: AlarmRecord, request: AlarmPlanner.RingRequest) {
+        act { batch -> enqueue(Ring(record, request, RingSettings.of(record.spec, defaults()), record.state.ringSince ?: request.firedAt), batch) }
+    }
+
+    /**
+     * Takes a due timer (roadmap P7.1): it rings like an alarm, with `kind: 'timer'` on its events.
+     * zh-CN: 接收到点的计时器 (路线图 P7.1): 与闹钟一样响铃, 事件带 `kind: 'timer'`.
+     */
+    fun offerTimer(record: TimerRecord, request: AlarmPlanner.RingRequest) {
         act { batch ->
-            val ring = Ring(record, request, RingSettings.of(record.spec, defaults()), record.state.ringSince ?: request.firedAt)
-            val sounding = current
-            if (sounding != null && sounding.alarmId == ring.alarmId) {
-                if (sounding.occurrence != ring.occurrence) start(ring, batch)
-            } else {
-                val index = queue.indexOfFirst { it.alarmId == ring.alarmId }
-                if (index >= 0) queue[index] = ring else queue += ring
-            }
+            val settings = RingSettings.ofTimer(record.spec, defaults())
+            enqueue(Ring(null, request, settings, record.ringSince ?: request.firedAt, kind = AlarmContract.KIND_TIMER, label = record.spec.label), batch)
         }
     }
 
@@ -126,7 +135,12 @@ class RingCoordinator(
                 if (!ring.canSnooze) continue
                 val length = minutes ?: ring.settings.snoozeMinutes
                 val count = ring.request.snoozeCount + 1
-                schedule.snooze(ring.alarmId, now + length * MINUTE_MILLIS, count) ?: continue
+                val until = now + length * MINUTE_MILLIS
+                if (ring.isTimer) {
+                    if (timers?.snooze(ring.alarmId, until, count) != true) continue
+                } else {
+                    schedule.snooze(ring.alarmId, until, count) ?: continue
+                }
                 drop(ring)
                 batch += event(AlarmContract.EVENT_SNOOZE, ring, now).copy(by = by, minutes = length, snoozeCount = count)
                 handled = true
@@ -145,12 +159,17 @@ class RingCoordinator(
         var handled = false
         for (ring in active(id)) {
             drop(ring)
-            schedule.endRound(ring.alarmId)
+            endRound(ring)
             batch += event(AlarmContract.EVENT_DISMISS, ring, now).copy(by = by)
             handled = true
         }
         for (record in snoozed(id)) {
             schedule.endRound(record.id)
+            batch += snoozedEvent(record, now).copy(by = by)
+            handled = true
+        }
+        for (record in timers?.snoozed(id).orEmpty()) {
+            timers?.end(record.id)
             batch += snoozedEvent(record, now).copy(by = by)
             handled = true
         }
@@ -166,7 +185,7 @@ class RingCoordinator(
         val ring = current?.takeIf { it.occurrence == occurrence } ?: return@act false
         val now = clock()
         drop(ring)
-        schedule.endRound(ring.alarmId)
+        endRound(ring)
         batch += event(AlarmContract.EVENT_SILENCE, ring, now).copy(ringMillis = (now - (ring.startedAt ?: now)).coerceAtLeast(0L))
         true
     }
@@ -178,11 +197,14 @@ class RingCoordinator(
     fun ringing(): List<RingingSnapshot> {
         val active = synchronized(lock) { listOfNotNull(current) + queue }
         val ids = active.mapTo(HashSet()) { it.alarmId }
-        val rings = active.map { RingingSnapshot(it.alarmId, AlarmContract.KIND_ALARM, it.record.spec.label, it.since, false, it.request.snoozeCount) }
+        val rings = active.map { RingingSnapshot(it.alarmId, it.kind, it.label, it.since, false, it.request.snoozeCount) }
         val snoozes = snoozed(null).filter { it.id !in ids }.map {
             RingingSnapshot(it.id, AlarmContract.KIND_ALARM, it.spec.label, it.state.ringSince ?: it.state.snoozeUntil!!, true, it.state.snoozeCount)
         }
-        return rings + snoozes
+        val timerSnoozes = timers?.snoozed(null).orEmpty().filter { it.id !in ids }.map {
+            RingingSnapshot(it.id, AlarmContract.KIND_TIMER, it.spec.label, it.ringSince ?: it.snoozeUntil!!, true, it.snoozeCount)
+        }
+        return rings + snoozes + timerSnoozes
     }
 
     /**
@@ -206,6 +228,17 @@ class RingCoordinator(
                 schedule.endRound(record.id)
             }
         }
+        for (record in timers?.interrupted().orEmpty()) {
+            if (active(record.id).isNotEmpty()) continue
+            val ringingAt = record.ringingAt ?: continue
+            if (now - ringingAt < RingSettings.ofTimer(record.spec, defaults()).autoSilenceMillis) {
+                val occurrence = record.occurrence ?: AlarmPlanner.occurrenceOf(record.id, ringingAt, record.snoozeCount)
+                offerTimer(record, AlarmPlanner.RingRequest(record.id, ringingAt, now, occurrence, record.snoozeCount))
+                resumed++
+            } else {
+                timers?.end(record.id, silent = true)
+            }
+        }
         return resumed
     }
 
@@ -226,6 +259,22 @@ class RingCoordinator(
         batch.forEach(events::emit)
         if (changed) listeners.forEach { listener -> runCatching(listener) }
         return result
+    }
+
+    /** Lets [ring] sound now, or queues it; see [offer]. zh-CN: 让 [ring] 立即发声或排队, 见 [offer]. */
+    private fun enqueue(ring: Ring, batch: MutableList<AlarmEvent>) {
+        val sounding = current
+        if (sounding != null && sounding.alarmId == ring.alarmId) {
+            if (sounding.occurrence != ring.occurrence) start(ring, batch)
+        } else {
+            val index = queue.indexOfFirst { it.alarmId == ring.alarmId }
+            if (index >= 0) queue[index] = ring else queue += ring
+        }
+    }
+
+    /** Ends the round of [ring]: an alarm through the scheduler, a timer is removed. zh-CN: 结束 [ring] 的一轮: 闹钟经调度器, 计时器被删除. */
+    private fun endRound(ring: Ring) {
+        if (ring.isTimer) timers?.end(ring.alarmId) else schedule.endRound(ring.alarmId)
     }
 
     /** Lets [ring] sound now (it leaves the queue). zh-CN: 让 [ring] 立即发声 (离开队列). */
@@ -256,8 +305,8 @@ class RingCoordinator(
         if (after != null && after.enabled) {
             // Other changes keep the round as it sounds; the record shows the new label. zh-CN: 其他变更不改变发声, 记录显示新标签.
             act {
-                current = current?.let { if (it.alarmId == after.id) it.copy(record = after) else it }
-                queue.replaceAll { if (it.alarmId == after.id) it.copy(record = after) else it }
+                current = current?.let { if (it.alarmId == after.id) it.copy(record = after, label = after.spec.label) else it }
+                queue.replaceAll { if (it.alarmId == after.id) it.copy(record = after, label = after.spec.label) else it }
             }
             return
         }
@@ -278,13 +327,27 @@ class RingCoordinator(
 
     private fun event(type: String, ring: Ring, now: Long) = AlarmEvent(
         type = type,
-        kind = AlarmContract.KIND_ALARM,
+        kind = ring.kind,
         alarmId = ring.alarmId,
         occurrence = ring.occurrence,
         firedAt = now,
         scheduledAt = ring.request.scheduledAt,
-        label = ring.record.spec.label,
+        label = ring.label,
     )
+
+    /** The `dismiss` of a snoozed timer. zh-CN: 贪睡中计时器的 `dismiss`. */
+    private fun snoozedEvent(record: TimerRecord, now: Long): AlarmEvent {
+        val until = record.snoozeUntil ?: now
+        return AlarmEvent(
+            type = AlarmContract.EVENT_DISMISS,
+            kind = AlarmContract.KIND_TIMER,
+            alarmId = record.id,
+            occurrence = record.occurrence ?: AlarmPlanner.occurrenceOf(record.id, until),
+            firedAt = now,
+            scheduledAt = until,
+            label = record.spec.label,
+        )
+    }
 
     /** An event of a snoozed alarm: the round it ends is the one that was snoozed. zh-CN: 贪睡中闹钟的事件, 结束的是被贪睡的那一轮. */
     private fun snoozedEvent(record: AlarmRecord, now: Long): AlarmEvent {

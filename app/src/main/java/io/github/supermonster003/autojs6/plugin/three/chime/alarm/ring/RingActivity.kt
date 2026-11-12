@@ -220,7 +220,7 @@ internal fun RingScreen(
                     maxLines = 1,
                 )
                 Text(
-                    view.label ?: stringResource(R.string.alarm_default_label),
+                    view.label ?: stringResource(if (view.timer) R.string.timer_default_label else R.string.alarm_default_label),
                     Modifier.padding(top = 8.dp).testTag(RingActivity.TAG_LABEL),
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onBackground,

@@ -7,6 +7,7 @@ import android.content.Intent
 import android.util.Log
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.AlarmRuntime
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.schedule.AlarmPlanner
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.timer.AndroidTimerPort
 import java.util.TimeZone
 
 /**
@@ -44,7 +45,10 @@ class AlarmRescheduleReceiver : BroadcastReceiver() {
         // The default zone of a running process may still be the old one. zh-CN: 运行中的进程的默认时区可能还是旧的.
         if (action == Intent.ACTION_TIMEZONE_CHANGED) TimeZone.setDefault(null)
         AlarmRuntime.get(context).run(goAsync(), "reschedule $action") {
-            schedule.reconcile(cause).values
+            schedule.reconcile(cause).values.also {
+                // The timers too (roadmap P7.1, T110). zh-CN: 计时器也对账 (路线图 P7.1, T110).
+                Log.i(AndroidTimerPort.TAG, "reschedule $action: ${timers.reconcile(cause)} timers rang")
+            }
         }
     }
 }
