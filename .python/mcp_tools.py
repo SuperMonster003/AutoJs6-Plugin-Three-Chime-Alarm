@@ -12,7 +12,9 @@ waits while the maintainer allows it on the phone.
 Checks: `tools/list` names the twelve chime tools (the nine alarm tools, since 1.1.0 also the three timer tools of roadmap
 P7.6) with MCP annotations from their risk, then `chime_alarm_add` (a weekday
 alarm 30 days ahead, tag p42-mcp), `chime_alarm_list`, `chime_alarm_upcoming` and `chime_alarm_remove` (the test alarm
-is removed, also after a failure). Output: PASS / FAIL per check with counts and ids only, never the token or the tool list.
+is removed, also after a failure), then `chime_timer_start` (a silent 30 min timer, label p77 mcp), `chime_timer_list`,
+`chime_timer_control` pause / add / cancel and a refused pause with a duration (the test timer is cancelled, also after a
+failure). Output: PASS / FAIL per check with counts and ids only, never the token or the tool list.
 """
 import argparse
 import datetime
@@ -30,6 +32,7 @@ from mcp_client import McpClient, McpError, PAIRING_REQUIRED  # noqa: E402
 
 CLIENT_NAME = "chime-p42-evidence"
 TAG = "p42-mcp"
+TIMER_LABEL = "p77 mcp"
 PAIRING_WAIT = [180]
 TOOLS = [
     "alarm_add", "alarm_list", "alarm_update", "alarm_remove", "alarm_set_enabled", "alarm_skip_next", "alarm_upcoming", "alarm_dismiss", "alarm_snooze",
@@ -93,6 +96,44 @@ def initialize(client, wait):
             time.sleep(3)
 
 
+def timer_cases(client, report):
+    """The timer tools (roadmap P7.6 / P7.7): start a silent 30 min timer, list it, pause it, add a minute, cancel it."""
+    started = None
+    try:
+        ok, body, ms = call(client, "timer_start", {"duration": "30m", "label": TIMER_LABEL, "sound": {"source": "silent"}})
+        timer = body.get("timer") or {}
+        if ok and timer.get("id"):
+            started = timer["id"]
+        report.line("chime_timer_start", ok and str(timer.get("id", "")).startswith("t_") and timer.get("state") == "running"
+                    and timer.get("durationMillis") == 1800000 and bool(timer.get("endsAtTime")),
+                    f"{ms} ms, id {timer.get('id')}, state {timer.get('state')}, remaining {timer.get('remaining')}" if ok else str(body)[:160])
+        if started is None:
+            return
+        ok, body, ms = call(client, "timer_list", {})
+        ids = [t.get("id") for t in body.get("timers", [])]
+        report.line("chime_timer_list", ok and started in ids, f"{ms} ms, {len(ids)} timers")
+        ok, body, ms = call(client, "timer_control", {"id": started, "action": "pause"})
+        paused = body.get("timer") or {}
+        report.line("chime_timer_control pause", ok and paused.get("state") == "paused" and "endsAt" not in paused,
+                    f"{ms} ms, state {paused.get('state')}, remaining {paused.get('remaining')}")
+        ok, body, ms = call(client, "timer_control", {"id": started, "action": "add", "duration": "1m"})
+        added = body.get("timer") or {}
+        gained = (added.get("remainingMillis") or 0) - (paused.get("remainingMillis") or 0)
+        report.line("chime_timer_control add", ok and gained == 60000, f"{ms} ms, +{gained} ms, remaining {added.get('remaining')}")
+        try:
+            ok, body, ms = call(client, "timer_control", {"id": started, "action": "pause", "duration": "1m"})
+            report.line("duration only with add refused", not ok, f"{ms} ms, tool error" if not ok else str(body)[:160])
+        except McpError as e:
+            report.line("duration only with add refused", True, f"protocol error {e.code}")
+    finally:
+        if started is not None:
+            ok, body, ms = call(client, "timer_control", {"id": started, "action": "cancel"})
+            report.line("chime_timer_control cancel", ok and body.get("removed") is True, f"{ms} ms, removed {body.get('removed')}")
+            ok, body, _ = call(client, "timer_list", {})
+            left = [t.get("id") for t in body.get("timers", []) if t.get("label") == TIMER_LABEL]
+            report.line("no test timer left", ok and not left, f"{len(left)} left")
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("serial")
@@ -143,6 +184,7 @@ def main(argv=None):
                     created.remove(alarm_id)
             ok, body, _ = call(client, "alarm_list", {"tag": TAG})
             report.line("no test alarm left", ok and body.get("total") == 0, f"total {body.get('total')}")
+        timer_cases(client, report)
     print(f"{args.serial}: MCP TOOLS {'PASS' if report.failed == 0 else 'FAIL'} ({report.passed} passed, {report.failed} failed)")
     return 0 if report.failed == 0 else 1
 
