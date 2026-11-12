@@ -8,14 +8,17 @@ import android.media.AudioAttributes
 import android.media.AudioManager
 import android.os.Build
 import android.os.PowerManager
+import android.provider.Settings
 import android.util.Base64
 import android.util.Log
 import androidx.core.app.NotificationManagerCompat
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.AlarmRuntime
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmException
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmRecord
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.timer.TimerRecord
 import org.autojs.plugin.alarm.api.AlarmContract
 import org.autojs.plugin.alarm.api.AlarmOptionKeys
+import org.autojs.plugin.alarm.api.AlarmResultKeys
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -32,13 +35,22 @@ import org.json.JSONObject
  *   the full screen and notification permissions and the active players with alarm usage;
  * - `clear`: dismisses and removes every probe alarm;
  * - `keepalive`: sets "Keep running in background" (roadmap Q23 (b), T100) to `value` `on` / `off` and syncs the
- *   keep-alive service, or only reports it without a `value`.
+ *   keep-alive service, or only reports it without a `value`;
+ * - `timer_start`: the hook of `.python/device_timers.py` (roadmap P7.1): starts the probe timer `label` (starting with
+ *   [TIMER_PREFIX]) of `millis`, silent and without vibration, and pauses it at once when `paused` is true;
+ * - `timers`: reports every probe timer (state, time left, end, boot) and the boot count;
+ * - `timer_clear`: cancels every probe timer.
+ *
+ * The receiver is direct boot aware (debug manifest), so the timer operations also answer before the first unlock.
  *
  * zh-CN: 仅 debug 构建: `.python/device_ring.py` 的探针 (路线图 P2.4). `am instrument` 会强行停止插件, 从而结束被测的响铃, 因此设备脚本改为向本接收器
  * 发送 shell 广播, 并从日志读取应答 (标签 [TAG], 每行以请求的 `token` 开头). 操作 (`op`): `add` 在 `inSeconds` 秒后添加一次性探针闹钟 `label`
  * (以 [LABEL_PREFIX] 开头), 附加 `options64` (JSON 对象的 Base64) 中的选项; `snooze` / `dismiss` 向响铃服务发送通知按钮的 Intent (针对探针 `id`,
  * 省略时为全部), 与用户的操作路径相同; `state` 报告响铃状态, 闹钟流音量与保存的用户音量, 锁屏, 屏幕, 全屏与通知权限, 以及闹钟用途的活动播放器;
- * `clear` 关闭并删除全部探针闹钟; `keepalive` 把 "保持后台运行" (路线图 Q23 (b), T100) 设为 `value` `on` / `off` 并同步保活服务, 不带 `value` 时只报告.
+ * `clear` 关闭并删除全部探针闹钟; `keepalive` 把 "保持后台运行" (路线图 Q23 (b), T100) 设为 `value` `on` / `off` 并同步保活服务, 不带 `value` 时只报告;
+ * `timer_start` 是 `.python/device_timers.py` 的探针 (路线图 P7.1): 启动时长为 `millis` 的探针计时器 `label` (以 [TIMER_PREFIX] 开头), 无声且不振动,
+ * `paused` 为 true 时随即暂停; `timers` 报告全部探针计时器 (状态, 剩余时间, 到点时刻, 启动序号) 与开机次数; `timer_clear` 取消全部探针计时器.
+ * 本接收器可直接启动感知 (debug 清单), 所以计时器操作在首次解锁前也能应答.
  */
 class RingDebugReceiver : BroadcastReceiver() {
 
@@ -58,8 +70,7 @@ class RingDebugReceiver : BroadcastReceiver() {
         }
     }
 
-    private fun handle(context: Context, runtime: AlarmRuntime, intent: Intent): String = when (val op = intent.getStringExtra("op")) {
-        "add" -> add(runtime, intent)
+    private fun handle(context: Context, runtime: AlarmRuntime, intent: Intent): String = when (val op = intent.getStringExtra("op")) {        "add" -> add(runtime, intent)
         "snooze" -> send(context, RingService.ACTION_SNOOZE, intent.getStringExtra("id"))
         "dismiss" -> send(context, RingService.ACTION_DISMISS, intent.getStringExtra("id"))
         "state" -> state(context, runtime)
@@ -72,7 +83,39 @@ class RingDebugReceiver : BroadcastReceiver() {
             "cleared=${probes.size}"
         }
         "keepalive" -> keepAlive(context, intent.getStringExtra("value"))
+        "timer_start" -> startTimer(runtime, intent)
+        "timers" -> {
+            val now = System.currentTimeMillis()
+            val probes = runtime.timers.list().filter(::isProbe).joinToString(",") { record ->
+                "${record.spec.label}:${record.id}:${record.state}:remaining=${record.toSnapshot(now).remainingMillis}:endsAt=${record.endsAt}:boot=${record.boot}"
+            }
+            val boot = runCatching { Settings.Global.getInt(context.contentResolver, Settings.Global.BOOT_COUNT) }.getOrNull()
+            "now=$now bootCount=$boot timers=${probes.ifEmpty { "none" }}"
+        }
+        "timer_clear" -> {
+            val probes = runtime.timers.list().filter(::isProbe)
+            "cleared=${probes.count { runtime.toolTimerApi.cancel(it.id) }}"
+        }
         else -> "error=unknown op '$op'"
+    }
+
+    private fun startTimer(runtime: AlarmRuntime, intent: Intent): String {
+        val label = intent.getStringExtra("label").orEmpty()
+        require(label.startsWith(TIMER_PREFIX)) { "probe timer labels start with $TIMER_PREFIX" }
+        val options = linkedMapOf<String, Any?>(
+            AlarmOptionKeys.DURATION_MILLIS to intent.getLongExtra("millis", 0L),
+            AlarmOptionKeys.LABEL to label,
+            AlarmOptionKeys.SOUND to mapOf("source" to "silent"),
+            AlarmOptionKeys.VIBRATE to false,
+        )
+        return try {
+            val started = runtime.toolTimerApi.startTimer(options)[AlarmResultKeys.TIMER] as Map<*, *>
+            var record = runtime.timers.get(started["id"] as String)!!
+            if (intent.getBooleanExtra("paused", false)) record = runtime.timers.pause(record.id)
+            "started=${record.id} label=$label state=${record.state} remaining=${record.remainingMillis} endsAt=${record.endsAt}"
+        } catch (e: AlarmException) {
+            "error=${e.code}: ${e.message}"
+        }
     }
 
     private fun add(runtime: AlarmRuntime, intent: Intent): String {
@@ -149,6 +192,8 @@ class RingDebugReceiver : BroadcastReceiver() {
 
     private fun isProbe(record: AlarmRecord) = record.spec.label?.startsWith(LABEL_PREFIX) == true
 
+    private fun isProbe(record: TimerRecord) = record.spec.label?.startsWith(TIMER_PREFIX) == true
+
     private fun plain(value: Any?): Any? = when (value) {
         is JSONObject -> value.keys().asSequence().associateWith { plain(value.get(it)) }
         is JSONArray -> (0 until value.length()).map { plain(value.get(it)) }
@@ -159,5 +204,6 @@ class RingDebugReceiver : BroadcastReceiver() {
     private companion object {
         const val TAG = "ChimeRingDebug"
         const val LABEL_PREFIX = "p24-probe"
+        const val TIMER_PREFIX = "p71-probe"
     }
 }

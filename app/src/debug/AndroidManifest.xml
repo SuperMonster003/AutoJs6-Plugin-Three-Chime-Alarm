@@ -1,14 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Debug builds only: the hook of .python/device_ring.py (roadmap P2.4). Protected by android.permission.DUMP, which only
-    the shell and the system hold, so other apps cannot send it.
-    zh-CN: 仅 debug 构建: .python/device_ring.py 的探针 (路线图 P2.4). 由 android.permission.DUMP 保护, 只有 shell 与系统持有, 其他应用无法发送.
+    Debug builds only: the hook of .python/device_ring.py (roadmap P2.4) and .python/device_timers.py (roadmap P7.1).
+    Protected by android.permission.DUMP, which only the shell and the system hold, so other apps cannot send it. Direct
+    boot aware, so device_timers.py reads the restored timers before the first unlock after a reboot.
+    zh-CN: 仅 debug 构建: .python/device_ring.py (路线图 P2.4) 与 .python/device_timers.py (路线图 P7.1) 的探针. 由 android.permission.DUMP 保护,
+    只有 shell 与系统持有, 其他应用无法发送. 可直接启动感知, 所以 device_timers.py 在重启后首次解锁之前就能读到恢复的计时器.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <application>
         <receiver
             android:name=".ring.RingDebugReceiver"
+            android:directBootAware="true"
             android:exported="true"
             android:permission="android.permission.DUMP" />
     </application>
