@@ -51,9 +51,9 @@ import java.util.Locale
 object ClockRequests {
 
     /**
-     * `AlarmClock.ACTION_SHOW_TIMERS` (API 26) and `ACTION_DISMISS_TIMER` (API 27) as literals, since the plugin starts at
+     * `AlarmClock.ACTION_SHOW_TIMERS` (API 26) and `ACTION_DISMISS_TIMER` (API 28) as literals, since the plugin starts at
      * API 24 and the constants are inlined anyway.
-     * zh-CN: `AlarmClock.ACTION_SHOW_TIMERS` (API 26) 与 `ACTION_DISMISS_TIMER` (API 27) 的字面值, 因为插件从 API 24 起支持, 而这些常量本就会被内联.
+     * zh-CN: `AlarmClock.ACTION_SHOW_TIMERS` (API 26) 与 `ACTION_DISMISS_TIMER` (API 28) 的字面值, 因为插件从 API 24 起支持, 而这些常量本就会被内联.
      */
     const val ACTION_SHOW_TIMERS = "android.intent.action.SHOW_TIMERS"
 

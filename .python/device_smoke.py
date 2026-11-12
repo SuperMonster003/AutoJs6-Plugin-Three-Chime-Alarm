@@ -337,6 +337,7 @@ def main(argv=None):
     parser.add_argument("--screenshot", metavar="DIR", help="open the Plugin Center afterwards and save the screen into DIR")
     parser.add_argument("--contract", action="store_true", help="run the roadmap P2.7 contract checks through the AutoJs6 alarms module")
     parser.add_argument("--incompatible-apk", metavar="FILE", help="with --contract: a build whose requiresHostVersion is above the host's")
+    parser.add_argument("--feature-apk", metavar="FILE", help="with --contract: a release before 1.1.0 for the feature gate of timers (roadmap P7.3)")
     arguments = parser.parse_args(argv)
     return 0 if run(arguments.serial, arguments) else 1
 

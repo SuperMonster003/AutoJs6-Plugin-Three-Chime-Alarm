@@ -199,7 +199,7 @@ class ClockRequestsTest {
         assertAlarmError(INVALID_OPTIONS, "got 360001") { ClockRequests.setTimer(mapOf(AlarmClock.EXTRA_LENGTH to 360_001)) }
         assertAlarmError(INVALID_OPTIONS, "integer") { ClockRequests.setTimer(mapOf(AlarmClock.EXTRA_LENGTH to "60")) }
         assertTrue(AlarmClock.EXTRA_LENGTH in ClockRequests.EXTRA_KEYS)
-        // The literals equal the platform constants (API 26 / 27). zh-CN: 字面值与平台常量 (API 26 / 27) 相同.
+        // The literals equal the platform constants (API 26 / 28). zh-CN: 字面值与平台常量 (API 26 / 28) 相同.
         assertEquals(AlarmClock.ACTION_SHOW_TIMERS, ClockRequests.ACTION_SHOW_TIMERS)
         assertEquals(AlarmClock.ACTION_DISMISS_TIMER, ClockRequests.ACTION_DISMISS_TIMER)
     }

@@ -1,7 +1,7 @@
 """Contract checks of 3-Chime Alarm through the AutoJs6 `alarms` module on one device (roadmap P2.7).
 
-    py .python/device_smoke.py <serial> --contract [--incompatible-apk <file>]
-    py .python/device_contract.py <serial> [--modes full,permission,ui] [--incompatible-apk <file>] [--cleanup]
+    py .python/device_smoke.py <serial> --contract [--incompatible-apk <file>] [--feature-apk <file>]
+    py .python/device_contract.py <serial> [--modes full,timers,permission,ui] [--incompatible-apk <file>] [--feature-apk <file>] [--cleanup]
 
 The host must be a build with the alarm contract (versionCode 6641 or later, roadmap Q12). Every mode pushes one
 script to /sdcard/Download/autojs6-chime-contract, runs it through RunIntentActivity after bringing the host launcher
@@ -20,15 +20,34 @@ activity to the front, waits for its result file and prints one PASS / FAIL / SK
   one-shot alarm rings about 75 s later: the `ring` and `dismiss` listeners, the bound script for `change`, `ring`
   and `dismiss` (it writes the event it was started with), dismiss() from the listener; PLUGIN_DISABLED through the
   host's Plugin Center switch (set off and back by the script). Every alarm the script made is removed.
+- timers (1.1.0, roadmap P7.3): capabilities() lists timers and stopwatch; example 3 of appendix A section 12 as a
+  timer of 25 minutes (start, list, endsAt); the error codes of appendix A section 11 for timers: INVALID_OPTIONS
+  (500 ms on the host, addTime past 100 h, a `change` binding, pause() of a ringing timer), NOT_FOUND (pause of an
+  unknown id; get answers null, cancel false), LIMIT_EXCEEDED (a label of 101 characters, the 21st timer; the bulk
+  timers are cancelled again), IO_FAILED (a ringtone that is not audio); the stopwatch, only while it is idle:
+  INVALID_OPTIONS for lap() of an idle stopwatch, LIMIT_EXCEEDED for the 101st lap, then reset; a silent timer of 20 s
+  bound to a script: the `ring` listener gets kind `timer`, dismiss() from the listener, the `dismiss` event, the
+  bound script started for `ring` and `dismiss` (it writes the event it was started with), the timer and its
+  bindings gone afterwards; the host's alarms.system timer intents to the plugin's package (roadmap P7.5): handlers()
+  lists the plugin for setTimer / showTimers (and dismissTimer from API 28), setTimer starts a timer of 10 minutes and
+  starts it again after reset() instead of adding one (T140), showTimers answers, dismissTimer leaves a running timer
+  alone (T141); PLUGIN_DISABLED for timers and the stopwatch through the Plugin Center switch. Every timer the script
+  started is cancelled.
 - permission (API 31 - 32 only): the exact alarm appop of the plugin is denied, an enabled alarm fails with
-  PERMISSION_REQUIRED, a disabled one is accepted; the original appop mode is restored afterwards.
+  PERMISSION_REQUIRED, a disabled one is accepted, and with 1.1.0 a timer fails with PERMISSION_REQUIRED; the original
+  appop mode is restored afterwards.
 - ui (silent, nothing rings): alarms.openPlugin() and each page of AlarmPluginActions.PAGES open the plugin (checked
   in its ChimeOpen log lines), an unknown page fails with INVALID_OPTIONS; a disabled alarm bound to a script is
   unbound in the alarm list through its menu by HomeUnbindProbe (the androidTest APK is installed for the run and
   uninstalled after it), then the host lists no binding for it (roadmap D20, T27, T81).
 - incompatible (--incompatible-apk): a build of the plugin whose requiresHostVersion is above the host's versionCode
   is installed over the normal one, add / list fail with PLUGIN_INCOMPATIBLE, then the normal APK is installed again.
-- --cleanup: removes alarms left by an interrupted run (tags p27*, sample-*, shift; the labels of the examples).
+- feature (--feature-apk, the feature gate of roadmap P7.3): a release before 1.1.0 (releases/*-v1.0.1-*.apk) is
+  installed over the normal build (a downgrade; when the signatures differ the plugin is uninstalled first), the
+  alarm calls still answer, capabilities() lacks timers, and alarms.timers / alarms.stopwatch / a binding of a timer
+  id fail with PLUGIN_INCOMPATIBLE naming 1.1.0, with the install hint; then the normal APK is installed again.
+- --cleanup: removes alarms and timers left by an interrupted run (tags p27*, sample-*, shift; labels p27-*; the
+  labels of the examples).
 
 The alarm rings silently without vibration; its ring screen shows for a few seconds. Nothing here answers a system
 dialog or taps the screen; no token or full text is printed.
@@ -54,6 +73,8 @@ PAGES = ("alarms", "timers", "stopwatch", "permissions", "settings")
 REMOTE = "/sdcard/Download/autojs6-chime-contract"
 RING_LEAD_SECONDS = 75
 RING_WAIT_SECONDS = 150
+TIMER_RING_SECONDS = 20
+TIMER_WAIT_SECONDS = 120
 MIN_HOST = 6641
 
 SCRIPT = """
@@ -61,6 +82,7 @@ var DIR = '@DIR@';
 var cfg = JSON.parse(files.read(DIR + '/config.json'));
 var checks = [];
 var created = [];
+var timersCreated = [];
 var started = Date.now();
 var Store = Packages.org.autojs.autojs.core.plugin.center.PluginEnableStore.INSTANCE;
 
@@ -98,6 +120,27 @@ function removeCreated() {
     created.forEach(function (id) { try { if (alarms.remove(id)) removed++; } catch (e) { /* already gone */ } });
     created = [];
     return removed;
+}
+function startTimer(duration, options) { var t = alarms.timers.start(duration, options); timersCreated.push(t.id); return t; }
+function cancelTimers() {
+    var cancelled = 0;
+    timersCreated.forEach(function (id) { try { if (alarms.timers.cancel(id)) cancelled++; } catch (e) { /* already gone */ } });
+    timersCreated = [];
+    return cancelled;
+}
+function expectTimerCode(name, code, fn) {
+    try {
+        var value = fn();
+        if (value && value.id) timersCreated.push(value.id);
+        record(name, 'FAIL', 'no error, expected ' + code);
+    } catch (e) {
+        var ok = e instanceof alarms.AlarmError && e.code === code;
+        record(name, ok ? 'PASS' : 'FAIL', ok ? code + (e.hint ? ', with hint' : '') : describe(e));
+    }
+}
+function hasTimers() {
+    var f = arr(alarms.capabilities().features);
+    return f.indexOf('timers') >= 0 && typeof alarms.timers === 'object' && alarms.timers !== null;
 }
 function exists(name) { return files.exists(DIR + '/' + name); }
 function readJson(name) { return JSON.parse(files.read(DIR + '/' + name)); }
@@ -143,6 +186,10 @@ function modePermission() {
         return off.id;
     });
     if (off) expectCode('enabling it answers PERMISSION_REQUIRED', 'PERMISSION_REQUIRED', function () { return alarms.setEnabled(off.id, true); });
+    if (hasTimers()) {
+        expectTimerCode('timer answers PERMISSION_REQUIRED', 'PERMISSION_REQUIRED', function () { return alarms.timers.start('10m', { label: 'p27-permission' }); });
+        check('test timers cancelled', function () { return cancelTimers() + ' cancelled'; });
+    }
     check('test alarms removed', function () { return removeCreated() + ' removed'; });
     save();
 }
@@ -157,6 +204,14 @@ function modeCleanup() {
         if (ours) { try { if (alarms.remove(x.id)) removed++; } catch (e) { /* gone */ } }
     });
     record('leftover test alarms removed', 'PASS', removed + ' removed, ' + arr(alarms.list()).length + ' alarms left');
+    if (hasTimers()) {
+        var cancelled = 0;
+        arr(alarms.timers.list()).forEach(function (t) {
+            var label = String(t.label || '');
+            if (label.indexOf('p27-') === 0 || label === '番茄钟') { try { if (alarms.timers.cancel(t.id)) cancelled++; } catch (e) { /* gone */ } }
+        });
+        record('leftover test timers cancelled', 'PASS', cancelled + ' cancelled, ' + arr(alarms.timers.list()).length + ' timers left');
+    }
     save();
 }
 
@@ -408,6 +463,277 @@ function modeFull() {
     });
 }
 
+function timerExample() {
+    check('example 3 in 1.1.0: pomodoro as a timer', function () {
+        var t = startTimer('25m', { label: '番茄钟', speak: { text: '休息一下', mode: 'only' } });
+        assert(/^t_/.test(t.id) && t.state === 'running' && t.durationMillis === 1500000, 'id ' + t.id + ', state ' + t.state + ', duration ' + t.durationMillis);
+        assert(t.endsAt && Math.abs(t.endsAt - Date.now() - t.remainingMillis) < 2000, 'endsAt ' + t.endsAt + ', remaining ' + t.remainingMillis);
+        var listed = arr(alarms.timers.list()).filter(function (x) { return x.id === t.id; });
+        assert(listed.length === 1 && listed[0].label === '番茄钟', 'listed ' + listed.length);
+        return t.id + ', ends in ' + Math.round(t.remainingMillis / 1000) + ' s';
+    });
+}
+
+function timerErrors() {
+    var t = null;
+    check('a test timer of 10 minutes', function () { t = startTimer('10m', { label: 'p27-timer' }); return t.id; });
+    expectTimerCode('INVALID_OPTIONS: timer of 500 ms (host)', 'INVALID_OPTIONS', function () { return alarms.timers.start(500); });
+    if (t) {
+        expectTimerCode('INVALID_OPTIONS: addTime past 100 h', 'INVALID_OPTIONS', function () { return t.addTime('100h'); });
+        expectTimerCode('INVALID_OPTIONS: a change binding of a timer', 'INVALID_OPTIONS', function () { return t.bind('./bound.js', { events: ['change'] }); });
+    }
+    expectTimerCode('NOT_FOUND: pause of an unknown timer (plugin)', 'NOT_FOUND', function () { return alarms.timers.pause('t_p27missing'); });
+    check('get / cancel of an unknown timer', function () {
+        var g = alarms.timers.get('t_p27missing');
+        var c = alarms.timers.cancel('t_p27missing');
+        assert((g === null || g === undefined) && c === false, 'get ' + JSON.stringify(g) + ', cancel ' + c);
+        return 'null, false';
+    });
+    expectTimerCode('LIMIT_EXCEEDED: timer label of 101 characters', 'LIMIT_EXCEEDED', function () { return alarms.timers.start('10m', { label: new Array(102).join('x') }); });
+    expectTimerCode('IO_FAILED: timer ringtone that is not audio (plugin)', 'IO_FAILED', function () {
+        return alarms.timers.start('10m', { label: 'p27-io', sound: { source: DIR + '/not-audio.mp3' } });
+    });
+    check('LIMIT_EXCEEDED: the 21st timer (plugin)', function () {
+        var before = arr(alarms.timers.list()).length;
+        var bulk = [], code = null;
+        while (code === null && before + bulk.length < 25) {
+            try {
+                bulk.push(alarms.timers.start('10h', { label: 'p27-timer-bulk-' + bulk.length }).id);
+            } catch (e) {
+                code = e.code || describe(e);
+            }
+        }
+        var total = before + bulk.length;
+        var cancelled = 0;
+        bulk.forEach(function (id) { try { if (alarms.timers.cancel(id)) cancelled++; } catch (e) { /* counted below */ } });
+        assert(code === 'LIMIT_EXCEEDED' && total === 20, 'stopped with ' + code + ' at ' + total + ' timers');
+        assert(cancelled === bulk.length, cancelled + ' of ' + bulk.length + ' cancelled');
+        return 'refused at timer ' + (total + 1) + ' (' + bulk.length + ' started and cancelled)';
+    });
+    check('test timers cancelled', function () { return cancelTimers() + ' cancelled'; });
+}
+
+function stopwatchChecks() {
+    var idle = alarms.stopwatch.state();
+    if (idle.state !== 'idle') {
+        record('stopwatch checks', 'SKIP', 'the stopwatch is ' + idle.state + ' (left alone)');
+        return;
+    }
+    expectTimerCode('INVALID_OPTIONS: lap of an idle stopwatch', 'INVALID_OPTIONS', function () { return alarms.stopwatch.lap(); });
+    try {
+        check('LIMIT_EXCEEDED: the 101st lap', function () {
+            alarms.stopwatch.start();
+            var laps = 0, code = null;
+            while (code === null && laps < 110) {
+                try { alarms.stopwatch.lap(); laps++; } catch (e) { code = e.code || describe(e); }
+            }
+            var now = alarms.stopwatch.state();
+            assert(code === 'LIMIT_EXCEEDED' && laps === 100 && arr(now.laps).length === 100, 'stopped with ' + code + ' after ' + laps + ' laps, state lists ' + arr(now.laps).length);
+            return 'refused at lap 101, state ' + now.state;
+        });
+    } finally {
+        check('stopwatch reset', function () {
+            var after = alarms.stopwatch.reset();
+            assert(after.state === 'idle' && after.elapsedMillis === 0 && arr(after.laps).length === 0, 'reset ' + JSON.stringify(after).slice(0, 120));
+            return 'idle';
+        });
+    }
+}
+
+function timerRing(done) {
+    var lead = cfg.timerRingSeconds;
+    var t = null;
+    var seen = {};
+    var startedAt = Date.now();
+    if (!check('ring timer with a bound script', function () {
+        t = startTimer(lead * 1000, { label: 'p27-timer-ring', sound: { source: 'silent' }, vibrate: false });
+        var b = t.bind('./bound.js', { events: ['ring', 'dismiss'] });
+        return 'due in ' + lead + ' s, events [' + arr(b.events).join(',') + ']';
+    })) { done(); return; }
+    var dueAt = startedAt + lead * 1000;
+    alarms.on('ring', function (e) {
+        if (e.alarmId !== t.id) return;
+        seen.ring = Date.now();
+        seen.kind = e.kind;
+        try { alarms.timers.pause(t.id); seen.pause = 'no error'; } catch (err) { seen.pause = err.code || describe(err); }
+        try { seen.dismissed = alarms.dismiss(t.id); } catch (err) { seen.dismissError = describe(err); }
+    });
+    alarms.on('dismiss', function (e) {
+        if (e.alarmId !== t.id) return;
+        seen.dismiss = Date.now();
+        seen.by = e.by;
+        seen.dismissKind = e.kind;
+    });
+    var deadline = dueAt + cfg.timerWaitSeconds * 1000;
+    var poll = setInterval(function () {
+        var complete = seen.dismiss && exists('bound-ring.json') && exists('bound-dismiss.json');
+        if (!complete && Date.now() < deadline) return;
+        clearInterval(poll);
+        alarms.off();
+        try {
+            timerRingResults(t, dueAt, seen);
+        } catch (err) {
+            record('timer ring results', 'FAIL', describe(err));
+        }
+        done();
+    }, 1000);
+}
+
+function timerRingResults(t, dueAt, seen) {
+    record('timer ring event reaches the listener', seen.ring && seen.kind === 'timer' ? 'PASS' : 'FAIL',
+        seen.ring ? Math.round((seen.ring - dueAt) / 100) / 10 + ' s after due, kind ' + seen.kind : 'no ring event');
+    record('INVALID_OPTIONS: pause of a ringing timer', seen.pause === 'INVALID_OPTIONS' ? 'PASS' : 'FAIL', String(seen.pause));
+    record('dismiss() of the timer from the listener', seen.dismiss && !seen.dismissError && seen.dismissKind === 'timer' ? 'PASS' : 'FAIL',
+        seen.dismissError || ('answered ' + seen.dismissed + ', dismiss event by ' + seen.by + ', kind ' + seen.dismissKind));
+    ['ring', 'dismiss'].forEach(function (type) {
+        var name = 'bound-' + type + '.json';
+        if (!exists(name)) { record('bound script started for timer ' + type, 'FAIL', 'not started'); return; }
+        var e = readJson(name).event || {};
+        var ok = e.type === type && e.kind === 'timer' && e.alarmId === t.id;
+        record('bound script started for timer ' + type, ok ? 'PASS' : 'FAIL', 'currentEvent ' + e.type + ', kind ' + e.kind + (e.by ? ' by ' + e.by : '') + (ok ? '' : ', id ' + e.alarmId));
+    });
+    check('the dismissed timer and its bindings are gone', function () {
+        var end = Date.now() + 15000;
+        while (arr(alarms.bindings(t.id)).length > 0 && Date.now() < end) sleep(500);
+        var g = alarms.timers.get(t.id);
+        assert(g === null || g === undefined, 'timer still listed: ' + (g && g.state));
+        assert(arr(alarms.bindings(t.id)).length === 0, arr(alarms.bindings(t.id)).length + ' bindings left');
+        return 'get null, 0 bindings';
+    });
+}
+
+function timerDisabled() {
+    var before = Store.isEnabled(context, cfg.pkg, true);
+    try {
+        Store.setEnabled(context, cfg.pkg, false);
+        expectTimerCode('timers.list answers PLUGIN_DISABLED', 'PLUGIN_DISABLED', function () { return alarms.timers.list(); });
+        expectTimerCode('timers.start answers PLUGIN_DISABLED', 'PLUGIN_DISABLED', function () { return alarms.timers.start('10m', { label: 'p27-disabled' }); });
+        expectTimerCode('stopwatch.state answers PLUGIN_DISABLED', 'PLUGIN_DISABLED', function () { return alarms.stopwatch.state(); });
+    } finally {
+        Store.setEnabled(context, cfg.pkg, before);
+    }
+    availability(true, 'switched on again');
+}
+
+function waitTimer(label, accept) {
+    var deadline = Date.now() + 10000;
+    while (true) {
+        var found = arr(alarms.timers.list()).filter(function (x) { return x.label === label; });
+        if (found.length && (!accept || accept(found))) return found;
+        if (Date.now() > deadline) throw new Error('no timer ' + label + ' after 10 s (' + found.length + ' found)');
+        sleep(500);
+    }
+}
+
+function timerSystem() {
+    var label = 'p27-timer-system';
+    var t = null;
+    check('system intents: handlers include 3-Chime Alarm', function () {
+        var actions = device.sdkInt >= 28 ? ['setTimer', 'showTimers', 'dismissTimer'] : ['setTimer', 'showTimers'];
+        var missing = actions.filter(function (a) { return arr(alarms.system.handlers(a)).indexOf(cfg.pkg) < 0; });
+        assert(missing.length === 0, 'not handled: ' + missing.join(','));
+        return actions.join(' / ');
+    });
+    check('system intents: setTimer starts a timer in 3-Chime Alarm', function () {
+        var answer = alarms.system.setTimer({ seconds: 600, label: label, package: cfg.pkg });
+        assert(answer === true, 'setTimer answered ' + answer);
+        t = waitTimer(label)[0];
+        timersCreated.push(t.id);
+        assert(t.state === 'running' && t.durationMillis === 600000, 'state ' + t.state + ', duration ' + t.durationMillis);
+        return t.id;
+    });
+    if (!t) return;
+    check('system intents: setTimer starts the same reset timer again (T140)', function () {
+        alarms.timers.reset(t.id);
+        assert(alarms.timers.get(t.id).state === 'paused', 'not reset');
+        alarms.system.setTimer({ seconds: 600, label: label, package: cfg.pkg });
+        var found = waitTimer(label, function (xs) { return xs.some(function (x) { return x.id === t.id && x.state === 'running'; }); });
+        assert(found.length === 1, found.length + ' timers labelled ' + label);
+        return t.id + ' running again, 1 timer';
+    });
+    check('system intents: showTimers answers', function () {
+        var answer = alarms.system.showTimers({ package: cfg.pkg });
+        assert(answer === true, 'showTimers answered ' + answer);
+        return 'true';
+    });
+    if (device.sdkInt >= 28) {
+        check('system intents: dismissTimer leaves a running timer (T141)', function () {
+            var answer = alarms.system.dismissTimer({ package: cfg.pkg });
+            assert(answer === true, 'dismissTimer answered ' + answer);
+            sleep(2000);
+            var now = alarms.timers.get(t.id);
+            assert(now && now.state === 'running', 'timer ' + (now ? now.state : 'gone'));
+            return 'still running';
+        });
+    } else {
+        record('system intents: dismissTimer leaves a running timer (T141)', 'SKIP', 'API ' + device.sdkInt + ' < 28');
+    }
+}
+
+function modeTimers() {
+    if (!check('timers: capabilities list timers and stopwatch', function () {
+        var c = alarms.capabilities();
+        var f = arr(c.features);
+        assert(f.indexOf('timers') >= 0 && f.indexOf('stopwatch') >= 0, 'features [' + f.join(',') + ']');
+        assert(typeof alarms.timers === 'object' && typeof alarms.stopwatch === 'object', 'alarms.timers ' + typeof alarms.timers);
+        return c.pluginVersionName + ' (' + c.pluginVersionCode + '), features [' + f.join(',') + ']';
+    })) {
+        save();
+        return;
+    }
+    timerExample();
+    timerErrors();
+    stopwatchChecks();
+    timerRing(function () {
+        try {
+            timerSystem();
+        } catch (e) {
+            record('timer system intents', 'FAIL', describe(e));
+        }
+        try {
+            timerDisabled();
+        } catch (e) {
+            record('timer PLUGIN_DISABLED check', 'FAIL', describe(e));
+        }
+        check('test timers cancelled', function () {
+            var n = cancelTimers();
+            var left = arr(alarms.timers.list()).filter(function (x) { return String(x.label || '').indexOf('p27-') === 0; });
+            assert(left.length === 0, left.length + ' p27 timers left');
+            return n + ' cancelled';
+        });
+        save();
+    });
+}
+
+function expectGate(name, fn) {
+    try {
+        var value = fn();
+        if (value && value.id) timersCreated.push(value.id);
+        record(name + ' answers PLUGIN_INCOMPATIBLE', 'FAIL', 'no error');
+    } catch (e) {
+        var ok = e instanceof alarms.AlarmError && e.code === 'PLUGIN_INCOMPATIBLE' && String(e.message).indexOf('1.1.0') >= 0 && !!e.hint;
+        record(name + ' answers PLUGIN_INCOMPATIBLE', ok ? 'PASS' : 'FAIL', ok ? 'names 1.1.0, with hint' : describe(e));
+    }
+}
+
+function modeFeature() {
+    availability(true, 'a release before 1.1.0');
+    check('capabilities lack timers and stopwatch', function () {
+        var c = alarms.capabilities();
+        var f = arr(c.features);
+        assert(f.indexOf('alarms') >= 0 && f.indexOf('timers') < 0 && f.indexOf('stopwatch') < 0, 'features [' + f.join(',') + ']');
+        return c.pluginVersionName + ' (' + c.pluginVersionCode + '), features [' + f.join(',') + ']';
+    });
+    check('alarms.list() answers', function () { return arr(alarms.list()).length + ' alarms'; });
+    expectGate('timers.start', function () { return alarms.timers.start('25m', { label: 'p27-feature' }); });
+    expectGate('timers.list', function () { return alarms.timers.list(); });
+    expectGate('timers.get', function () { return alarms.timers.get('t_p27missing'); });
+    expectGate('stopwatch.state', function () { return alarms.stopwatch.state(); });
+    expectGate('stopwatch.start', function () { return alarms.stopwatch.start(); });
+    expectGate('bind of a timer id', function () { return alarms.bind('t_p27missing', DIR + '/bound.js'); });
+    save();
+}
+
 function modeUi() {
     [null].concat(cfg.pages).forEach(function (page) {
         check('openPlugin(' + (page === null ? '' : "'" + page + "'") + ') accepted', function () {
@@ -457,10 +783,13 @@ try {
     else if (cfg.mode === 'permission') modePermission();
     else if (cfg.mode === 'cleanup') modeCleanup();
     else if (cfg.mode === 'ui') modeUi();
+    else if (cfg.mode === 'timers') modeTimers();
+    else if (cfg.mode === 'feature') modeFeature();
     else modeFull();
 } catch (e) {
     record('script', 'FAIL', describe(e));
     try { removeCreated(); } catch (ignored) { /* best effort */ }
+    try { cancelTimers(); } catch (ignored) { /* best effort */ }
     save();
 }
 """
@@ -500,7 +829,8 @@ def push_files(serial, mode):
         f"{REMOTE}/bound-dismiss.json", f"{REMOTE}/bound-change.json", f"{REMOTE}/bound-none.json", f"{REMOTE}/stage-unbind", f"{REMOTE}/go")
     folder = Path(tempfile.gettempdir()) / f"chime-contract-{serial.replace(':', '_')}"
     folder.mkdir(exist_ok=True)
-    config = {"mode": mode, "pkg": PLUGIN, "ringLeadSeconds": RING_LEAD_SECONDS, "ringWaitSeconds": RING_WAIT_SECONDS, "pages": list(PAGES)}
+    config = {"mode": mode, "pkg": PLUGIN, "ringLeadSeconds": RING_LEAD_SECONDS, "ringWaitSeconds": RING_WAIT_SECONDS, "pages": list(PAGES),
+              "timerRingSeconds": TIMER_RING_SECONDS, "timerWaitSeconds": TIMER_WAIT_SECONDS}
     texts = {
         "contract.js": SCRIPT.replace("@DIR@", REMOTE),
         "bound.js": BOUND.replace("@DIR@", REMOTE),
@@ -612,6 +942,33 @@ def incompatible(serial, apk, normal, report):
         report.line("normal build installed again", "PASS" if ok else "FAIL", f"{normal.name}: {detail}, versionCode {smoke.installed_version(serial, PLUGIN)}")
 
 
+def install_over(serial, apk):
+    """Installs [apk] over the plugin, also as a downgrade; when the signatures differ, the plugin is uninstalled first.
+    zh-CN: 覆盖安装 [apk] (允许降级); 签名不同时先卸载插件."""
+    out = subprocess.run(["adb", "-s", serial, "install", "-r", "-d", str(apk)], capture_output=True, text=True, timeout=300)
+    text = out.stdout + out.stderr
+    if "INSTALL_FAILED_UPDATE_INCOMPATIBLE" in text or "INSTALL_FAILED_VERSION_DOWNGRADE" in text:
+        subprocess.run(["adb", "-s", serial, "uninstall", PLUGIN], capture_output=True, text=True, timeout=120)
+        out = subprocess.run(["adb", "-s", serial, "install", str(apk)], capture_output=True, text=True, timeout=300)
+        text = "uninstalled first, " + (out.stdout + out.stderr)
+    ok = out.returncode == 0 and "Success" in out.stdout
+    return ok, ("Success" + (" (uninstalled first)" if text.startswith("uninstalled") else "")) if ok else (text.strip().splitlines() or ["no output"])[-1]
+
+
+def feature(serial, apk, normal, report):
+    """The feature gate (roadmap P7.3): a release before 1.1.0 answers PLUGIN_INCOMPATIBLE for timers and the stopwatch.
+    zh-CN: 功能门 (路线图 P7.3): 1.1.0 之前的版本对计时器与秒表应答 PLUGIN_INCOMPATIBLE."""
+    ok, detail = install_over(serial, apk)
+    if not report.line("install the release before 1.1.0", "PASS" if ok else "FAIL", f"{Path(apk).name}: {detail}, versionCode {smoke.installed_version(serial, PLUGIN)}"):
+        return
+    try:
+        adb(serial, "shell", "am", "force-stop", PLUGIN)
+        run_mode(serial, "feature", report, timeout=300)
+    finally:
+        ok, detail = install_over(serial, normal)
+        report.line("normal build installed again", "PASS" if ok else "FAIL", f"{normal.name}: {detail}, versionCode {smoke.installed_version(serial, PLUGIN)}")
+
+
 def host_ready(serial, report):
     host = smoke.installed_version(serial, HOST)
     return report.line("host with the alarm contract", "PASS" if host and host >= MIN_HOST else "FAIL", f"AutoJs6 versionCode {host}, needs {MIN_HOST}")
@@ -633,9 +990,12 @@ def after_smoke(serial, args, report, apk):
         return False
     smoke.adb(serial, "shell", "am", "force-stop", PLUGIN, check=False)
     run_mode(serial, "full", report)
+    run_mode(serial, "timers", report, timeout=600)
     permission(serial, report)
     if getattr(args, "incompatible_apk", None):
         incompatible(serial, args.incompatible_apk, apk, report)
+    if getattr(args, "feature_apk", None):
+        feature(serial, args.feature_apk, apk, report)
     adb(serial, "shell", "rm", "-rf", REMOTE)
     return report.failed == 0
 
@@ -643,11 +1003,12 @@ def after_smoke(serial, args, report, apk):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("serial")
-    parser.add_argument("--modes", default="full,permission",
-                        help="comma-separated: unavailable, full, permission, ui, switch-on / switch-off (the plugin's Plugin Center switch, "
-                             "as the switch on the screen sets it) (default: full,permission)")
+    parser.add_argument("--modes", default="full,timers,permission",
+                        help="comma-separated: unavailable, full, timers, permission, ui, switch-on / switch-off (the plugin's Plugin Center switch, "
+                             "as the switch on the screen sets it) (default: full,timers,permission)")
     parser.add_argument("--incompatible-apk", metavar="FILE", help="a build whose requiresHostVersion is above the host's versionCode")
-    parser.add_argument("--apk", help="the normal APK installed again after --incompatible-apk (default: the newest debug APK)")
+    parser.add_argument("--feature-apk", metavar="FILE", help="a release before 1.1.0 (releases/*-v1.0.1-*.apk) for the feature gate of timers")
+    parser.add_argument("--apk", help="the normal APK installed again after --incompatible-apk / --feature-apk (default: the newest debug APK)")
     parser.add_argument("--cleanup", action="store_true", help="only remove the alarms an interrupted run left")
     args = parser.parse_args(argv)
     report = Report()
@@ -662,10 +1023,14 @@ def main(argv=None):
                 permission(args.serial, report)
             elif mode == "ui":
                 ui(args.serial, report)
+            elif mode == "timers":
+                run_mode(args.serial, mode, report, timeout=600)
             else:
                 run_mode(args.serial, mode, report)
         if args.incompatible_apk:
             incompatible(args.serial, args.incompatible_apk, smoke.pick_apk(args.apk), report)
+        if args.feature_apk:
+            feature(args.serial, args.feature_apk, smoke.pick_apk(args.apk), report)
     adb(args.serial, "shell", "rm", "-rf", REMOTE)
     print(f"{args.serial}: CONTRACT {'PASS' if report.failed == 0 else 'FAIL'} ({report.passed} passed, {report.failed} failed)")
     return 0 if report.failed == 0 else 1
