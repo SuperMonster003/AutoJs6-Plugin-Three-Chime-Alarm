@@ -112,11 +112,15 @@ def probe(serial, operation, **extra):
 
 
 def scheduled(serial):
-    """The plugin's alarm entries of `dumpsys alarm` (instant, action, alarm clock or not) and the next alarm clock."""
+    """The plugin's alarm entries of `dumpsys alarm` (instant, action, alarm clock or not) and the next alarm clock.
+
+    The header carries the instant as `origWhen` (API 31+) or `when` (before, without `whenElapsed`), as in
+    `device_timers.timer_clocks`.
+    """
     text = shell(serial, "dumpsys", "alarm")
     entries = []
     for block in re.split(r"\n(?=\s+[A-Z_]+ #\d+: Alarm\{)", text):
-        head = re.search(r"([A-Z_]+) #\d+: Alarm\{\S+ type \d+ origWhen (\d+) whenElapsed \S+ (\S+)\}", block)
+        head = re.search(r"([A-Z_]+) #\d+: Alarm\{\S+ type \d+ (?:origWhen|when) (\d+)(?: whenElapsed \S+)? (\S+)\}", block)
         if not head or head.group(3) != PLUGIN:
             continue
         tag = re.search(r"tag=\S*?:(\S+)", block)
