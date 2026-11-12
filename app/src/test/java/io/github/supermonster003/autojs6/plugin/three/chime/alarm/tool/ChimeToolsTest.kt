@@ -1,11 +1,13 @@
 package io.github.supermonster003.autojs6.plugin.three.chime.alarm.tool
 
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmException
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmOptionsValidator
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmRecord
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmRepository
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmStore
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.api.AlarmApi
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.api.BindingHints
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.api.TimerApi
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.event.AlarmEventBus
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.event.ChangeEvents
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.ring.RingCoordinator
@@ -13,6 +15,12 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.ring.Ring
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.schedule.AlarmPlanner
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.schedule.AlarmSchedule
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.schedule.AlarmSchedulePort
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.timer.JsonDocumentFile
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.timer.Stopwatch
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.timer.TimerEngine
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.timer.TimerPort
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.timer.TimerRecord
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.timer.TimerStore
 import org.autojs.plugin.alarm.api.AlarmContract
 import org.autojs.plugin.alarm.api.AlarmErrorCodes
 import org.autojs.plugin.alarm.api.AlarmEvent
@@ -33,11 +41,12 @@ import java.time.ZoneId
 import java.util.Locale
 
 /**
- * Roadmap P4.1 (T18, T89 - T95): every 1.0.0 tool on the real repository, scheduler and ring state through the JSON a
- * provider receives and answers: the `AlarmOptions` shapes, the source `tool`, filters and limits, the update merge and
- * `clear`, rings handled by `tool`, and the alarm errors as tool errors.
- * zh-CN: 路线图 P4.1 (T18, T89 - T95): 在真实仓库, 调度器与响铃状态上, 经提供方收发的 JSON 测试每个 1.0.0 工具: `AlarmOptions` 的各种写法, 来源
- * `tool`, 筛选与上限, 修改的合并与 `clear`, 以 `tool` 处理响铃, 以及闹钟错误到工具错误的转换.
+ * Roadmap P4.1 (T18, T89 - T95) and P7.6 (T126 - T129): every tool on the real repository, scheduler, timer engine and
+ * ring state through the JSON a provider receives and answers: the `AlarmOptions` shapes, the source `tool`, filters
+ * and limits, the update merge and `clear`, rings handled by `tool`, the timer durations and actions, and the alarm
+ * errors as tool errors.
+ * zh-CN: 路线图 P4.1 (T18, T89 - T95) 与 P7.6 (T126 - T129): 在真实仓库, 调度器, 计时器引擎与响铃状态上, 经提供方收发的 JSON 测试每个工具:
+ * `AlarmOptions` 的各种写法, 来源 `tool`, 筛选与上限, 修改的合并与 `clear`, 以 `tool` 处理响铃, 计时器的时长与动作, 以及闹钟错误到工具错误的转换.
  */
 class ChimeToolsTest {
 
@@ -45,11 +54,13 @@ class ChimeToolsTest {
     val temp = TemporaryFolder()
 
     private var now = at("2026-11-05T08:00")
+    private var up = 5 * MINUTE
     private var exactAllowed = true
     private val events = ArrayList<AlarmEvent>()
 
     private lateinit var schedule: AlarmSchedule
     private lateinit var rings: RingCoordinator
+    private lateinit var timers: TimerEngine
     private lateinit var tools: ChimeTools
 
     @Before
@@ -65,7 +76,9 @@ class ChimeToolsTest {
         val bus = AlarmEventBus().also { it.addListener(events::add) }
         created = AlarmSchedule(repository, Port(), bus, clock = { now }, deviceZone = { SHANGHAI })
         schedule = created
-        rings = RingCoordinator(repository, schedule, bus, clock = { now })
+        val validator = AlarmOptionsValidator()
+        timers = TimerEngine(TimerStore(File(temp.root, TimerStore.FILE_NAME)) { validator.timerOptions(it) }, Timers(), clock = { now }, elapsed = { up }, boot = { 1 })
+        rings = RingCoordinator(repository, schedule, bus, clock = { now }, timers = timers)
         repository.addListener { bus.emit(ChangeEvents.of(it, now)) }
         val hints = BindingHints(File(temp.root, BindingHints.FILE_NAME))
         val library = RingtoneLibrary(temp.root, { "audio/mpeg" }, { now })
@@ -73,7 +86,9 @@ class ChimeToolsTest {
             repository, rings, hints, library, { emptyList() }, clock = { now }, deviceZone = { SHANGHAI }, locale = { Locale.ENGLISH },
             source = AlarmContract.SOURCE_TOOL, by = AlarmContract.BY_TOOL,
         )
-        tools = ChimeTools(api) { SHANGHAI }
+        val stopwatch = Stopwatch(JsonDocumentFile(File(temp.root, Stopwatch.FILE_NAME), Stopwatch.FORMAT, Stopwatch.VERSION), { now }, { up }, { 1 })
+        val timerApi = TimerApi(timers, stopwatch, rings, validator, clock = { now }, source = AlarmContract.SOURCE_TOOL, by = AlarmContract.BY_TOOL)
+        tools = ChimeTools(api, timerApi) { SHANGHAI }
     }
 
     /** Calls [tool] with [json] arguments as the provider does and answers the decoded result. zh-CN: 像提供方那样调用. */
@@ -85,6 +100,22 @@ class ChimeToolsTest {
     private fun alarm(answer: Map<String, Any?>): Map<String, Any?> = answer["alarm"] as Map<String, Any?>
 
     private fun add(json: String): Map<String, Any?> = alarm(call(ChimeToolCatalog.TOOL_ADD, json))
+
+    @Suppress("UNCHECKED_CAST")
+    private fun timer(answer: Map<String, Any?>): Map<String, Any?> = answer["timer"] as Map<String, Any?>
+
+    private fun startTimer(json: String): Map<String, Any?> = timer(call(ChimeToolCatalog.TOOL_TIMER_START, json))
+
+    private fun control(id: String, action: String, duration: String? = null): Map<String, Any?> =
+        call(ChimeToolCatalog.TOOL_TIMER_CONTROL, """{"id": "$id", "action": "$action"${duration?.let { ", \"duration\": $it" } ?: ""}}""")
+
+    @Suppress("UNCHECKED_CAST")
+    private fun listedTimers(): List<Map<String, Any?>> = call(ChimeToolCatalog.TOOL_TIMER_LIST)["timers"] as List<Map<String, Any?>>
+
+    private fun advance(millis: Long) {
+        now += millis
+        up += millis
+    }
 
     private fun failure(code: String, mention: String? = null, block: () -> Unit): PluginToolException {
         try {
@@ -313,7 +344,138 @@ class ChimeToolsTest {
         val e = ChimeTools.error(AlarmException.ioFailed("disk full"))
         assertEquals(PluginToolErrorCodes.FAILED, e.code)
         assertEquals("IO_FAILED: disk full", e.message)
-        failure(PluginToolErrorCodes.UNKNOWN_TOOL) { call("timer_start") }
+        failure(PluginToolErrorCodes.UNKNOWN_TOOL) { call("stopwatch_start") }
+    }
+
+    @Test
+    fun `timer_start takes milliseconds or h m s text and records the tool as source`() {
+        val tea = startTimer("""{"duration": "25m", "label": "tea", "vibrate": false}""")
+        val id = tea["id"] as String
+        assertTrue(id, id.startsWith("t_"))
+        assertEquals("tea", tea["label"])
+        assertEquals(AlarmContract.TIMER_RUNNING, tea["state"])
+        assertEquals(25 * MINUTE, tea["durationMillis"])
+        assertEquals(25 * MINUTE, tea["remainingMillis"])
+        assertEquals("25:00", tea["remaining"])
+        assertEquals(now + 25 * MINUTE, tea["endsAt"])
+        assertEquals("2026-11-05T08:25:00+08:00", tea["endsAtTime"])
+        assertEquals(false, tea["vibrate"])
+        assertEquals(AlarmContract.SOURCE_TOOL, timers.get(id)!!.source)
+
+        val short = startTimer("""{"duration": 90000}""")
+        assertEquals(90_000L, short["durationMillis"])
+        assertEquals("1:30", short["remaining"])
+        assertFalse("options never set are left out", short.containsKey("label") || short.containsKey("vibrate"))
+        val long = startTimer("""{"duration": "1h30m", "sound": {"source": "silent"}, "speak": {"text": "done"}, "autoSilenceMinutes": 5, "vibrate": [0, 300]}""")
+        assertEquals("1:30:00", long["remaining"])
+        assertEquals(mapOf("source" to "silent"), long["sound"])
+        assertEquals("done", (long["speak"] as Map<*, *>)["text"])
+        assertEquals(5L, long["autoSilenceMinutes"])
+        assertEquals(listOf(0L, 300L), long["vibrate"])
+
+        failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "duration is required") { call(ChimeToolCatalog.TOOL_TIMER_START) }
+        failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "INVALID_OPTIONS: duration must be") { call(ChimeToolCatalog.TOOL_TIMER_START, """{"duration": "25"}""") }
+        failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "1 s - 100 h") { call(ChimeToolCatalog.TOOL_TIMER_START, """{"duration": 999}""") }
+        failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "1 s - 100 h") { call(ChimeToolCatalog.TOOL_TIMER_START, """{"duration": "100h1s"}""") }
+        failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "must be an integer") { call(ChimeToolCatalog.TOOL_TIMER_START, """{"duration": 1.5}""") }
+        failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "milliseconds or text") { call(ChimeToolCatalog.TOOL_TIMER_START, """{"duration": true}""") }
+        failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "unknown argument repeat") { call(ChimeToolCatalog.TOOL_TIMER_START, """{"duration": "5m", "repeat": "FREQ=DAILY"}""") }
+        failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "no local files") { call(ChimeToolCatalog.TOOL_TIMER_START, """{"duration": "5m", "sound": {"source": "/sdcard/a.mp3"}}""") }
+
+        repeat(17) { startTimer("""{"duration": "1m"}""") }
+        failure(PluginToolErrorCodes.LIMIT_EXCEEDED, "20 timers") { call(ChimeToolCatalog.TOOL_TIMER_START, """{"duration": "1m"}""") }
+        assertEquals(20, listedTimers().size)
+    }
+
+    @Test
+    fun `timer_list lists the timers in the order they were started`() {
+        assertEquals(mapOf("timers" to emptyList<Any?>()), call(ChimeToolCatalog.TOOL_TIMER_LIST))
+        val first = startTimer("""{"duration": "10m"}""")["id"]
+        val second = startTimer("""{"duration": "5m", "label": "eggs"}""")["id"]
+        advance(MINUTE)
+        val listed = listedTimers()
+        assertEquals(listOf(first, second), listed.map { it["id"] })
+        assertEquals(listOf("9:00", "4:00"), listed.map { it["remaining"] })
+        failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "unknown argument limit") { call(ChimeToolCatalog.TOOL_TIMER_LIST, """{"limit": 5}""") }
+    }
+
+    @Test
+    fun `timer_control pauses, adds time, resumes, resets and cancels (T127)`() {
+        val id = startTimer("""{"duration": "10m"}""")["id"] as String
+        advance(2 * MINUTE)
+        val paused = timer(control(id, "pause"))
+        assertEquals(AlarmContract.TIMER_PAUSED, paused["state"])
+        assertEquals("8:00", paused["remaining"])
+        assertFalse("a paused timer has no end", paused.containsKey("endsAt"))
+        assertEquals(7 * MINUTE, timer(control(id, "add", "\"-1m\""))["remainingMillis"])
+        assertEquals(9 * MINUTE, timer(control(id, "add", "120000"))["remainingMillis"])
+        failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "the time left") { control(id, "add", "\"-9m\"") }
+        failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "the time left") { control(id, "add", "\"100h\"") }
+        val resumed = timer(control(id, "resume"))
+        assertEquals(AlarmContract.TIMER_RUNNING, resumed["state"])
+        assertEquals(now + 9 * MINUTE, resumed["endsAt"])
+        val reset = timer(control(id, "reset"))
+        assertEquals(AlarmContract.TIMER_PAUSED, reset["state"])
+        assertEquals("10:00", reset["remaining"])
+
+        failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "action must be one of pause, resume, add, reset, cancel") { control(id, "stop") }
+        failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "action must be one of") { call(ChimeToolCatalog.TOOL_TIMER_CONTROL, """{"id": "$id"}""") }
+        failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "action add needs duration") { control(id, "add") }
+        failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "duration only goes with action add") { control(id, "pause", "60000") }
+        failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "NOT_FOUND: ") { control("t_missing", "pause") }
+        failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "unknown argument millis") { call(ChimeToolCatalog.TOOL_TIMER_CONTROL, """{"id": "$id", "action": "add", "millis": 1000}""") }
+
+        assertEquals(mapOf("id" to id, "removed" to true), control(id, "cancel"))
+        assertEquals(mapOf("id" to id, "removed" to false), control(id, "cancel"))
+        assertTrue("timers send no change events", events.isEmpty())
+    }
+
+    @Test
+    fun `a ringing timer is snoozed and cancelled by tool, or dismissed with alarm_dismiss`() {
+        val id = startTimer("""{"duration": "1m", "label": "tea"}""")["id"] as String
+        advance(MINUTE)
+        assertEquals(1, timers.reconcile(AlarmPlanner.Cause.TRIGGER))
+        assertEquals(AlarmContract.EVENT_RING, events.last().type)
+        assertEquals(AlarmContract.KIND_TIMER, events.last().kind)
+        val ringing = listedTimers().single()
+        assertEquals(AlarmContract.TIMER_RINGING, ringing["state"])
+        assertEquals("0:00", ringing["remaining"])
+        failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "ringing") { control(id, "pause") }
+
+        assertEquals(mapOf("handled" to true), call(ChimeToolCatalog.TOOL_SNOOZE))
+        assertEquals(AlarmContract.EVENT_SNOOZE, events.last().type)
+        assertEquals(AlarmContract.KIND_TIMER, events.last().kind)
+        assertEquals(AlarmContract.BY_TOOL, events.last().by)
+        assertEquals(mapOf("id" to id, "removed" to true), control(id, "cancel"))
+        assertEquals(AlarmContract.EVENT_DISMISS, events.last().type)
+        assertEquals(AlarmContract.KIND_TIMER, events.last().kind)
+        assertEquals(AlarmContract.BY_TOOL, events.last().by)
+        assertEquals(emptyList<Any?>(), listedTimers())
+
+        val second = startTimer("""{"duration": "30s"}""")["id"] as String
+        advance(30 * SECOND)
+        timers.reconcile(AlarmPlanner.Cause.TRIGGER)
+        assertEquals(mapOf("handled" to true), call(ChimeToolCatalog.TOOL_DISMISS, """{"id": "$second"}"""))
+        assertEquals(AlarmContract.EVENT_DISMISS, events.last().type)
+        assertNull(timers.get(second))
+    }
+
+    @Test
+    fun `a missing exact alarm permission stops timer_start with NOT_READY`() {
+        exactAllowed = false
+        val e = failure(PluginToolErrorCodes.NOT_READY, "PERMISSION_REQUIRED: ") { call(ChimeToolCatalog.TOOL_TIMER_START, """{"duration": "5m"}""") }
+        assertTrue(e.message.contains("permissions page"))
+        assertFalse("a timer has no enabled option", e.message.contains("enabled false"))
+    }
+
+    /** Timers ring through the coordinator as on Android. zh-CN: 与 Android 上一样, 计时器经协调器响铃. */
+    private inner class Timers : TimerPort {
+        override fun canScheduleExact() = exactAllowed
+        override fun schedule(record: TimerRecord) = Unit
+        override fun cancel(timerId: String) = Unit
+        override fun ring(record: TimerRecord, request: AlarmPlanner.RingRequest) = rings.offerTimer(record, request)
+        override fun notifyMissed(record: TimerRecord, scheduledAt: Long) = Unit
+        override fun removedSilently(timerId: String) = Unit
     }
 
     private inner class Port : AlarmSchedulePort {
@@ -326,6 +488,8 @@ class ChimeToolsTest {
 
     private companion object {
         val SHANGHAI: ZoneId = ZoneId.of("Asia/Shanghai")
+        const val SECOND = 1_000L
+        const val MINUTE = 60 * SECOND
 
         fun at(text: String): Long = LocalDateTime.parse(text).atZone(SHANGHAI).toInstant().toEpochMilli()
     }

@@ -1,18 +1,22 @@
-"""The plugin tools of 3-Chime Alarm on one device (roadmap P4.1).
+"""The plugin tools of 3-Chime Alarm on one device (roadmap P4.1, since 1.1.0 also P7.6).
 
     py .python/device_tools.py <serial> [--modes provider,host] [--apk <debug apk>] [--no-install]
 
 - provider: installs the debug APK over the installed one (`adb install -r`, never uninstalled) and the androidTest APK,
   runs ChimeToolServiceTest (the provider through its Binder interface, every call through Parcels: discovery and the
-  capability, the catalog, the nine tools on test alarms 30 days ahead, refusals and tool errors), then uninstalls the
-  androidTest APK.
+  capability, the catalog, the nine alarm tools on test alarms 30 days ahead, the three timer tools on a 25-minute timer,
+  refusals and tool errors), then uninstalls the androidTest APK.
 - host: needs a host with the alarm contract (versionCode 6641 or later, roadmap Q12): pushes one script to
   /sdcard/Download/autojs6-chime-tools and runs it through RunIntentActivity. It checks `plugins.tools.list()` (the nine
-  `chime_alarm_*` tools, their risks) and `plugins.tools.providers()` (the plugin as an available official provider), then
+  `chime_alarm_*` and the three `chime_timer_*` tools, their risks, no stopwatch tool) and `plugins.tools.providers()` (the
+  plugin as an available official provider), then
   calls every tool through `plugins.tools.call` on alarms tagged p41-host (add -> list -> update -> set_enabled ->
   skip_next -> upcoming -> remove), checks that `alarms.get` sees the source `tool`, and that the host refuses an unknown
   argument and an out-of-range count before the plugin while the plugin refuses a local ringtone path and an hourly rule.
-  Every alarm the script made is removed; nothing rings (the alarms lie 30 days ahead, dismiss / snooze name an unknown id).
+  The timer tools run on a 25-minute timer labelled p76-host (start -> list -> pause -> add -> resume -> reset -> cancel);
+  the host refuses a duration below 1 s and the plugin refuses text without a unit and add without duration. Without the
+  exact alarm permission only NOT_READY is checked. Every alarm and timer the script made is removed; nothing rings (the
+  alarms lie 30 days ahead, the timer is cancelled long before it ends, dismiss / snooze name an unknown id).
 
 Output: one PASS / FAIL / SKIP line per check with counts and codes only; never tokens, labels of other alarms or full
 tool lists. Nothing here taps the screen or answers a dialog.
@@ -36,13 +40,17 @@ RUNNER = f"{TEST_PACKAGE}/androidx.test.runner.AndroidJUnitRunner"
 TEST_CLASS = f"{PLUGIN}.ChimeToolServiceTest"
 REMOTE = "/sdcard/Download/autojs6-chime-tools"
 MIN_HOST = 6641
-TOOLS = ["alarm_add", "alarm_list", "alarm_update", "alarm_remove", "alarm_set_enabled", "alarm_skip_next", "alarm_upcoming", "alarm_dismiss", "alarm_snooze"]
+TOOLS = [
+    "alarm_add", "alarm_list", "alarm_update", "alarm_remove", "alarm_set_enabled", "alarm_skip_next", "alarm_upcoming", "alarm_dismiss", "alarm_snooze",
+    "timer_start", "timer_list", "timer_control",
+]
 
 SCRIPT = """
 var DIR = '@DIR@';
 var TAG = 'p41-host';
 var checks = [];
 var created = [];
+var timers = [];
 var started = Date.now();
 function record(name, state, detail) {
     checks.push([name, state, String(detail === undefined || detail === null ? '' : detail).slice(0, 200)]);
@@ -83,7 +91,9 @@ check('chime tools listed', function () {
     var risks = {};
     mine.forEach(function (t) { risks[t.tool] = t.risk; });
     assert(risks.alarm_list === 'readonly' && risks.alarm_upcoming === 'readonly' && risks.alarm_add === 'write' && risks.alarm_remove === 'destructive', JSON.stringify(risks));
-    return names.length + ' tools, list/upcoming readonly, remove destructive';
+    assert(risks.timer_start === 'write' && risks.timer_list === 'readonly' && risks.timer_control === 'write', JSON.stringify(risks));
+    assert(names.filter(function (n) { return n.indexOf('stopwatch') >= 0; }).length === 0, 'a stopwatch tool');
+    return names.length + ' tools, list/upcoming/timer_list readonly, remove destructive, no stopwatch';
 });
 check('provider available and official', function () {
     var mine = plain(plugins.tools.providers()).filter(function (p) { return p.packageName === '@PKG@'; });
@@ -154,7 +164,49 @@ check('alarm_remove', function () {
     assert(call('alarm_list', { tag: TAG }).result.total === 0, 'left over');
     return 'removed, again false, none left';
 });
+var TIMER = 'p76-host';
+if (exact) {
+    var timer = null;
+    check('timer_start', function () {
+        var r = call('timer_start', { duration: '25m', label: TIMER, sound: { source: 'silent' } });
+        timer = r.result.timer;
+        timers.push(timer.id);
+        assert(timer.id.indexOf('t_') === 0 && timer.state === 'running' && timer.durationMillis === 1500000 && timer.label === TIMER, JSON.stringify(timer).slice(0, 160));
+        assert(typeof timer.endsAt === 'number' && typeof timer.endsAtTime === 'string', 'no endsAt');
+        return 'running, ' + timer.remaining + ' left, ' + r.ms + ' ms';
+    });
+    check('timer_list', function () {
+        var r = call('timer_list', {}).result.timers;
+        assert(r.filter(function (t) { return t.id === timer.id; }).length === 1, 'not listed');
+        return r.length + ' timers';
+    });
+    check('timer_control pause / add / resume / reset', function () {
+        var paused = call('timer_control', { id: timer.id, action: 'pause' }).result.timer;
+        assert(paused.state === 'paused' && paused.endsAt === undefined, 'pause ' + paused.state);
+        var shorter = call('timer_control', { id: timer.id, action: 'add', duration: '-1m' }).result.timer;
+        assert(shorter.remainingMillis === paused.remainingMillis - 60000, 'add -1m ' + shorter.remainingMillis);
+        var longer = call('timer_control', { id: timer.id, action: 'add', duration: 120000 }).result.timer;
+        assert(longer.remainingMillis === paused.remainingMillis + 60000, 'add 120000 ' + longer.remainingMillis);
+        assert(call('timer_control', { id: timer.id, action: 'resume' }).result.timer.state === 'running', 'resume');
+        var reset = call('timer_control', { id: timer.id, action: 'reset' }).result.timer;
+        assert(reset.state === 'paused' && reset.remainingMillis === 1500000, 'reset ' + reset.state + ' ' + reset.remainingMillis);
+        return 'four actions';
+    });
+    check('host refuses duration 999', function () { return refused('timer_start', { duration: 999 }, 'duration'); });
+    check('plugin refuses text without a unit', function () { return refused('timer_start', { duration: '25' }, 'INVALID_OPTIONS'); });
+    check('plugin refuses add without duration', function () { return refused('timer_control', { id: timer.id, action: 'add' }, 'add needs duration'); });
+    check('timer NOT_FOUND for an unknown id', function () { return refused('timer_control', { id: 't_missing', action: 'pause' }, 'NOT_FOUND'); });
+    check('timer_control cancel', function () {
+        assert(call('timer_control', { id: timer.id, action: 'cancel' }).result.removed === true, 'first');
+        assert(call('timer_control', { id: timer.id, action: 'cancel' }).result.removed === false, 'again');
+        timers = [];
+        return 'removed, again false';
+    });
+} else {
+    check('timer_start NOT_READY without exact alarms', function () { return refused('timer_start', { duration: '25m', label: TIMER }, 'PERMISSION_REQUIRED'); });
+}
 created.forEach(function (x) { try { alarms.remove(x); } catch (e) { /* gone */ } });
+timers.forEach(function (x) { try { call('timer_control', { id: x, action: 'cancel' }); } catch (e) { /* gone */ } });
 files.write(DIR + '/result.json', JSON.stringify({ seconds: Math.round((Date.now() - started) / 1000), checks: checks }));
 files.write(DIR + '/done', '1');
 """

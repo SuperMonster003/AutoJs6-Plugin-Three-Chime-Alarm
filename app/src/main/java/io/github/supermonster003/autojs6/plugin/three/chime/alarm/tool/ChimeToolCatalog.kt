@@ -4,15 +4,17 @@ import org.autojs.plugin.alarm.api.AlarmLimits
 
 /**
  * The catalog [ChimeToolService] returns from `IPluginToolProvider.getCatalog` (AutoJs6 plugin tool contract v1, roadmap
- * P4.1, appendix A section 10): the short name `chime` and the nine 1.0.0 tools, which AutoJs6 lists as `chime_alarm_add`
- * and so on. The parameters follow `AlarmOptions` of appendix A section 4.2 within the host's schema subset (T90): no local
+ * P4.1, appendix A section 10): the short name `chime`, the nine 1.0.0 tools, which AutoJs6 lists as `chime_alarm_add`
+ * and so on, and since 1.1.0 the three timer tools `timer_start`, `timer_list` and `timer_control` (roadmap P7.6, T126 -
+ * T128; the stopwatch is not offered, T17). The parameters follow `AlarmOptions` of appendix A section 4.2 within the host's schema subset (T90): no local
  * audio file path (T91) and none of the options of later features (`holidays` joins with 1.2.0, `dismiss` with 1.3.0
  * without `challenge: 'script'`); script bindings and `beforeRing` are never offered (T17). The document is static: the
  * host caches it per version code, and a missing exact alarm permission is reported by the call (`NOT_READY`), not by
  * dropping tools. The descriptions reach the context of AI models as written, so they stay English and ASCII and name
  * the error codes; there is nothing to localize (T89).
  * zh-CN: [ChimeToolService] 从 `IPluginToolProvider.getCatalog` 返回的目录 (AutoJs6 插件工具契约 v1, 路线图 P4.1, 附录 A 第 10 节): 短名
- * `chime` 下九个 1.0.0 工具, AutoJs6 列为 `chime_alarm_add` 等. 参数在宿主的 schema 子集内沿用附录 A 第 4.2 节的 `AlarmOptions` (T90): 不含
+ * `chime` 下九个 1.0.0 工具, AutoJs6 列为 `chime_alarm_add` 等, 1.1.0 起另有三个计时器工具 `timer_start`, `timer_list`, `timer_control` (路线图
+ * P7.6, T126 - T128; 不开放秒表, T17). 参数在宿主的 schema 子集内沿用附录 A 第 4.2 节的 `AlarmOptions` (T90): 不含
  * 本地音频文件路径 (T91), 也不含之后功能的选项 (`holidays` 随 1.2.0 加入, `dismiss` 随 1.3.0 加入且不含 `challenge: 'script'`); 从不开放脚本绑定与
  * `beforeRing` (T17). 文档是静态的: 宿主按 versionCode 缓存, 缺少精确闹钟权限由调用报告 (`NOT_READY`), 不从目录里删工具. 说明原样进入 AI 模型的
  * 上下文, 因此保持英文与 ASCII 并写明错误码; 没有需要本地化的文案 (T89).
@@ -29,7 +31,13 @@ internal object ChimeToolCatalog {
     const val TOOL_UPCOMING = "alarm_upcoming"
     const val TOOL_DISMISS = "alarm_dismiss"
     const val TOOL_SNOOZE = "alarm_snooze"
-    val TOOLS = listOf(TOOL_ADD, TOOL_LIST, TOOL_UPDATE, TOOL_REMOVE, TOOL_SET_ENABLED, TOOL_SKIP_NEXT, TOOL_UPCOMING, TOOL_DISMISS, TOOL_SNOOZE)
+    const val TOOL_TIMER_START = "timer_start"
+    const val TOOL_TIMER_LIST = "timer_list"
+    const val TOOL_TIMER_CONTROL = "timer_control"
+    val TOOLS = listOf(
+        TOOL_ADD, TOOL_LIST, TOOL_UPDATE, TOOL_REMOVE, TOOL_SET_ENABLED, TOOL_SKIP_NEXT, TOOL_UPCOMING, TOOL_DISMISS, TOOL_SNOOZE,
+        TOOL_TIMER_START, TOOL_TIMER_LIST, TOOL_TIMER_CONTROL,
+    )
 
     /** Every call is a quick local store operation. zh-CN: 每个调用都是很快的本地存储操作. */
     const val TIMEOUT_MS = 15_000L
@@ -42,6 +50,9 @@ internal object ChimeToolCatalog {
 
     /** T93: the option names `alarm_update` may clear. zh-CN: T93: `alarm_update` 可以清除的选项名. */
     val CLEARABLE = listOf("repeat", "exclude", "timeZone", "label", "tag", "sound", "speak", "snooze", "autoSilenceMinutes")
+
+    /** T127: the actions of `timer_control`; `add` is `addTime` of the contract. zh-CN: T127: `timer_control` 的动作; `add` 即契约的 `addTime`. */
+    val TIMER_ACTIONS = listOf("pause", "resume", "add", "reset", "cancel")
 
     private const val ID_DESCRIPTION = "Alarm id as returned by chime_alarm_add or chime_alarm_list (starts with a_)."
 
@@ -57,6 +68,29 @@ internal object ChimeToolCatalog {
           "tag": {"type": "string", "maxLength": ${AlarmLimits.MAX_TAG_CHARS}, "description": "Only alarms with exactly this tag."},
           "enabled": {"type": "boolean", "description": "Only enabled (true) or disabled (false) alarms."},
           "label": {"type": "string", "maxLength": ${AlarmLimits.MAX_LABEL_CHARS}, "description": "Only alarms with exactly this label."}"""
+
+    private val SOUND = """"sound": {"type": "object", "properties": {
+            "source": {"type": "string", "minLength": 1, "maxLength": 2048, "description": "default (the system alarm sound), silent, or a ringtone content: URI. Local file paths are not accepted."},
+            "volume": {"type": "number", "minimum": 0, "maximum": 1, "description": "Own volume 0 - 1; omitted, the alarm volume of the phone."},
+            "rampSeconds": {"type": "integer", "minimum": 0, "maximum": ${AlarmLimits.MAX_RAMP_SECONDS}, "description": "Fade-in time in seconds, 0 (default) for none."}
+          }, "additionalProperties": false, "description": "Ring sound; omitted members use the 3-Chime Alarm settings."}"""
+
+    private val VIBRATE = """"vibrate": {"oneOf": [
+            {"type": "boolean"},
+            {"type": "array", "items": {"type": "integer", "minimum": 0, "maximum": 60000}, "minItems": 1, "maxItems": ${AlarmLimits.MAX_VIBRATE_PATTERN}, "description": "Pattern in milliseconds: wait, vibrate, wait, vibrate, ..."}
+          ], "description": "Vibrate while ringing; omitted, the 3-Chime Alarm setting (on by default)."}"""
+
+    private val SPEAK = """"speak": {"type": "object", "properties": {
+            "text": {"type": "string", "minLength": 1, "maxLength": ${AlarmLimits.MAX_SPEAK_TEXT_CHARS}, "description": "Text read aloud when the alarm rings."},
+            "engine": {"type": "string", "minLength": 1, "maxLength": 128, "description": "Text-to-speech engine package; omitted, the system default engine."},
+            "language": {"type": "string", "minLength": 1, "maxLength": 35, "description": "BCP 47 language tag such as en or zh-CN."},
+            "rate": {"type": "number", "exclusiveMinimum": 0, "maximum": 10},
+            "pitch": {"type": "number", "exclusiveMinimum": 0, "maximum": 10},
+            "mode": {"type": "string", "enum": ["before", "after", "interleave", "only"], "description": "before: read, then ring; after (default): ring, then read over the lowered sound; interleave: alternate; only: read without ringing."},
+            "repeatInterval": {"type": "integer", "minimum": 0, "maximum": ${AlarmLimits.MAX_SPEAK_REPEAT_INTERVAL_SECONDS}, "description": "Seconds between readings, 0 to read once."}
+          }, "required": ["text"], "additionalProperties": false, "description": "Read text aloud when the alarm rings."}"""
+
+    private val AUTO_SILENCE = """"autoSilenceMinutes": {"type": "integer", "minimum": ${AlarmLimits.MIN_AUTO_SILENCE_MINUTES}, "maximum": ${AlarmLimits.MAX_AUTO_SILENCE_MINUTES}, "description": "Stop ringing after this many minutes without an answer; omitted, the 3-Chime Alarm setting (10)."}"""
 
     private val OPTIONS = """
           "time": {"oneOf": [
@@ -93,33 +127,35 @@ internal object ChimeToolCatalog {
           "label": {"type": "string", "maxLength": ${AlarmLimits.MAX_LABEL_CHARS}, "description": "Text shown on the ringing screen and in the alarm list."},
           "enabled": {"type": "boolean", "description": "Whether the alarm is armed; new alarms default to true."},
           "tag": {"type": "string", "maxLength": ${AlarmLimits.MAX_TAG_CHARS}, "description": "Free group tag for filtering with chime_alarm_list."},
-          "sound": {"type": "object", "properties": {
-            "source": {"type": "string", "minLength": 1, "maxLength": 2048, "description": "default (the system alarm sound), silent, or a ringtone content: URI. Local file paths are not accepted."},
-            "volume": {"type": "number", "minimum": 0, "maximum": 1, "description": "Own volume 0 - 1; omitted, the alarm volume of the phone."},
-            "rampSeconds": {"type": "integer", "minimum": 0, "maximum": ${AlarmLimits.MAX_RAMP_SECONDS}, "description": "Fade-in time in seconds, 0 (default) for none."}
-          }, "additionalProperties": false, "description": "Ring sound; omitted members use the 3-Chime Alarm settings."},
-          "vibrate": {"oneOf": [
-            {"type": "boolean"},
-            {"type": "array", "items": {"type": "integer", "minimum": 0, "maximum": 60000}, "minItems": 1, "maxItems": ${AlarmLimits.MAX_VIBRATE_PATTERN}, "description": "Pattern in milliseconds: wait, vibrate, wait, vibrate, ..."}
-          ], "description": "Vibrate while ringing; omitted, the 3-Chime Alarm setting (on by default)."},
-          "speak": {"type": "object", "properties": {
-            "text": {"type": "string", "minLength": 1, "maxLength": ${AlarmLimits.MAX_SPEAK_TEXT_CHARS}, "description": "Text read aloud when the alarm rings."},
-            "engine": {"type": "string", "minLength": 1, "maxLength": 128, "description": "Text-to-speech engine package; omitted, the system default engine."},
-            "language": {"type": "string", "minLength": 1, "maxLength": 35, "description": "BCP 47 language tag such as en or zh-CN."},
-            "rate": {"type": "number", "exclusiveMinimum": 0, "maximum": 10},
-            "pitch": {"type": "number", "exclusiveMinimum": 0, "maximum": 10},
-            "mode": {"type": "string", "enum": ["before", "after", "interleave", "only"], "description": "before: read, then ring; after (default): ring, then read over the lowered sound; interleave: alternate; only: read without ringing."},
-            "repeatInterval": {"type": "integer", "minimum": 0, "maximum": ${AlarmLimits.MAX_SPEAK_REPEAT_INTERVAL_SECONDS}, "description": "Seconds between readings, 0 to read once."}
-          }, "required": ["text"], "additionalProperties": false, "description": "Read text aloud when the alarm rings."},
+          $SOUND,
+          $VIBRATE,
+          $SPEAK,
           "snooze": {"oneOf": [
             {"type": "boolean", "description": "false: the alarm cannot be snoozed; true: the 3-Chime Alarm settings."},
             {"type": "object", "properties": {"minutes": {"type": "integer", "minimum": ${AlarmLimits.MIN_SNOOZE_MINUTES}, "maximum": ${AlarmLimits.MAX_SNOOZE_MINUTES}}, "max": {"type": "integer", "minimum": 1, "maximum": ${AlarmLimits.MAX_SNOOZE_MAX}, "description": "Snoozes per ring."}}, "additionalProperties": false}
           ], "description": "Snooze; omitted members use the 3-Chime Alarm settings (10 minutes, 3 times by default)."},
-          "autoSilenceMinutes": {"type": "integer", "minimum": ${AlarmLimits.MIN_AUTO_SILENCE_MINUTES}, "maximum": ${AlarmLimits.MAX_AUTO_SILENCE_MINUTES}, "description": "Stop ringing after this many minutes without an answer; omitted, the 3-Chime Alarm setting (10)."}"""
+          $AUTO_SILENCE"""
 
     private const val ALARM_RESULT = "Each alarm comes back with its id, its options as set (time as HH:mm or HH:mm:ss, repeat as a normalized RRULE with repeatText, a readable description), enabled, source and updatedBy (user / script / tool / intent), createdAt / updatedAt, nextTrigger (Unix milliseconds, absent when it will not ring again) with nextTriggerTime (ISO 8601 in the alarm's zone; an alarm set with at also has atTime), skipping (the next ring is skipped) and hasBindings (AutoJs6 scripts are bound to it)."
 
     private const val OPTION_ERRORS = "INVALID_ARGUMENTS (an invalid option or rule: the message starts with INVALID_OPTIONS or INVALID_RULE and names the problem), LIMIT_EXCEEDED (300 alarms, 200 enabled ones, or a text over its limit), NOT_READY (Android 12 - 12L only: 3-Chime Alarm may not set exact alarms; pass enabled false, or let the user allow it on the permissions page of 3-Chime Alarm)"
+
+    private val TIMER_ID = """"id": {"type": "string", "minLength": 1, "maxLength": 128, "description": "Timer id as returned by chime_timer_start or chime_timer_list (starts with t_)."}"""
+
+    private val TIMER_OPTIONS = """
+          "duration": {"oneOf": [
+            {"type": "integer", "minimum": ${AlarmLimits.MIN_TIMER_MILLIS}, "maximum": ${AlarmLimits.MAX_TIMER_MILLIS}, "description": "Milliseconds."},
+            {"type": "string", "minLength": 2, "maxLength": 32, "description": "Hours, minutes and seconds such as 25m, 1h30m or 90s: h, m and s in this order, each at most once."}
+          ], "description": "How long the timer runs, 1 s - 100 h."},
+          "label": {"type": "string", "maxLength": ${AlarmLimits.MAX_LABEL_CHARS}, "description": "Text shown on the ringing screen and in the timer notification."},
+          $SOUND,
+          $VIBRATE,
+          $SPEAK,
+          $AUTO_SILENCE"""
+
+    private const val TIMER_RESULT = "Each timer comes back with its id, label (when set), state (running, paused, or ringing: sounding or snoozed), durationMillis (the full duration), remainingMillis with remaining (the time left as M:SS or H:MM:SS; 0 while ringing), endsAt (Unix milliseconds, only while running) with endsAtTime (ISO 8601 in the phone's zone), and the ring options as set (sound, vibrate, speak, autoSilenceMinutes)."
+
+    private const val TIMER_NOT_READY = "NOT_READY (Android 12 - 12L only: 3-Chime Alarm may not set exact alarms; let the user allow it on the permissions page of 3-Chime Alarm)"
 
     val JSON: String = """{
   "shortName": "$SHORT_NAME",
@@ -260,6 +296,55 @@ internal object ChimeToolCatalog {
           $ID,
           "minutes": {"type": "integer", "minimum": ${AlarmLimits.MIN_SNOOZE_MINUTES}, "maximum": ${AlarmLimits.MAX_SNOOZE_MINUTES}, "description": "Snooze time for this snooze only; omitted, the alarm's own."}
         },
+        "additionalProperties": false
+      },
+      "risk": "write",
+      "timeoutMs": $TIMEOUT_MS,
+      "maxConcurrency": 1
+    },
+    {
+      "name": "$TOOL_TIMER_START",
+      "title": "Start a timer (3-Chime Alarm)",
+      "description": "Starts a countdown timer in 3-Chime Alarm on the phone. At zero it rings with the same full-screen screen and notification as an alarm, also when the phone is locked or sleeping; it can be snoozed, and it is deleted once it is dismissed or silenced. While it runs, a notification shows the time left with pause, +1 minute and cancel buttons. A timer survives a restart of the phone, and the time the phone was off counts. At most ${AlarmLimits.MAX_TIMERS} timers at once. The timer is marked as started by a tool. Returns {timer}. $TIMER_RESULT Errors: INVALID_ARGUMENTS (a duration outside 1 s - 100 h or an invalid option: the message starts with INVALID_OPTIONS and names the problem), LIMIT_EXCEEDED (${AlarmLimits.MAX_TIMERS} timers, or a text over its limit), $TIMER_NOT_READY.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {$TIMER_OPTIONS
+        },
+        "required": ["duration"],
+        "additionalProperties": false
+      },
+      "risk": "write",
+      "timeoutMs": $TIMEOUT_MS,
+      "maxConcurrency": 1
+    },
+    {
+      "name": "$TOOL_TIMER_LIST",
+      "title": "List timers (3-Chime Alarm)",
+      "description": "Lists the timers of 3-Chime Alarm on the phone in the order they were started (at most ${AlarmLimits.MAX_TIMERS}). Returns {timers}. $TIMER_RESULT",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "risk": "readonly",
+      "timeoutMs": $TIMEOUT_MS,
+      "maxConcurrency": 4
+    },
+    {
+      "name": "$TOOL_TIMER_CONTROL",
+      "title": "Pause, change or cancel a timer (3-Chime Alarm)",
+      "description": "Controls a timer of 3-Chime Alarm. pause stops the countdown, resume continues it, add changes the time left by duration (negative to take time off; the time left must stay within 1 s - 100 h), reset puts the timer back to its full duration, paused, and cancel deletes it (a ringing or snoozed timer is stopped first). pause, resume, add and reset return {timer} and fail on a ringing or snoozed timer, which cancel, chime_alarm_dismiss or chime_alarm_snooze handle. cancel returns {id, removed}: removed is false when no timer has that id (not an error). $TIMER_RESULT Errors: INVALID_ARGUMENTS (an invalid duration, duration with another action than add, or a ringing timer: the message starts with INVALID_OPTIONS), INVALID_ARGUMENTS with NOT_FOUND for an unknown id, $TIMER_NOT_READY.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          $TIMER_ID,
+          "action": {"type": "string", "enum": [${TIMER_ACTIONS.joinToString(", ") { "\"$it\"" }}], "description": "What to do with the timer."},
+          "duration": {"oneOf": [
+            {"type": "integer", "minimum": -${AlarmLimits.MAX_TIMER_MILLIS}, "maximum": ${AlarmLimits.MAX_TIMER_MILLIS}, "description": "Milliseconds, negative to take time off."},
+            {"type": "string", "minLength": 2, "maxLength": 33, "description": "Hours, minutes and seconds such as 5m, 1h30m or -1m, with a leading minus to take time off."}
+          ], "description": "Only with action add: the time to add to the time left (negative to take it off)."}
+        },
+        "required": ["id", "action"],
         "additionalProperties": false
       },
       "risk": "write",

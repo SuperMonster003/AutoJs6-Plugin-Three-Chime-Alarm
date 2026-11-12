@@ -30,10 +30,11 @@ class ChimeToolCatalogTest {
         (tool(name)["inputSchema"] as Map<String, Any?>)["properties"] as Map<String, Map<String, Any?>>
 
     @Test
-    fun `the catalog names nine tools under the short name chime`() {
+    fun `the catalog names the twelve tools under the short name chime`() {
         assertEquals("chime", catalog["shortName"])
         assertTrue(Regex("^[a-z][a-z0-9]{1,15}$").matches(ChimeToolCatalog.SHORT_NAME))
         assertEquals(ChimeToolCatalog.TOOLS, tools.map { it["name"] })
+        assertEquals(12, tools.size)
         assertTrue("at most 256 KiB", ChimeToolCatalog.JSON.toByteArray().size <= 256 * 1024)
         tools.forEach { tool ->
             val name = tool["name"] as String
@@ -59,7 +60,7 @@ class ChimeToolCatalogTest {
             mapOf(
                 "alarm_add" to "write", "alarm_list" to "readonly", "alarm_update" to "write", "alarm_remove" to "destructive",
                 "alarm_set_enabled" to "write", "alarm_skip_next" to "write", "alarm_upcoming" to "readonly", "alarm_dismiss" to "write",
-                "alarm_snooze" to "write",
+                "alarm_snooze" to "write", "timer_start" to "write", "timer_list" to "readonly", "timer_control" to "write",
             ),
             risks,
         )
@@ -84,6 +85,27 @@ class ChimeToolCatalogTest {
         val clear = (properties("alarm_update").getValue("clear")["items"] as Map<String, Any?>)["enum"]
         assertEquals(ChimeToolCatalog.CLEARABLE, clear)
         assertNotNull(properties("alarm_upcoming").getValue("count")["default"])
+    }
+
+    @Test
+    fun `the timer tools take durations and the timer actions but not the stopwatch (T17, T126 - T128)`() {
+        assertEquals(ChimeToolArguments.TIMER_KEYS, properties("timer_start").keys)
+        assertEquals(emptySet<String>(), properties("timer_list").keys)
+        assertEquals(setOf("id", "action", "duration"), properties("timer_control").keys)
+        @Suppress("UNCHECKED_CAST")
+        val start = tool("timer_start")["inputSchema"] as Map<String, Any?>
+        assertEquals(listOf("duration"), start["required"])
+        @Suppress("UNCHECKED_CAST")
+        val control = tool("timer_control")["inputSchema"] as Map<String, Any?>
+        assertEquals(listOf("id", "action"), control["required"])
+        assertEquals(ChimeToolCatalog.TIMER_ACTIONS, properties("timer_control").getValue("action")["enum"])
+        assertEquals(properties("alarm_add").getValue("sound"), properties("timer_start").getValue("sound"))
+        val durations = properties("timer_start").getValue("duration")["oneOf"] as List<*>
+        assertEquals(1_000L, (durations[0] as Map<*, *>)["minimum"])
+        assertEquals(360_000_000L, (durations[0] as Map<*, *>)["maximum"])
+        val changes = properties("timer_control").getValue("duration")["oneOf"] as List<*>
+        assertEquals(-360_000_000L, (changes[0] as Map<*, *>)["minimum"])
+        assertFalse("the stopwatch is not offered (T17)", tools.any { (it["name"] as String).contains("stopwatch") })
     }
 
     // ------------------------------------------------------------------ the host's schema subset

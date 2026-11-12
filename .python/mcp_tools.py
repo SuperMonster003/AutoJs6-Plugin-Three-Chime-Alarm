@@ -9,7 +9,8 @@ memory only) or AUTOJS6_MCP_TOKEN is set, and the write switch of the chime tool
 alarm_remove are write / destructive tools). The first tool call asks for pairing; the script prints the fingerprint and
 waits while the maintainer allows it on the phone.
 
-Checks: `tools/list` names the nine chime tools with MCP annotations from their risk, then `chime_alarm_add` (a weekday
+Checks: `tools/list` names the twelve chime tools (the nine alarm tools, since 1.1.0 also the three timer tools of roadmap
+P7.6) with MCP annotations from their risk, then `chime_alarm_add` (a weekday
 alarm 30 days ahead, tag p42-mcp), `chime_alarm_list`, `chime_alarm_upcoming` and `chime_alarm_remove` (the test alarm
 is removed, also after a failure). Output: PASS / FAIL per check with counts and ids only, never the token or the tool list.
 """
@@ -30,7 +31,10 @@ from mcp_client import McpClient, McpError, PAIRING_REQUIRED  # noqa: E402
 CLIENT_NAME = "chime-p42-evidence"
 TAG = "p42-mcp"
 PAIRING_WAIT = [180]
-TOOLS = ["alarm_add", "alarm_list", "alarm_update", "alarm_remove", "alarm_set_enabled", "alarm_skip_next", "alarm_upcoming", "alarm_dismiss", "alarm_snooze"]
+TOOLS = [
+    "alarm_add", "alarm_list", "alarm_update", "alarm_remove", "alarm_set_enabled", "alarm_skip_next", "alarm_upcoming", "alarm_dismiss", "alarm_snooze",
+    "timer_start", "timer_list", "timer_control",
+]
 
 
 class Report:
@@ -113,8 +117,9 @@ def main(argv=None):
         annotations = {n: (t.get("annotations") or {}) for n, t in mine.items()}
         report.line("annotations follow the risks",
                     annotations.get("alarm_list", {}).get("readOnlyHint") is True and annotations.get("alarm_upcoming", {}).get("readOnlyHint") is True
-                    and annotations.get("alarm_remove", {}).get("destructiveHint") is True and annotations.get("alarm_add", {}).get("readOnlyHint") is not True,
-                    "list / upcoming read-only, remove destructive")
+                    and annotations.get("alarm_remove", {}).get("destructiveHint") is True and annotations.get("alarm_add", {}).get("readOnlyHint") is not True
+                    and annotations.get("timer_list", {}).get("readOnlyHint") is True and annotations.get("timer_control", {}).get("readOnlyHint") is not True,
+                    "list / upcoming / timer_list read-only, remove destructive")
         day = (datetime.date.today() + datetime.timedelta(days=30)).isoformat()
         try:
             ok, body, ms = call(client, "alarm_add", {"time": "04:30", "date": day, "repeat": [1, 2, 3, 4, 5], "label": "p42 mcp", "tag": TAG,

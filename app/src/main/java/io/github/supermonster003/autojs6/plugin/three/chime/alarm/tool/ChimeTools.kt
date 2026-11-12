@@ -2,12 +2,16 @@ package io.github.supermonster003.autojs6.plugin.three.chime.alarm.tool
 
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmException
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.api.AlarmApi
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.api.TimerApi
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.timer.TimerDurations
+import org.autojs.plugin.alarm.api.AlarmContract
 import org.autojs.plugin.alarm.api.AlarmErrorCodes
 import org.autojs.plugin.alarm.api.AlarmLimits
 import org.autojs.plugin.alarm.api.AlarmOptionKeys
 import org.autojs.plugin.alarm.api.AlarmResultKeys
 import org.autojs.plugin.alarm.api.AlarmSnapshot
 import org.autojs.plugin.alarm.api.OccurrenceSnapshot
+import org.autojs.plugin.alarm.api.TimerSnapshot
 import org.autojs.plugin.tool.api.PluginToolErrorCodes
 import org.autojs.plugin.tool.api.PluginToolException
 import java.time.Instant
@@ -20,14 +24,18 @@ import java.time.format.DateTimeFormatter
  * Alarm errors become tool errors ([error], T94); the message keeps the alarm code in front. Results describe an alarm
  * in the `AlarmOptions` shape (T95): `time` as `HH:mm` (`HH:mm:ss` with seconds), `vibrate` as a boolean or the pattern,
  * `snooze` as false or its members, members never set left out, and the moments `nextTrigger` / `at` also as ISO 8601 text
- * in the alarm's zone. Pure Kotlin: the JVM tests run every tool on the real repository.
+ * in the alarm's zone. Since 1.1.0 the timer tools run on a [TimerApi] that records the source `tool` and cancels
+ * ringing timers `by` `tool` (roadmap P7.6, T126 - T129). Pure Kotlin: the JVM tests run every tool on the real
+ * repository and timer engine.
  * zh-CN: 路线图 P4.1 的九个 1.0.0 工具, 基于记来源 `tool` 与关闭者 `tool` 的 [AlarmApi] (T18, T78): [call] 接收去掉短名的工具名与已校验的参数,
  * 返回结果对象. 闹钟错误转为工具错误 ([error], T94), 消息前保留闹钟错误码. 结果以 `AlarmOptions` 的形式描述闹钟 (T95): `time` 为 `HH:mm`
  * (有秒时为 `HH:mm:ss`), `vibrate` 为布尔或节奏, `snooze` 为 false 或其成员, 未设置的成员略去, 时刻 `nextTrigger` / `at` 另给出闹钟时区的
- * ISO 8601 文本. 纯 Kotlin: JVM 测试在真实仓库上运行每个工具.
+ * ISO 8601 文本. 1.1.0 起计时器工具基于记来源 `tool`, 以 `tool` 关闭响铃中计时器的 [TimerApi] (路线图 P7.6, T126 - T129). 纯 Kotlin: JVM 测试在
+ * 真实仓库与计时器引擎上运行每个工具.
  */
 internal class ChimeTools(
     private val api: AlarmApi,
+    private val timers: TimerApi,
     private val deviceZone: () -> ZoneId = ZoneId::systemDefault,
 ) {
 
@@ -62,10 +70,70 @@ internal class ChimeTools(
                 arguments.int(args, "minutes", AlarmLimits.MIN_SNOOZE_MINUTES, AlarmLimits.MAX_SNOOZE_MINUTES, null)?.let { request[AlarmOptionKeys.MINUTES] = it }
                 mapOf("handled" to (api.snooze(request)[AlarmResultKeys.HANDLED] == true))
             }
+            ChimeToolCatalog.TOOL_TIMER_START -> timerResult(timers.startTimer(arguments.timer(args)))
+            ChimeToolCatalog.TOOL_TIMER_LIST -> {
+                only(args)
+                mapOf("timers" to maps(timers.listTimers(emptyMap())[AlarmResultKeys.TIMERS]).map { timer(TimerSnapshot.fromValues(it)) })
+            }
+            ChimeToolCatalog.TOOL_TIMER_CONTROL -> control(args)
             else -> throw PluginToolException(PluginToolErrorCodes.UNKNOWN_TOOL, "3-Chime Alarm has no tool $tool")
         }
     } catch (e: AlarmException) {
-        throw error(e)
+        throw error(e, timer = tool in TIMER_TOOLS)
+    }
+
+    /** T127: `timer_control`; `add` takes `duration` (which no other action takes) and becomes `addTime`. zh-CN: T127: `add` 带 `duration`, 转为 `addTime`. */
+    private fun control(args: Map<String, Any?>): Map<String, Any?> {
+        only(args, "id", "action", "duration")
+        val id = arguments.id(args)
+        val action = args["action"]
+        val wire = when (action) {
+            "pause" -> AlarmContract.TIMER_ACTION_PAUSE
+            "resume" -> AlarmContract.TIMER_ACTION_RESUME
+            "add" -> AlarmContract.TIMER_ACTION_ADD_TIME
+            "reset" -> AlarmContract.TIMER_ACTION_RESET
+            "cancel" -> AlarmContract.TIMER_ACTION_CANCEL
+            else -> throw AlarmException.invalidOptions("action must be one of ${ChimeToolCatalog.TIMER_ACTIONS.joinToString(", ")}, got ${ChimeToolArguments.describe(action)}")
+        }
+        val millis = args["duration"]?.let { arguments.duration("duration", it, signed = true) }
+        if (action == "add" && millis == null) throw AlarmException.invalidOptions("action add needs duration")
+        if (action != "add" && millis != null) throw AlarmException.invalidOptions("duration only goes with action add")
+        val request = linkedMapOf<String, Any?>(AlarmOptionKeys.ID to id, AlarmOptionKeys.ACTION to wire)
+        millis?.let { request[AlarmOptionKeys.MILLIS] = it }
+        val answer = timers.controlTimer(request)
+        if (wire == AlarmContract.TIMER_ACTION_CANCEL) return linkedMapOf("id" to id, "removed" to (answer[AlarmResultKeys.REMOVED] == true))
+        return timerResult(answer)
+    }
+
+    private fun timerResult(answer: Map<String, Any?>): Map<String, Any?> =
+        mapOf("timer" to timer(TimerSnapshot.fromValues(map(answer[AlarmResultKeys.TIMER] ?: throw AlarmException(AlarmErrorCodes.INTERNAL, "no timer in the answer")))))
+
+    /**
+     * T129: one timer for the tools: the snapshot with `remaining` as clock text, `endsAt` also as ISO 8601 text in the
+     * phone's zone, and the ring options in the shape `timer_start` takes.
+     * zh-CN: T129: 工具里的一个计时器: 快照, 另给出钟面文本 `remaining`, 手机时区的 ISO 8601 文本 `endsAtTime`, 响铃选项与 `timer_start` 的写法相同.
+     */
+    fun timer(snapshot: TimerSnapshot): Map<String, Any?> {
+        val spec = snapshot.spec
+        return LinkedHashMap<String, Any?>().apply {
+            put("id", snapshot.id)
+            spec.label?.let { put("label", it) }
+            put("state", snapshot.state)
+            put("durationMillis", snapshot.durationMillis)
+            put("remainingMillis", snapshot.remainingMillis)
+            put("remaining", TimerDurations.clockText(snapshot.remainingMillis))
+            snapshot.endsAt?.let {
+                put("endsAt", it)
+                put("endsAtTime", isoTime(it, deviceZone()))
+            }
+            spec.sound?.toValues()?.filterValues { it != null }?.takeIf { it.isNotEmpty() }?.let { put("sound", it) }
+            when {
+                spec.vibratePattern != null -> put("vibrate", spec.vibratePattern)
+                spec.vibrate != null -> put("vibrate", spec.vibrate)
+            }
+            spec.speak?.toValues()?.filterValues { it != null }?.let { put("speak", it) }
+            spec.autoSilenceMinutes?.let { put("autoSilenceMinutes", it) }
+        }
     }
 
     private fun list(args: Map<String, Any?>): Map<String, Any?> {
@@ -197,11 +265,16 @@ internal class ChimeTools(
             else -> PluginToolErrorCodes.FAILED
         }
 
-        fun error(e: AlarmException): PluginToolException {
+        private val TIMER_TOOLS = setOf(ChimeToolCatalog.TOOL_TIMER_START, ChimeToolCatalog.TOOL_TIMER_LIST, ChimeToolCatalog.TOOL_TIMER_CONTROL)
+
+        /** [timer]: a timer tool, whose permission hint cannot suggest `enabled: false`. zh-CN: [timer]: 计时器工具, 其权限提示不能建议 `enabled: false`. */
+        fun error(e: AlarmException, timer: Boolean = false): PluginToolException {
             val detail = e.detail.ifEmpty { "no detail" }
-            val hint = if (e.code == AlarmErrorCodes.PERMISSION_REQUIRED) {
-                " (3-Chime Alarm may not set exact alarms: the user can allow it on its permissions page, or pass enabled false)"
-            } else ""
+            val hint = when {
+                e.code != AlarmErrorCodes.PERMISSION_REQUIRED -> ""
+                timer -> " (3-Chime Alarm may not set exact alarms: the user can allow it on its permissions page)"
+                else -> " (3-Chime Alarm may not set exact alarms: the user can allow it on its permissions page, or pass enabled false)"
+            }
             return PluginToolException(code(e.code), "${e.code}: $detail$hint", e)
         }
     }

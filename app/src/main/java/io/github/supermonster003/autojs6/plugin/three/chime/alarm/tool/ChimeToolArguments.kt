@@ -1,6 +1,7 @@
 package io.github.supermonster003.autojs6.plugin.three.chime.alarm.tool
 
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmException
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.timer.TimerDurations
 import org.autojs.plugin.alarm.api.AlarmContract
 import org.autojs.plugin.alarm.api.AlarmOptionKeys
 import java.time.DateTimeException
@@ -59,6 +60,31 @@ internal class ChimeToolArguments(private val deviceZone: () -> ZoneId = ZoneId:
         cleared.forEach { wire[it] = null }
         if (wire.isEmpty()) throw invalid("nothing to change: give an option or clear")
         return wire
+    }
+
+    /**
+     * The `startTimer` request of `timer_start` (roadmap P7.6, T126): `durationMillis` from [duration] and the ring options
+     * `label`, `sound`, `vibrate`, `speak` and `autoSilenceMinutes` in the wire shape of the alarm options.
+     * zh-CN: `timer_start` 的 `startTimer` 请求 (路线图 P7.6, T126): 由 [duration] 得到的 `durationMillis`, 以及线上形式与闹钟选项相同的响铃选项
+     * `label`, `sound`, `vibrate`, `speak`, `autoSilenceMinutes`.
+     */
+    fun timer(args: Map<String, Any?>): Map<String, Any?> {
+        rejectUnknown(args, TIMER_KEYS)
+        val value = args["duration"] ?: throw invalid("duration is required: milliseconds, or text such as 25m, 1h30m or 90s")
+        val wire = linkedMapOf<String, Any?>(AlarmOptionKeys.DURATION_MILLIS to TimerDurations.requireInRange(duration("duration", value), "duration"))
+        wire.putAll(options(args - "duration", null))
+        return wire
+    }
+
+    /**
+     * T107: a duration argument, an integer in milliseconds or the `h m s` text ("25m", "1h30m", "90s"); [signed] allows a
+     * negative integer or a leading minus (`timer_control` with `add`). The range is checked by the caller.
+     * zh-CN: T107: 时长参数, 毫秒整数或 `h m s` 文本 ("25m", "1h30m", "90s"); [signed] 允许负整数或前导减号 (`timer_control` 的 `add`). 范围由调用方检查.
+     */
+    fun duration(name: String, value: Any, signed: Boolean = false): Long = when (value) {
+        is String -> if (signed) TimerDurations.parseSigned(value, name) else TimerDurations.parse(value, name)
+        is Number -> integral(name, value)
+        else -> throw invalid("$name must be milliseconds or text such as 25m, 1h30m or 90s, got ${describe(value)}")
     }
 
     /** The `filter` group of `listAlarms` and `upcoming`, null when empty. zh-CN: `listAlarms` 与 `upcoming` 的 `filter` 分组, 为空时 null. */
@@ -319,6 +345,9 @@ internal class ChimeToolArguments(private val deviceZone: () -> ZoneId = ZoneId:
         val OPTION_KEYS: Set<String> = linkedSetOf(
             "time", "date", "at", "repeat", "exclude", "timeZone", "label", "enabled", "tag", "sound", "vibrate", "speak", "snooze", "autoSilenceMinutes",
         )
+
+        /** T126: the arguments of `timer_start`. zh-CN: T126: `timer_start` 的参数. */
+        val TIMER_KEYS: Set<String> = linkedSetOf("duration", "label", "sound", "vibrate", "speak", "autoSilenceMinutes")
 
         private val TIME_KEYS = setOf("hour", "minute", "second")
         private val SOUND_KEYS = setOf(AlarmOptionKeys.SOUND_SOURCE, AlarmOptionKeys.SOUND_VOLUME, AlarmOptionKeys.SOUND_RAMP_SECONDS)

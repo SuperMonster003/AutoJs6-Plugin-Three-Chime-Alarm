@@ -42,12 +42,16 @@ import java.util.concurrent.atomic.AtomicReference
 /**
  * Roadmap P4.1 (E2): the plugin tool provider through its Binder interface as AutoJs6 calls it for `plugins.tools.call`
  * (every call goes through Parcels, [MarshallingBinder]): discovery and the capability, the catalog, then each 1.0.0
- * tool on alarms tagged [TAG] (add -> list -> update -> set_enabled -> skip_next -> upcoming -> remove), the refusals of
- * the base class and the tool errors. Rings are never started: the alarms lie 30 days ahead, and dismiss / snooze name an
- * unknown id. Every alarm the test made is removed. Results are `ChimeDeviceRun` log lines with counts only.
+ * tool on alarms tagged [TAG] (add -> list -> update -> set_enabled -> skip_next -> upcoming -> remove), the 1.1.0 timer
+ * tools on a 25-minute timer labelled [TAG] (start -> list -> pause -> add -> resume -> reset -> cancel, roadmap P7.6), the
+ * refusals of the base class and the tool errors. Rings are never started: the alarms lie 30 days ahead, the timer is
+ * cancelled long before it ends, and dismiss / snooze name an unknown id. Every alarm and timer the test made is removed.
+ * Results are `ChimeDeviceRun` log lines with counts only.
  * zh-CN: 路线图 P4.1 (E2): 像 AutoJs6 为 `plugins.tools.call` 调用那样经 Binder 接口测试插件工具提供方 (每次调用都经 Parcel, [MarshallingBinder]): 发现与能力,
- * 目录, 然后在标签为 [TAG] 的闹钟上测试每个 1.0.0 工具 (add -> list -> update -> set_enabled -> skip_next -> upcoming -> remove), 基类的拒绝与工具错误.
- * 从不开始响铃: 闹钟都在 30 天后, dismiss / snooze 使用不存在的 id. 测试建的闹钟全部删除. 结果为只含数量的 `ChimeDeviceRun` 日志行.
+ * 目录, 然后在标签为 [TAG] 的闹钟上测试每个 1.0.0 工具 (add -> list -> update -> set_enabled -> skip_next -> upcoming -> remove), 在名称为 [TAG] 的
+ * 25 分钟计时器上测试 1.1.0 的计时器工具 (start -> list -> pause -> add -> resume -> reset -> cancel, 路线图 P7.6), 基类的拒绝与工具错误.
+ * 从不开始响铃: 闹钟都在 30 天后, 计时器远在到点前取消, dismiss / snooze 使用不存在的 id. 测试建的闹钟与计时器全部删除. 结果为只含数量的
+ * `ChimeDeviceRun` 日志行.
  */
 @RunWith(AndroidJUnit4::class)
 class ChimeToolServiceTest {
@@ -55,11 +59,15 @@ class ChimeToolServiceTest {
     private val context: Context get() = InstrumentationRegistry.getInstrumentation().targetContext
 
     private val created = ArrayList<String>()
+    private val timers = ArrayList<String>()
 
     @After
     fun tearDown() {
-        if (created.isEmpty()) return
-        withProvider { provider -> created.forEach { call(provider, ChimeToolCatalog.TOOL_REMOVE, JSONObject().put("id", it)) } }
+        if (created.isEmpty() && timers.isEmpty()) return
+        withProvider { provider ->
+            created.forEach { call(provider, ChimeToolCatalog.TOOL_REMOVE, JSONObject().put("id", it)) }
+            timers.forEach { call(provider, ChimeToolCatalog.TOOL_TIMER_CONTROL, JSONObject().put("id", it).put("action", "cancel")) }
+        }
     }
 
     @Test
@@ -130,8 +138,57 @@ class ChimeToolServiceTest {
     }
 
     @Test
+    fun timerToolsRoundTrip() = withProvider { provider ->
+        val exact = AlarmRuntime.get(context).port.canScheduleExact()
+        if (!exact) {
+            val refused = call(provider, ChimeToolCatalog.TOOL_TIMER_START, JSONObject().put("duration", "25m").put("label", TAG))
+            assertEquals(PluginToolErrorCodes.NOT_READY, refused.code)
+            assertFalse(refused.message!!.contains("enabled false"))
+            log("timers exact=false NOT_READY")
+            return@withProvider
+        }
+        val started = call(provider, ChimeToolCatalog.TOOL_TIMER_START, JSONObject().put("duration", "25m").put("label", TAG).put("sound", JSONObject().put("source", "silent")))
+            .result().getJSONObject("timer")
+        val id = started.getString("id").also(timers::add)
+        assertTrue(id.startsWith("t_"))
+        assertEquals(AlarmContract.TIMER_RUNNING, started.getString("state"))
+        assertEquals(25 * 60_000L, started.getLong("durationMillis"))
+        assertTrue(started.has("endsAt") && started.has("endsAtTime"))
+        assertEquals(AlarmContract.SOURCE_TOOL, AlarmRuntime.get(context).timers.get(id)!!.source)
+
+        val listed = call(provider, ChimeToolCatalog.TOOL_TIMER_LIST, JSONObject()).result().getJSONArray("timers")
+        assertTrue((0 until listed.length()).any { listed.getJSONObject(it).getString("id") == id })
+
+        val paused = call(provider, ChimeToolCatalog.TOOL_TIMER_CONTROL, JSONObject().put("id", id).put("action", "pause")).result().getJSONObject("timer")
+        assertEquals(AlarmContract.TIMER_PAUSED, paused.getString("state"))
+        assertFalse(paused.has("endsAt"))
+        val left = paused.getLong("remainingMillis")
+        val shorter = call(provider, ChimeToolCatalog.TOOL_TIMER_CONTROL, JSONObject().put("id", id).put("action", "add").put("duration", "-1m")).result().getJSONObject("timer")
+        assertEquals(left - 60_000L, shorter.getLong("remainingMillis"))
+        val longer = call(provider, ChimeToolCatalog.TOOL_TIMER_CONTROL, JSONObject().put("id", id).put("action", "add").put("duration", 120_000)).result().getJSONObject("timer")
+        assertEquals(left + 60_000L, longer.getLong("remainingMillis"))
+        assertEquals(AlarmContract.TIMER_RUNNING, call(provider, ChimeToolCatalog.TOOL_TIMER_CONTROL, JSONObject().put("id", id).put("action", "resume")).result().getJSONObject("timer").getString("state"))
+        val reset = call(provider, ChimeToolCatalog.TOOL_TIMER_CONTROL, JSONObject().put("id", id).put("action", "reset")).result().getJSONObject("timer")
+        assertEquals(AlarmContract.TIMER_PAUSED, reset.getString("state"))
+        assertEquals(25 * 60_000L, reset.getLong("remainingMillis"))
+
+        val text = call(provider, ChimeToolCatalog.TOOL_TIMER_START, JSONObject().put("duration", "25"))
+        assertEquals(PluginToolErrorCodes.INVALID_ARGUMENTS, text.code)
+        assertTrue(text.message!!.startsWith("INVALID_OPTIONS: "))
+        assertEquals(PluginToolErrorCodes.INVALID_ARGUMENTS, call(provider, ChimeToolCatalog.TOOL_TIMER_CONTROL, JSONObject().put("id", id).put("action", "add")).code)
+        val missing = call(provider, ChimeToolCatalog.TOOL_TIMER_CONTROL, JSONObject().put("id", "t_missing").put("action", "pause"))
+        assertEquals(PluginToolErrorCodes.INVALID_ARGUMENTS, missing.code)
+        assertTrue(missing.message!!.startsWith("NOT_FOUND: "))
+
+        assertTrue(call(provider, ChimeToolCatalog.TOOL_TIMER_CONTROL, JSONObject().put("id", id).put("action", "cancel")).result().getBoolean("removed"))
+        assertFalse(call(provider, ChimeToolCatalog.TOOL_TIMER_CONTROL, JSONObject().put("id", id).put("action", "cancel")).result().getBoolean("removed"))
+        timers.clear()
+        log("timers exact=true tools=3 refusals=3")
+    }
+
+    @Test
     fun refusalsAndToolErrors() = withProvider { provider ->
-        assertEquals(PluginToolErrorCodes.UNKNOWN_TOOL, call(provider, "timer_start", JSONObject()).code)
+        assertEquals(PluginToolErrorCodes.UNKNOWN_TOOL, call(provider, "stopwatch_start", JSONObject()).code)
         assertEquals(PluginToolErrorCodes.INVALID_ARGUMENTS, call(provider, ChimeToolCatalog.TOOL_ADD, JSONObject().put("time", "7 am")).code)
         val local = call(provider, ChimeToolCatalog.TOOL_ADD, JSONObject().put("time", "04:00").put("enabled", false).put("sound", JSONObject().put("source", "/sdcard/a.mp3")))
         assertEquals(PluginToolErrorCodes.INVALID_ARGUMENTS, local.code)
