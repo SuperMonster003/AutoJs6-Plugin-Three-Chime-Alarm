@@ -5,6 +5,8 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.Ala
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmRecord
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.NextOccurrence
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.RecurrenceRule
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.timer.TimerDurations
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.timer.TimerRecord
 import org.autojs.plugin.alarm.api.AlarmContract
 import org.autojs.plugin.alarm.api.AlarmLimits
 import org.autojs.plugin.alarm.api.AlarmOptionKeys
@@ -24,6 +26,13 @@ import java.util.Locale
  *   same repeat and label (and the same vibration and sound when given) is enabled instead of added again (T79).
  * - `DISMISS_ALARM` ([search], [matches], [dismissPlan]): see T80.
  * - `SNOOZE_ALARM` ([snoozeMinutes]): `EXTRA_ALARM_SNOOZE_DURATION` 1 - 60 minutes, absent: the alarm's own length.
+ * - `SET_TIMER` ([setTimer], [sameTimer], roadmap P7.5, T140): `EXTRA_LENGTH` in seconds, 1 s - 100 h (the plugin
+ *   range, T107, wider than the 24 h the platform documents, as the AOSP clock); without it the new timer dialog opens
+ *   and `EXTRA_SKIP_UI` does not apply. `EXTRA_MESSAGE` becomes the label as for alarms. A timer that stands reset with
+ *   the same length and label starts again instead of a new one (as the AOSP clock). `EXTRA_SKIP_UI` false (the
+ *   default) also opens the timers page.
+ * - `SHOW_TIMERS` ([ACTION_SHOW_TIMERS]) opens the timers page; `DISMISS_TIMER` ([ACTION_DISMISS_TIMER]) ends every
+ *   ringing or snoozed timer (T141).
  *
  * zh-CN: 以普通值处理系统时钟 Intent (路线图 P2.6, D21), 使 JVM 测试覆盖 extras 映射与闹钟搜索; [ClockIntentActivity] 读取 Intent, 执行并显示结果.
  * 键为 `AlarmClock` 的 extras.
@@ -34,8 +43,25 @@ import java.util.Locale
  *   时直接保存, 已有同一时间, 无自定日期 (仅有自动补上的日期), 重复与标签相同 (给出振动与铃声时也相同) 的闹钟则改为启用它而不重复添加 (T79).
  * - `DISMISS_ALARM` ([search], [matches], [dismissPlan]): 见 T80.
  * - `SNOOZE_ALARM` ([snoozeMinutes]): `EXTRA_ALARM_SNOOZE_DURATION` 1 - 60 分钟, 缺省时用闹钟自己的时长.
+ * - `SET_TIMER` ([setTimer], [sameTimer], 路线图 P7.5, T140): `EXTRA_LENGTH` 以秒计, 1 秒至 100 小时 (插件的范围, T107, 与 AOSP 时钟一样宽于平台文档的
+ *   24 小时); 缺省时打开新建计时器对话框, `EXTRA_SKIP_UI` 不适用. `EXTRA_MESSAGE` 与闹钟一样成为标签. 已有处于重置状态, 时长与标签都相同的计时器时
+ *   重新开始它而不新建 (与 AOSP 时钟一致). `EXTRA_SKIP_UI` 为 false (默认) 时另打开计时器页.
+ * - `SHOW_TIMERS` ([ACTION_SHOW_TIMERS]) 打开计时器页; `DISMISS_TIMER` ([ACTION_DISMISS_TIMER]) 结束全部正在响铃或贪睡的计时器 (T141).
  */
 object ClockRequests {
+
+    /**
+     * `AlarmClock.ACTION_SHOW_TIMERS` (API 26) and `ACTION_DISMISS_TIMER` (API 27) as literals, since the plugin starts at
+     * API 24 and the constants are inlined anyway.
+     * zh-CN: `AlarmClock.ACTION_SHOW_TIMERS` (API 26) 与 `ACTION_DISMISS_TIMER` (API 27) 的字面值, 因为插件从 API 24 起支持, 而这些常量本就会被内联.
+     */
+    const val ACTION_SHOW_TIMERS = "android.intent.action.SHOW_TIMERS"
+
+    /** See [ACTION_SHOW_TIMERS]. zh-CN: 见 [ACTION_SHOW_TIMERS]. */
+    const val ACTION_DISMISS_TIMER = "android.intent.action.DISMISS_TIMER"
+
+    /** The longest `EXTRA_LENGTH` in seconds (100 h, T107). zh-CN: `EXTRA_LENGTH` 的最大秒数 (100 小时, T107). */
+    const val MAX_TIMER_SECONDS: Long = TimerDurations.MAX_MILLIS / 1000L
 
     /** A dismissal of a ring that is not sounding yet reaches at most this far ahead (T80). zh-CN: 尚未响铃的关闭至多提前这么久 (T80). */
     const val DISMISS_AHEAD_MILLIS: Long = 24 * 60 * 60 * 1000L
@@ -46,6 +72,13 @@ object ClockRequests {
      * zh-CN: 一个 `SET_ALARM` 请求: 闹钟选项 [options] (Intent 没有有效时间时为 null, 此时打开新建页) 与 [skipUi].
      */
     data class SetAlarm(val options: Map<String, Any?>?, val skipUi: Boolean)
+
+    /**
+     * A `SET_TIMER` request: the length in [millis] (null when the intent has none, so the new timer dialog opens), the
+     * [label] and [skipUi].
+     * zh-CN: 一个 `SET_TIMER` 请求: 时长 [millis] (Intent 未给出时为 null, 此时打开新建计时器对话框), 标签 [label] 与 [skipUi].
+     */
+    data class SetTimer(val millis: Long?, val label: String?, val skipUi: Boolean)
 
     /** How a `DISMISS_ALARM` intent picks alarms. zh-CN: `DISMISS_ALARM` Intent 挑选闹钟的方式. */
     sealed interface Search {
@@ -96,6 +129,31 @@ object ClockRequests {
             options[AlarmOptionKeys.SOUND] = mapOf(AlarmOptionKeys.SOUND_SOURCE to source)
         }
         return SetAlarm(options, skipUi)
+    }
+
+    /**
+     * The `SET_TIMER` extras; throws `INVALID_OPTIONS` for an `EXTRA_LENGTH` outside 1 - [MAX_TIMER_SECONDS] seconds or
+     * of another type.
+     * zh-CN: `SET_TIMER` 的 extras; `EXTRA_LENGTH` 不在 1 - [MAX_TIMER_SECONDS] 秒或类型不符时报 `INVALID_OPTIONS`.
+     */
+    fun setTimer(extras: Map<String, Any?>): SetTimer {
+        val millis = when (val value = extras[AlarmClock.EXTRA_LENGTH]) {
+            null -> null
+            is Int, is Long -> (value as Number).toLong().takeIf { it in 1..MAX_TIMER_SECONDS }?.let { it * 1000L }
+                ?: throw AlarmException.invalidOptions("EXTRA_LENGTH must be 1 - $MAX_TIMER_SECONDS seconds, got $value")
+            else -> throw AlarmException.invalidOptions("EXTRA_LENGTH must be an integer number of seconds")
+        }
+        return SetTimer(millis, labelOf(extras[AlarmClock.EXTRA_MESSAGE]), extras[AlarmClock.EXTRA_SKIP_UI] as? Boolean ?: false)
+    }
+
+    /**
+     * The timer a `SET_TIMER` of [millis] and [label] starts again instead of adding one: it stands reset (not running,
+     * ringing or snoozed, the whole length left) with the same length and label, as the AOSP clock reuses timers.
+     * zh-CN: `SET_TIMER` ([millis], [label]) 重新开始而不新建的计时器: 处于重置状态 (未运行, 未响铃, 未贪睡, 剩余整个时长), 时长与标签都相同, 与 AOSP 时钟复用计时器的做法一致.
+     */
+    fun sameTimer(records: List<TimerRecord>, millis: Long, label: String?): TimerRecord? = records.firstOrNull {
+        !it.running && !it.ringing && it.snoozeUntil == null && it.remainingMillis == it.durationMillis &&
+            it.durationMillis == millis && it.spec.label == label
     }
 
     /**
@@ -219,6 +277,6 @@ object ClockRequests {
     val EXTRA_KEYS: List<String> = listOf(
         AlarmClock.EXTRA_HOUR, AlarmClock.EXTRA_MINUTES, AlarmClock.EXTRA_MESSAGE, AlarmClock.EXTRA_DAYS, AlarmClock.EXTRA_VIBRATE,
         AlarmClock.EXTRA_RINGTONE, AlarmClock.EXTRA_SKIP_UI, AlarmClock.EXTRA_ALARM_SEARCH_MODE, AlarmClock.EXTRA_IS_PM,
-        AlarmClock.EXTRA_ALARM_SNOOZE_DURATION,
+        AlarmClock.EXTRA_ALARM_SNOOZE_DURATION, AlarmClock.EXTRA_LENGTH,
     )
 }

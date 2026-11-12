@@ -69,6 +69,11 @@ class TimerEngine(
         listeners += listener
     }
 
+    /** Removes a listener of [addListener] (the timers page, roadmap P7.4). zh-CN: 移除 [addListener] 的监听器 (计时器页, 路线图 P7.4). */
+    fun removeListener(listener: (String, TimerRecord?) -> Unit) {
+        listeners -= listener
+    }
+
     fun get(id: String): TimerRecord? = synchronized(lock) { loaded()[id] }
 
     fun list(): List<TimerRecord> = synchronized(lock) { loaded().values.toList() }

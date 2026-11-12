@@ -60,9 +60,17 @@
         <item quantity="one">At most %1$d sound can be imported. Delete one first</item>
         <item quantity="other">At most %1$d sounds can be imported. Delete one first</item>
     </plurals>
+    <plurals name="stopwatch_lap_limit">
+        <item quantity="one">Lap limit reached: at most %1$d lap</item>
+        <item quantity="other">Lap limit reached: at most %1$d laps</item>
+    </plurals>
     <plurals name="stopwatch_laps">
         <item quantity="one">%1$d lap</item>
         <item quantity="other">%1$d laps</item>
+    </plurals>
+    <plurals name="timers_limit">
+        <item quantity="one">You can have at most %1$d timer</item>
+        <item quantity="other">You can have at most %1$d timers</item>
     </plurals>
     <plurals name="update_ignored_count">
         <item quantity="one">%1$d ignored release</item>

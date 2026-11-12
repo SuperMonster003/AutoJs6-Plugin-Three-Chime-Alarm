@@ -120,4 +120,19 @@ object TimeFormats {
         }
         return MeasureFormat.getInstance(locale(context), MeasureFormat.FormatWidth.SHORT).formatMeasures(*measures.toTypedArray())
     }
+
+    /**
+     * A timer duration in hours, minutes and seconds, leaving out the zero parts ("1 hr, 30 min", "1 min, 30 sec"), for
+     * the presets and the system timer requests (roadmap P7.4, P7.5).
+     * zh-CN: 以时, 分, 秒表示的计时器时长, 省略为零的部分, 用于预设与系统计时器请求 (路线图 P7.4, P7.5).
+     */
+    fun duration(context: Context, millis: Long): String {
+        val seconds = (millis.coerceAtLeast(0L) + 999L) / 1000L
+        val measures = listOfNotNull(
+            (seconds / 3600).takeIf { it > 0 }?.let { Measure(it, MeasureUnit.HOUR) },
+            (seconds / 60 % 60).takeIf { it > 0 }?.let { Measure(it, MeasureUnit.MINUTE) },
+            (seconds % 60).takeIf { it > 0 || seconds == 0L }?.let { Measure(it, MeasureUnit.SECOND) },
+        )
+        return MeasureFormat.getInstance(locale(context), MeasureFormat.FormatWidth.SHORT).formatMeasures(*measures.toTypedArray())
+    }
 }

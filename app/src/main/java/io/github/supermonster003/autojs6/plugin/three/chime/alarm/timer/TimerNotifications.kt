@@ -14,7 +14,8 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.timer.Tim
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.timer.TimerRecord
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.appearance.screenTexts
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.format.TimeFormats
-import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.home.HomeActivity
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.home.HomeIntents
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.home.HomePage
 import org.autojs.plugin.alarm.api.AlarmContract
 import org.autojs.plugin.alarm.api.StopwatchSnapshot
 
@@ -49,9 +50,9 @@ object TimerNotifications {
     private const val KEY_STOPWATCH = "stopwatch"
 
     /**
-     * Whether the stopwatch shows its notification (T122): on by default, the switch comes with the timer screens of
-     * roadmap P7.4.
-     * zh-CN: 秒表是否显示通知 (T122): 默认开启, 开关随路线图 P7.4 的计时器页面提供.
+     * Whether the stopwatch shows its notification (T122): on by default, switched in the "Timers and stopwatch" group
+     * of the settings page (roadmap P7.4).
+     * zh-CN: 秒表是否显示通知 (T122): 默认开启, 在设置页的 "计时器与秒表" 分组中切换 (路线图 P7.4).
      */
     fun stopwatchShown(context: Context): Boolean = runCatching { preferences(context).getBoolean(KEY_STOPWATCH, true) }.getOrDefault(true)
 
@@ -71,7 +72,7 @@ object TimerNotifications {
         }
         val texts = screenTexts(context)
         val label = record.spec.label?.takeIf { it.isNotBlank() } ?: texts.getString(R.string.timer_default_label)
-        val builder = base(context)
+        val builder = base(context, HomePage.TIMERS)
             .setContentTitle(label)
             .setSortKey("%020d".format(java.util.Locale.ROOT, record.createdAt))
         val end = record.endsAt
@@ -100,7 +101,7 @@ object TimerNotifications {
             return
         }
         val texts = screenTexts(context)
-        val builder = base(context).setContentTitle(texts.getString(R.string.stopwatch_title))
+        val builder = base(context, HomePage.STOPWATCH).setContentTitle(texts.getString(R.string.stopwatch_title))
         if (snapshot.state == AlarmContract.STOPWATCH_RUNNING) {
             builder.setWhen(now - snapshot.elapsedMillis)
                 .setShowWhen(true)
@@ -134,15 +135,12 @@ object TimerNotifications {
         stopwatch(context, stopwatch)
     }
 
-    /** The alarm list (the timer screens come with roadmap P7.4, T123). zh-CN: 闹钟列表 (计时器页面随路线图 P7.4 提供, T123). */
-    fun homeIntent(context: Context): PendingIntent = PendingIntent.getActivity(
-        context,
-        0,
-        Intent(context, HomeActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-    )
-
-    private fun base(context: Context): NotificationCompat.Builder = NotificationCompat.Builder(context, ThreeChimeAlarmApplication.CHANNEL_TIMER)
+    /**
+     * A tap on a timer notification opens the timers page and one on the stopwatch notification the stopwatch page (T123,
+     * roadmap P7.4).
+     * zh-CN: 点按计时器通知打开计时器页, 点按秒表通知打开秒表页 (T123, 路线图 P7.4).
+     */
+    private fun base(context: Context, page: HomePage): NotificationCompat.Builder = NotificationCompat.Builder(context, ThreeChimeAlarmApplication.CHANNEL_TIMER)
         .setSmallIcon(R.drawable.ic_alarm_24)
         .setCategory(NotificationCompat.CATEGORY_STOPWATCH)
         .setPriority(NotificationCompat.PRIORITY_LOW)
@@ -151,7 +149,7 @@ object TimerNotifications {
         .setOnlyAlertOnce(true)
         .setSilent(true)
         .setLocalOnly(true)
-        .setContentIntent(homeIntent(context))
+        .setContentIntent(HomeIntents.pending(context, page))
 
     private fun notify(manager: NotificationManagerCompat, tag: String, id: Int, builder: NotificationCompat.Builder) {
         try {

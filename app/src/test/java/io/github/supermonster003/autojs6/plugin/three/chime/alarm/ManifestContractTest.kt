@@ -192,7 +192,7 @@ class ManifestContractTest {
     }
 
     @Test
-    fun `the clock intent activity answers the alarm intents behind SET_ALARM`() {
+    fun `the clock intent activity answers the alarm and timer intents behind SET_ALARM`() {
         val clock = activity(".intent.ClockIntentActivity")
         assertEquals("true", clock.android("exported"))
         assertEquals(SET_ALARM_PERMISSION, clock.android("permission"))
@@ -206,6 +206,10 @@ class ManifestContractTest {
                 "android.intent.action.SHOW_ALARMS",
                 "android.intent.action.DISMISS_ALARM",
                 "android.intent.action.SNOOZE_ALARM",
+                // Roadmap P7.5 (T140, T141). zh-CN: 路线图 P7.5 (T140, T141).
+                "android.intent.action.SET_TIMER",
+                "android.intent.action.SHOW_TIMERS",
+                "android.intent.action.DISMISS_TIMER",
             ),
             filters.flatMap { filter -> filter.children("action").map { it.android("name") } },
         )

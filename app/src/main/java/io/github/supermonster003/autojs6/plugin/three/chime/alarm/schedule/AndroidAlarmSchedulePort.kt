@@ -16,7 +16,8 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.schedule.
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.schedule.AlarmSchedulePort
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.appearance.screenTexts
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.format.TimeFormats
-import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.home.HomeActivity
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.home.HomeIntents
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.home.HomePage
 import org.autojs.plugin.alarm.api.AlarmContract
 import org.autojs.plugin.alarm.api.AlarmEvent
 
@@ -115,12 +116,7 @@ class AndroidAlarmSchedulePort(
         .setData(Uri.Builder().scheme(URI_SCHEME).authority(URI_AUTHORITY).appendPath(alarmId).build())
 
     /** Opens the alarm list (the show intent of the alarm clock). zh-CN: 打开闹钟列表 (闹钟时钟的展示 Intent). */
-    private fun showIntent(): PendingIntent = PendingIntent.getActivity(
-        context,
-        0,
-        Intent(context, HomeActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-    )
+    private fun showIntent(): PendingIntent = HomeIntents.pending(context, HomePage.ALARMS)
 
     companion object {
 

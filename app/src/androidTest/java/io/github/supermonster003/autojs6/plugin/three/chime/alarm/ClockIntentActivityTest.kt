@@ -10,6 +10,7 @@ import android.content.Intent
 import android.os.SystemClock
 import android.provider.AlarmClock
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -50,16 +51,21 @@ import java.util.UUID
  * nothing for an unknown label and lets the user choose among several matches; `SNOOZE_ALARM` without a ringing alarm
  * and the refused extras; a ringing alarm is snoozed for one minute by `SNOOZE_ALARM` and its round ended by
  * `DISMISS_ALARM` without a search mode; two `SET_ALARM` sent back to back are both answered, also while the edit page of
- * an earlier request closes (roadmap Q25, Q27).
+ * an earlier request closes (roadmap Q25, Q27). The timer intents of 1.1.0 (roadmap P7.5, T140, T141): `SET_TIMER`
+ * starts a timer (source `intent`) and starts a reset timer of the same length and label again, opens the timers page
+ * unless `EXTRA_SKIP_UI`, and without a length opens the custom duration dialog; `SHOW_TIMERS` opens the timers page;
+ * `DISMISS_TIMER` ends the ringing timers.
  *
- * Every alarm here carries the label prefix `p26-probe`; [cleanUp] removes them, so a run leaves the alarm list as
- * it found it. Nothing here touches the device's other alarms (no `all` search on a device).
+ * Every alarm and timer here carries the label prefix `p26-probe`; [cleanUp] removes them, so a run leaves the lists as
+ * it found them. Nothing here touches the device's other alarms (no `all` search on a device).
  *
  * zh-CN: 已安装插件的系统时钟 Intent (路线图 P2.6, D21, T79, T80), 以 Intent 启动 [ClockIntentActivity], 再从其结果行与闹钟列表读回: `SET_ALARM`
  * 只保存一次, 第二次改为启用同一闹钟 (来源 `intent`), 没有 `EXTRA_SKIP_UI` 或时间时打开编辑页 (路线图 P3.1, T83), 以来源 `intent` 保存或不保存直接关闭; `SHOW_ALARMS` 打开闹钟列表; `DISMISS_ALARM`
  * 跳过一天之内的响铃, 拒绝更远的, 未知标签找不到闹钟, 多个匹配时由用户选择; `SNOOZE_ALARM` 在没有闹钟响铃时的结果与被拒的 extras; 正在响的闹钟经
- * `SNOOZE_ALARM` 贪睡一分钟, 再由不带搜索模式的 `DISMISS_ALARM` 结束本轮; 背靠背发送的两个 `SET_ALARM` 都得到应答, 之前请求的编辑页正在关闭时也是如此 (路线图 Q25, Q27). 这里的闹钟都带标签前缀 `p26-probe`; [cleanUp] 删除它们, 运行后闹钟
- * 列表保持原样. 不触碰设备上的其他闹钟 (设备上不做 `all` 搜索).
+ * `SNOOZE_ALARM` 贪睡一分钟, 再由不带搜索模式的 `DISMISS_ALARM` 结束本轮; 背靠背发送的两个 `SET_ALARM` 都得到应答, 之前请求的编辑页正在关闭时也是如此 (路线图 Q25, Q27).
+ * 1.1.0 的计时器 Intent (路线图 P7.5, T140, T141): `SET_TIMER` 开始计时器 (来源 `intent`), 并重新开始时长与标签相同且处于重置状态的计时器, 没有 `EXTRA_SKIP_UI`
+ * 时打开计时器页, 没有时长时打开自定义时长对话框; `SHOW_TIMERS` 打开计时器页; `DISMISS_TIMER` 结束正在响铃的计时器. 这里的闹钟与计时器都带标签前缀
+ * `p26-probe`; [cleanUp] 删除它们, 运行后两个列表保持原样. 不触碰设备上的其他闹钟 (设备上不做 `all` 搜索).
  */
 @RunWith(AndroidJUnit4::class)
 class ClockIntentActivityTest {
@@ -87,6 +93,7 @@ class ClockIntentActivityTest {
     fun cleanUp() {
         monitors.forEach { instrumentation.removeMonitor(it) }
         runtime.repository.list().filter { it.spec.label?.startsWith(LABEL_PREFIX) == true }.forEach { runtime.repository.remove(it.id, AlarmContract.SOURCE_TOOL) }
+        runtime.timers.list().filter { it.spec.label?.startsWith(LABEL_PREFIX) == true }.forEach { runCatching { runtime.userTimerApi.cancel(it.id) } }
     }
 
     @Test
@@ -280,6 +287,90 @@ class ClockIntentActivityTest {
         assertEquals("dismissAlarm matched=1 ${record.id}:ended", send(AlarmClock.ACTION_DISMISS_ALARM))
         waitFor("the round ended", WAIT_MILLIS) { runtime.rings.ringing().none { it.id == record.id } }
         assertNull(runtime.repository.get(record.id)!!.state.snoozeUntil)
+    }
+
+    @Test
+    fun setTimerStartsOnceAndStartsTheSameResetTimerAgain() {
+        val extras = arrayOf<Pair<String, Any>>(AlarmClock.EXTRA_LENGTH to 600, AlarmClock.EXTRA_MESSAGE to label, AlarmClock.EXTRA_SKIP_UI to true)
+        val first = send(AlarmClock.ACTION_SET_TIMER, *extras)
+        assertTrue(first, first.startsWith("setTimer started="))
+        val id = first.substringAfter("started=")
+        val record = runtime.timers.get(id)!!
+        assertEquals(AlarmContract.SOURCE_INTENT, record.source)
+        assertEquals(label, record.spec.label)
+        assertEquals(600_000L, record.durationMillis)
+        assertTrue(record.running)
+
+        // A reset timer of the same length and label starts again (T140). zh-CN: 时长与标签相同的已重置计时器重新开始 (T140).
+        runtime.timers.reset(id)
+        assertEquals("setTimer resumed=$id", send(AlarmClock.ACTION_SET_TIMER, *extras))
+        assertTrue(runtime.timers.get(id)!!.running)
+
+        // It runs now, so the same request starts a new one; so does another label. zh-CN: 它已在运行, 同样的请求开始新计时器; 换标签也一样.
+        val second = send(AlarmClock.ACTION_SET_TIMER, *extras)
+        assertTrue(second, second.startsWith("setTimer started=") && second != first)
+        val other = send(AlarmClock.ACTION_SET_TIMER, AlarmClock.EXTRA_LENGTH to 600, AlarmClock.EXTRA_MESSAGE to "$label-b", AlarmClock.EXTRA_SKIP_UI to true)
+        assertTrue(other, other.startsWith("setTimer started="))
+        assertEquals(3, runtime.timers.list().count { it.spec.label?.startsWith(label) == true })
+    }
+
+    @Test
+    fun setTimerWithoutSkipUiOpensTheTimersPage() {
+        val home = monitor(HomeActivity::class.java)
+        val started = send(AlarmClock.ACTION_SET_TIMER, AlarmClock.EXTRA_LENGTH to 90, AlarmClock.EXTRA_MESSAGE to label)
+        assertTrue(started, started.startsWith("setTimer started="))
+        assertNotNull("the timers page opened", instrumentation.waitForMonitorWithTimeout(home, WAIT_MILLIS))
+        val card = "chime.timers.timer.${started.substringAfter("started=")}"
+        compose.waitUntil(WAIT_MILLIS) { compose.shows(hasTestTag(card)) }
+        compose.onNodeWithTag("$card.title").assert(hasText(label))
+        finishAllActivities()
+    }
+
+    @Test
+    fun setTimerWithoutLengthOpensTheCustomDialog() {
+        val home = monitor(HomeActivity::class.java)
+        // As on AOSP, a request without a length shows the timer setup even with skip UI. zh-CN: 与 AOSP 相同, 没有时长的请求即使跳过界面也显示计时器设置.
+        assertEquals("setTimer draft=new", send(AlarmClock.ACTION_SET_TIMER, AlarmClock.EXTRA_SKIP_UI to true))
+        assertNotNull("the timers page opened", instrumentation.waitForMonitorWithTimeout(home, WAIT_MILLIS))
+        val dialog = "chime.timers.customDialog"
+        compose.waitUntil(WAIT_MILLIS) { compose.shows(hasTestTag(dialog)) }
+        compose.onNodeWithTag("$dialog.cancel").performClick()
+        compose.waitUntil(WAIT_MILLIS) { !compose.shows(hasTestTag(dialog)) && compose.shows(hasTestTag("chime.timers.list")) }
+        finishAllActivities()
+    }
+
+    @Test
+    fun refusedTimerExtras() {
+        for (length in listOf<Any>(0, -1, 360_001, "60")) {
+            val refused = send(AlarmClock.ACTION_SET_TIMER, AlarmClock.EXTRA_LENGTH to length, AlarmClock.EXTRA_MESSAGE to label, AlarmClock.EXTRA_SKIP_UI to true)
+            assertTrue("$length: $refused", refused.startsWith("setTimer error=INVALID_OPTIONS"))
+        }
+        assertTrue(runtime.timers.list().none { it.spec.label == label })
+    }
+
+    @Test
+    fun showTimersOpensTheTimersPage() {
+        val home = monitor(HomeActivity::class.java)
+        assertEquals("showTimers shown", send(ClockRequests.ACTION_SHOW_TIMERS))
+        assertNotNull("the timers page opened", instrumentation.waitForMonitorWithTimeout(home, WAIT_MILLIS))
+        compose.waitUntil(WAIT_MILLIS) { compose.shows(hasTestTag("chime.timers.list")) }
+        finishAllActivities()
+    }
+
+    @Test
+    fun dismissTimerEndsTheRingingTimers() {
+        assumeTrue("another timer rings", runtime.rings.ringing().none { it.kind == AlarmContract.KIND_TIMER })
+        // Starting an activity first clears the stopped state that `am instrument` leaves, so the timer is delivered.
+        // zh-CN: 先启动一次 activity, 解除 `am instrument` 留下的停止状态, 计时器才能送达.
+        assertEquals("dismissTimer ringing=0 dismissed=0", send(ClockRequests.ACTION_DISMISS_TIMER))
+        val started = send(AlarmClock.ACTION_SET_TIMER, AlarmClock.EXTRA_LENGTH to RING_SECONDS, AlarmClock.EXTRA_MESSAGE to "$label-ring", AlarmClock.EXTRA_SKIP_UI to true)
+        assertTrue(started, started.startsWith("setTimer started="))
+        val id = started.substringAfter("started=")
+        waitFor("the timer rings", RING_WAIT_MILLIS) { runtime.rings.ringing().any { it.id == id && !it.snoozed } }
+
+        assertEquals("dismissTimer ringing=1 dismissed=1", send(ClockRequests.ACTION_DISMISS_TIMER))
+        waitFor("the timer ended", WAIT_MILLIS) { runtime.rings.ringing().none { it.id == id } && runtime.timers.get(id) == null }
+        finishAllActivities()
     }
 
     private fun waitFor(what: String, millis: Long, condition: () -> Boolean) {

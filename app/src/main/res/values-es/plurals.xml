@@ -75,10 +75,20 @@
         <item quantity="many">Como máximo se pueden importar %1$d sonidos. Elimina uno primero</item>
         <item quantity="other">Como máximo se pueden importar %1$d sonidos. Elimina uno primero</item>
     </plurals>
+    <plurals name="stopwatch_lap_limit">
+        <item quantity="one">Límite de vueltas alcanzado: como máximo %1$d vuelta</item>
+        <item quantity="many">Límite de vueltas alcanzado: como máximo %1$d vueltas</item>
+        <item quantity="other">Límite de vueltas alcanzado: como máximo %1$d vueltas</item>
+    </plurals>
     <plurals name="stopwatch_laps">
         <item quantity="one">%1$d vuelta</item>
         <item quantity="many">%1$d vueltas</item>
         <item quantity="other">%1$d vueltas</item>
+    </plurals>
+    <plurals name="timers_limit">
+        <item quantity="one">Como máximo %1$d temporizador</item>
+        <item quantity="many">Como máximo %1$d temporizadores</item>
+        <item quantity="other">Como máximo %1$d temporizadores</item>
     </plurals>
     <plurals name="update_ignored_count">
         <item quantity="one">%1$d versión ignorada</item>

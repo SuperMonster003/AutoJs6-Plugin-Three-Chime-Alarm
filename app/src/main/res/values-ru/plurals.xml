@@ -90,11 +90,23 @@
         <item quantity="many">Можно импортировать не более %1$d мелодий. Сначала удалите одну</item>
         <item quantity="other">Можно импортировать не более %1$d мелодии. Сначала удалите одну</item>
     </plurals>
+    <plurals name="stopwatch_lap_limit">
+        <item quantity="one">Достигнут предел кругов: не более %1$d круга</item>
+        <item quantity="few">Достигнут предел кругов: не более %1$d кругов</item>
+        <item quantity="many">Достигнут предел кругов: не более %1$d кругов</item>
+        <item quantity="other">Достигнут предел кругов: не более %1$d круга</item>
+    </plurals>
     <plurals name="stopwatch_laps">
         <item quantity="one">%1$d круг</item>
         <item quantity="few">%1$d круга</item>
         <item quantity="many">%1$d кругов</item>
         <item quantity="other">%1$d круга</item>
+    </plurals>
+    <plurals name="timers_limit">
+        <item quantity="one">Не более %1$d таймера</item>
+        <item quantity="few">Не более %1$d таймеров</item>
+        <item quantity="many">Не более %1$d таймеров</item>
+        <item quantity="other">Не более %1$d таймера</item>
     </plurals>
     <plurals name="update_ignored_count">
         <item quantity="one">Игнорируется %1$d выпуск</item>

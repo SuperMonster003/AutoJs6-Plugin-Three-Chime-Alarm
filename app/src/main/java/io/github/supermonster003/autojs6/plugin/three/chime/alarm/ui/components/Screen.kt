@@ -65,8 +65,9 @@ internal object RowDefaults {
 internal fun Color.disabledIf(disabled: Boolean): Color = if (disabled) copy(alpha = alpha * 0.38f) else this
 
 /**
- * Standard page: neutral background, a top bar with the back arrow and the system bar insets handled by [Scaffold].
- * zh-CN: 标准页面: 中性背景, 带返回箭头的顶栏, 系统栏 insets 由 [Scaffold] 处理.
+ * Standard page: neutral background, a top bar with the back arrow and the system bar insets handled by [Scaffold];
+ * [bottomBar] holds the bottom navigation of the home pages (roadmap P7.4).
+ * zh-CN: 标准页面: 中性背景, 带返回箭头的顶栏, 系统栏 insets 由 [Scaffold] 处理; [bottomBar] 放首页各页的底部导航 (路线图 P7.4).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,6 +78,7 @@ internal fun ChimeScreen(
     actions: @Composable RowScope.() -> Unit = {},
     snackbarHostState: SnackbarHostState? = null,
     floatingActionButton: @Composable () -> Unit = {},
+    bottomBar: @Composable () -> Unit = {},
     content: @Composable (PaddingValues) -> Unit,
 ) {
     Scaffold(
@@ -106,6 +108,7 @@ internal fun ChimeScreen(
         },
         snackbarHost = { if (snackbarHostState != null) SnackbarHost(snackbarHostState, modifier = Modifier.testTag("chime.snackbar")) },
         floatingActionButton = floatingActionButton,
+        bottomBar = bottomBar,
         content = content,
     )
 }

@@ -55,6 +55,11 @@ class Stopwatch(
         listeners += listener
     }
 
+    /** Removes a listener of [addListener] (the stopwatch page, roadmap P7.4). zh-CN: 移除 [addListener] 的监听器 (秒表页, 路线图 P7.4). */
+    fun removeListener(listener: (StopwatchSnapshot) -> Unit) {
+        listeners -= listener
+    }
+
     fun state(): StopwatchSnapshot = update { it }
 
     /** Starts from idle, or continues a paused stopwatch (T119). zh-CN: 从 idle 开始, 或继续已暂停的秒表 (T119). */

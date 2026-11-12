@@ -7,9 +7,13 @@ import android.provider.AlarmClock
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.AlarmRuntime
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.R
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmException
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.format.TimeFormats
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.edit.EditAlarmActivity
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.home.HomeActivity
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.home.HomeIntents
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.home.HomePage
 import org.autojs.plugin.alarm.api.AlarmContract
+import org.autojs.plugin.alarm.api.TimerSpec
 import java.time.ZoneId
 
 /**
@@ -20,11 +24,16 @@ import java.time.ZoneId
  * P3.1), the alarm chooser is [ClockDialogActivity], the alarm list is [HomeActivity]. Each outcome is a toast and one
  * line of `adb logcat -s ChimeIntent` ([ClockActions]). Every request gets a task of its own (`documentLaunchMode`,
  * roadmap Q25, T104); on API 24 - 27 [ClockRescue] starts a request the system left behind the home screen (Q27, T105).
+ * Since 1.1.0 (roadmap P7.5) also `SET_TIMER`, `SHOW_TIMERS` and `DISMISS_TIMER` ([ClockRequests.setTimer], T140,
+ * T141): timers are started with source `intent` and dismissed `by` `user`; the timers page is the second page of
+ * [HomeActivity].
  * zh-CN:不带自身窗口地应答系统时钟 Intent (路线图 D21, P2.6): `SET_ALARM`, `SHOW_ALARMS`, `DISMISS_ALARM` 与 `SNOOZE_ALARM` (extras 由
  * [ClockRequests] 映射). 调用方须持有 `com.android.alarm.permission.SET_ALARM` (Manifest). 变更以来源 `intent` 记录; 关闭与贪睡以 `by` `user`
  * 记录 (T66). 不带 `SKIP_UI` 的 `SET_ALARM` 打开编辑页 ([EditAlarmActivity.draft], 路线图 P3.1), 闹钟选择由 [ClockDialogActivity] 提供, 闹钟列表为
  * [HomeActivity]. 每个结果为一个 toast 与 `adb logcat -s ChimeIntent` 的一行 ([ClockActions]). 每个请求各有自己的任务 (`documentLaunchMode`, 路线图
- * Q25, T104); 在 API 24 - 27 上, 被系统留在桌面后面的请求由 [ClockRescue] 启动 (Q27, T105).
+ * Q25, T104); 在 API 24 - 27 上, 被系统留在桌面后面的请求由 [ClockRescue] 启动 (Q27, T105). 自 1.1.0 起 (路线图 P7.5) 另应答 `SET_TIMER`,
+ * `SHOW_TIMERS` 与 `DISMISS_TIMER` ([ClockRequests.setTimer], T140, T141): 计时器以来源 `intent` 启动, 以 `by` `user` 关闭; 计时器页为
+ * [HomeActivity] 的第二页.
  */
 class ClockIntentActivity : Activity() {
 
@@ -42,11 +51,17 @@ class ClockIntentActivity : Activity() {
             when (intent.action) {
                 AlarmClock.ACTION_SET_ALARM -> setAlarm(action, extras)
                 AlarmClock.ACTION_SHOW_ALARMS -> {
-                    startActivity(Intent(this, HomeActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    startActivity(HomeIntents.of(this, HomePage.ALARMS))
                     ClockActions.report(this, action, "shown", null)
                 }
                 AlarmClock.ACTION_DISMISS_ALARM -> dismissAlarm(action, extras)
                 AlarmClock.ACTION_SNOOZE_ALARM -> snoozeAlarm(action, extras)
+                AlarmClock.ACTION_SET_TIMER -> setTimer(action, extras)
+                ClockRequests.ACTION_SHOW_TIMERS -> {
+                    startActivity(HomeIntents.of(this, HomePage.TIMERS))
+                    ClockActions.report(this, action, "shown", null)
+                }
+                ClockRequests.ACTION_DISMISS_TIMER -> dismissTimer(action)
                 else -> ClockActions.report(this, action, "ignored", null)
             }
         } catch (e: AlarmException) {
@@ -90,6 +105,34 @@ class ClockIntentActivity : Activity() {
         }
     }
 
+    private fun setTimer(action: String, extras: Map<String, Any?>) {
+        val request = ClockRequests.setTimer(extras)
+        val millis = request.millis
+        if (millis == null) {
+            startActivity(HomeIntents.of(this, HomePage.TIMERS, customTimer = true))
+            ClockActions.report(this, action, "draft=new", null)
+            return
+        }
+        val runtime = AlarmRuntime.get(this)
+        val same = ClockRequests.sameTimer(runtime.timers.list(), millis, request.label)
+        val record = if (same != null) runtime.timers.resume(same.id) else runtime.intentTimerApi.start(millis, TimerSpec(label = request.label))
+        if (!request.skipUi) startActivity(HomeIntents.of(this, HomePage.TIMERS))
+        val outcome = if (same != null) "resumed=${record.id}" else "started=${record.id}"
+        ClockActions.report(this, action, outcome, getString(R.string.clock_toast_timer_set, TimeFormats.duration(this, millis)))
+    }
+
+    private fun dismissTimer(action: String) {
+        val rings = AlarmRuntime.get(this).rings
+        val timers = rings.ringing().filter { it.kind == AlarmContract.KIND_TIMER }
+        val done = timers.filter { rings.dismiss(it.id, AlarmContract.BY_USER) }
+        val text = if (done.isEmpty()) {
+            getString(R.string.clock_toast_timer_not_ringing)
+        } else {
+            getString(R.string.clock_toast_timer_dismissed, done.joinToString(", ") { it.label ?: getString(R.string.timer_default_label) })
+        }
+        ClockActions.report(this, action, "ringing=${timers.size} dismissed=${done.size}", text)
+    }
+
     companion object {
 
         /** The short action name of the log lines. zh-CN: 日志行中的简短 action 名. */
@@ -98,6 +141,9 @@ class ClockIntentActivity : Activity() {
             AlarmClock.ACTION_SHOW_ALARMS -> "showAlarms"
             AlarmClock.ACTION_DISMISS_ALARM -> "dismissAlarm"
             AlarmClock.ACTION_SNOOZE_ALARM -> "snoozeAlarm"
+            AlarmClock.ACTION_SET_TIMER -> "setTimer"
+            ClockRequests.ACTION_SHOW_TIMERS -> "showTimers"
+            ClockRequests.ACTION_DISMISS_TIMER -> "dismissTimer"
             else -> action ?: "none"
         }
 

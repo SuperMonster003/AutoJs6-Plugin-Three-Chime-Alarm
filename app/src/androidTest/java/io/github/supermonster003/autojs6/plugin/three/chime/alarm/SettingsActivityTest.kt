@@ -20,6 +20,7 @@ import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
 import androidx.test.runner.lifecycle.Stage
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.ring.RingDefaults
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ring.RingDefaultsStore
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.timer.TimerNotifications
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.format.TimeFormat
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.format.TimeFormats
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.settings.SettingsActivity
@@ -36,9 +37,10 @@ import org.junit.runner.RunWith
 /**
  * The settings screen of the installed plugin (roadmap P3.5, T84): the alarm defaults (vibration, snooze) are written to
  * the device-protected store an alarm reads when it rings, and the time format and the automatic update frequency are
- * saved; each row shows the stored value again. The stored values of the device are restored afterwards.
+ * saved, and so is the stopwatch notification switch (roadmap P7.4, T122); each row shows the stored value again. The
+ * stored values of the device are restored afterwards.
  * zh-CN: 已安装插件的设置页 (路线图 P3.5, T84): 闹钟默认值 (振动, 贪睡) 写入响铃时读取的设备加密存储, 时间格式与自动检查更新的频率得到保存; 各行重新显示
- * 存储值. 测试结束后恢复设备原有的存储值.
+ * 存储值; 秒表通知开关同样得到保存 (路线图 P7.4, T122). 测试结束后恢复设备原有的存储值.
  */
 @RunWith(AndroidJUnit4::class)
 class SettingsActivityTest {
@@ -57,12 +59,14 @@ class SettingsActivityTest {
     private lateinit var defaults: RingDefaults
     private lateinit var timeFormat: TimeFormat
     private lateinit var frequency: UpdateFrequency
+    private var stopwatchShown = true
 
     @Before
     fun remember() {
         defaults = RingDefaultsStore(context).get()
         timeFormat = TimeFormats.get(context)
         frequency = AppUpdateStore.of(context).frequency
+        stopwatchShown = TimerNotifications.stopwatchShown(context)
     }
 
     @After
@@ -71,6 +75,7 @@ class SettingsActivityTest {
         RingDefaultsStore(context).set(defaults)
         TimeFormats.set(context, timeFormat)
         AppUpdateStore.of(context).frequency = frequency
+        TimerNotifications.setStopwatchShown(context, stopwatchShown)
     }
 
     @Test
@@ -119,6 +124,19 @@ class SettingsActivityTest {
         compose.onNodeWithTag("chime.dialog.frequency.confirm").performClick()
         compose.waitUntil(WAIT_MILLIS) { AppUpdateStore.of(context).frequency == next }
         assertTrue("the metered switch is enabled while checks are on", compose.onAllNodes(hasTestTag("chime.settings.metered") and isEnabled()).fetchSemanticsNodes().isNotEmpty())
+    }
+
+    @Test
+    fun theStopwatchNotificationSwitchIsSaved() {
+        open()
+        val tag = "chime.settings.stopwatchNotification"
+        if (stopwatchShown) row(tag).assertIsOn() else row(tag).assertIsOff()
+        row(tag).performClick()
+        compose.waitUntil(WAIT_MILLIS) { TimerNotifications.stopwatchShown(context) != stopwatchShown }
+        if (stopwatchShown) row(tag).assertIsOff() else row(tag).assertIsOn()
+        waitForSnackbarGone()
+        row(tag).performClick()
+        compose.waitUntil(WAIT_MILLIS) { TimerNotifications.stopwatchShown(context) == stopwatchShown }
     }
 
     private fun open() {

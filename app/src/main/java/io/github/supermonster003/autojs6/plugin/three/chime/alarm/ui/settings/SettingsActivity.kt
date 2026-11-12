@@ -36,6 +36,7 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.ring.Ring
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ring.KeepAliveService
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ring.RingDefaultsStore
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.service.SystemRingtones
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.timer.TimerNotifications
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.StandaloneActivity
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.about.NoticesActivity
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.appearance.AppearancePreferences
@@ -156,6 +157,7 @@ class SettingsActivity : StandaloneActivity() {
                 Column(modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(scroll).testTag("chime.settings")) {
                     AppearanceGroup()
                     DefaultsGroup()
+                    TimersGroup()
                     BackgroundGroup()
                     FormatGroup()
                     AboutGroup()
@@ -227,6 +229,30 @@ class SettingsActivity : StandaloneActivity() {
         SwitchRow(stringResource(R.string.settings_keep_alive), settings.enabled, { saveKeepAlive(settings, it) },
             summary = stringResource(R.string.settings_keep_alive_summary), icon = R.drawable.ic_power_24,
             modifier = Modifier.testTag("chime.settings.keepAlive"))
+    }
+
+    /**
+     * "Timers and stopwatch" (roadmap P7.4, T122): the stopwatch notification, on by default; a change shows or removes it
+     * at once. Timer notifications always show, since their buttons are the way to reach a running timer from outside.
+     * zh-CN: "计时器与秒表" (路线图 P7.4, T122): 秒表通知, 默认开启; 修改后立即显示或移除. 计时器通知始终显示, 因为其按钮是在界面外操作运行中计时器的途径.
+     */
+    @Composable
+    private fun TimersGroup() {
+        SectionHeader(stringResource(R.string.settings_timers))
+        val shown = remember { TimerNotifications.stopwatchShown(this) }
+        SwitchRow(stringResource(R.string.settings_stopwatch_notification), shown, ::saveStopwatchNotification,
+            summary = stringResource(R.string.settings_stopwatch_notification_summary), icon = R.drawable.ic_timer_24,
+            modifier = Modifier.testTag("chime.settings.stopwatchNotification"))
+    }
+
+    private fun saveStopwatchNotification(value: Boolean) {
+        if (!TimerNotifications.setStopwatchShown(this, value)) {
+            pendingMessage = getString(R.string.settings_save_failed)
+            return
+        }
+        val app = applicationContext
+        AlarmRuntime.get(app).executor.execute { TimerNotifications.stopwatch(app, AlarmRuntime.get(app).stopwatch.state()) }
+        saved()
     }
 
     private fun saveKeepAlive(settings: KeepAliveSettings, value: Boolean) {

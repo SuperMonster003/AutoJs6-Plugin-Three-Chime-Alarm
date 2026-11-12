@@ -16,7 +16,8 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.timer.Tim
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.timer.TimerRecord
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.appearance.screenTexts
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.format.TimeFormats
-import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.home.HomeActivity
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.home.HomeIntents
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.home.HomePage
 
 /**
  * The Android side of the timers (roadmap P7.1, T3): one `setAlarmClock` per running timer at its end, or per snoozed
@@ -100,11 +101,8 @@ class AndroidTimerPort(
         .setAction(ACTION_RING)
         .setData(uriOf(timerId))
 
-    /**
-     * Opens the alarm list until the timer screen of roadmap P7.4 exists.
-     * zh-CN: 在路线图 P7.4 的计时器页面出现之前打开闹钟列表.
-     */
-    private fun showIntent(): PendingIntent = TimerNotifications.homeIntent(context)
+    /** Opens the timers page (T123, roadmap P7.4). zh-CN: 打开计时器页 (T123, 路线图 P7.4). */
+    private fun showIntent(): PendingIntent = HomeIntents.pending(context, HomePage.TIMERS)
 
     companion object {
 

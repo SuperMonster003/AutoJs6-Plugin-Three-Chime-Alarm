@@ -88,6 +88,8 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.permissions
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.permissions.titleOf
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.release.ReleaseHistoryActivity
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.settings.SettingsActivity
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.stopwatch.StopwatchScreen
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.timers.TimersScreen
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.update.AppUpdateController
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.update.AppUpdateStore
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.update.UpdateDialogs
@@ -113,22 +115,45 @@ import java.time.ZoneId
  * button and the empty state open the edit page (P3.1, T83); the top bar opens the settings, and the list runs the
  * automatic update check when it opens (P3.5, T84). Repository calls run off the main thread; the list and the banner
  * reload on resume, on repository and ring changes, and at every minute (state changes such as a new next ring send no
- * change event).
+ * change event). Since 1.1.0 a bottom navigation switches to the timers and the stopwatch pages (roadmap P7.4, T139);
+ * the `page` extra of [HomeIntents] picks the page on launch and on a new intent (notifications, `alarms.openPlugin`,
+ * the system timer intents), and back on another page returns to the alarms first.
  * zh-CN: 闹钟列表 (路线图 P3.1, D7, T18, D20), 启动器目标: 每个闹钟的时间, 重复, 标签与下次响铃 ("还有 9 小时 3 分"), 启用开关, 创建与最后修改来源,
  * 以及 AutoJs6 脚本绑定标记 (点击解除绑定, T27). 溢出菜单跳过或恢复下次响铃并删除; 长按进入多选删除. 缺少闹钟所需的权限时, 顶部横幅打开权限页 (P3.4,
  * T82; ColorOS 上另提示自动启动列表, 直到该行被打开过一次, T103). 点击列表行, 新建按钮与空状态打开编辑页 (P3.1, T83); 顶栏打开设置页, 列表打开时进行自动更新检查 (P3.5, T84). 仓库调用不在主线程; 列表与横幅
- * 在恢复, 仓库与响铃变化以及每分钟时重新加载 (新的下次响铃等状态变化不发变更事件).
+ * 在恢复, 仓库与响铃变化以及每分钟时重新加载 (新的下次响铃等状态变化不发变更事件). 1.1.0 起底部导航可切换到计时器页与秒表页 (路线图 P7.4, T139); [HomeIntents] 的
+ * `page` extra 在启动与收到新 Intent 时选择页面 (通知, `alarms.openPlugin`, 系统计时器 Intent), 在其他页面按返回先回到闹钟页.
  */
 class HomeActivity : StandaloneActivity() {
 
     private lateinit var updates: AppUpdateController
 
+    private var page by mutableStateOf(HomePage.ALARMS)
+
+    /** A pending request to open the custom duration dialog (roadmap P7.5). zh-CN: 待处理的打开自定义时长对话框请求 (路线图 P7.5). */
+    private var customTimer by mutableStateOf(false)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         updates = AppUpdateController(AppUpdateStore.of(this), BuildConfig.VERSION_NAME)
+        page = HomePage.of(savedInstanceState?.getString(STATE_PAGE)) ?: HomePage.of(intent?.getStringExtra(HomeIntents.EXTRA_PAGE)) ?: HomePage.ALARMS
+        if (savedInstanceState == null) customTimer = intent?.getBooleanExtra(HomeIntents.EXTRA_CUSTOM_TIMER, false) == true
         super.onCreate(savedInstanceState)
         // The automatic update check runs when the list opens at the chosen frequency (roadmap P3.5, T84), not on a
         // recreation. zh-CN: 自动更新检查在列表打开时按所选频率进行 (路线图 P3.5, T84), 重建时不检查.
         if (savedInstanceState == null) updates.checkAutomaticallyIfDue(UpdateNetwork.of(this))
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        // A launcher tap carries no page and keeps the current one. zh-CN: 启动器点按不带页面, 保持当前页面.
+        HomePage.of(intent.getStringExtra(HomeIntents.EXTRA_PAGE))?.let { page = it }
+        if (intent.getBooleanExtra(HomeIntents.EXTRA_CUSTOM_TIMER, false)) customTimer = true
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putString(STATE_PAGE, page.key)
     }
 
     override fun onDestroy() {
@@ -140,12 +165,23 @@ class HomeActivity : StandaloneActivity() {
 
     @Composable
     override fun Content() {
-        HomeScreen()
+        val current = page
+        BackHandler(enabled = current != HomePage.ALARMS) { page = HomePage.ALARMS }
+        val bottomBar: @Composable () -> Unit = { HomeNavigationBar(current) { page = it } }
+        when (current) {
+            HomePage.ALARMS -> HomeScreen(bottomBar)
+            HomePage.TIMERS -> TimersScreen(bottomBar, customTimer, onCustomTimerShown = { customTimer = false })
+            HomePage.STOPWATCH -> StopwatchScreen(bottomBar)
+        }
         UpdateDialogs(
             updates,
             onOpenRelease = { url -> runCatching { startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) } },
             onReleaseHistory = { startActivity(Intent(this, ReleaseHistoryActivity::class.java)) },
         )
+    }
+
+    private companion object {
+        const val STATE_PAGE = "page"
     }
 }
 
@@ -173,7 +209,7 @@ private fun minuteOfDay(record: AlarmRecord, deviceZone: ZoneId): Int {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun HomeScreen() {
+private fun HomeScreen(bottomBar: @Composable () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
@@ -221,6 +257,7 @@ private fun HomeScreen() {
         title = title,
         onBack = if (selecting) ({ selection = emptyList() }) else null,
         snackbarHostState = snackbar,
+        bottomBar = { if (!selecting) bottomBar() },
         floatingActionButton = {
             if (!selecting && items != null) {
                 FloatingActionButton(onClick = create, modifier = Modifier.testTag("chime.home.add")) {

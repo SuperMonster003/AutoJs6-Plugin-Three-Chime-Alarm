@@ -1,6 +1,6 @@
-"""Screenshots of 3-Chime Alarm on one device (roadmap P3.6 and the E4 checks of P3.1 - P3.5).
+"""Screenshots of 3-Chime Alarm on one device (roadmap P3.6 and the E4 checks of P3.1 - P3.5 and P7.4).
 
-    py .python/device_screens.py <serial> --out DIR [--screens all|pages|notice|ring] [--modes light,dark] [--no-install]
+    py .python/device_screens.py <serial> --out DIR [--screens all|pages|clock|notice|ring] [--modes light,dark] [--no-install]
                                  [--keep-test-package] [--direct-seconds N]
 
 1. install: `adb install -r -t` of the newest debug APK and its androidTest APK (the plugin keeps its data and its
@@ -8,11 +8,13 @@
 2. screen unlocked unless only `ring` is asked for (the debug hook's keyguard state): behind the keyguard the pages
    do not show.
 3. ScreenshotProbe (androidTest): adds four sample alarms, sets the plugin night mode to each mode in turn and captures
-   the alarm list, the editor, the ringtones page and the settings page (`pages`), the ring notification while the
+   the alarm list, the editor, the ringtones page and the settings page (`pages`), the timers page, its custom duration
+   dialog and the stopwatch page with three sample timers and, while the stopwatch is idle, four sample laps (`clock`,
+   1.1.0), the ring notification while the
    device is in use on its home screen with the expanded shade, once in the system theme (`notice`), then the ringing
    screen on the lock screen (`ring`: the screen is turned off before a silent sample alarm rings; `direct` marks a
-   screen started directly because the full-screen intent did not show it). It restores the night mode and removes the
-   samples.
+   screen started directly because the full-screen intent did not show it). It restores the night mode, removes the
+   samples and resets a stopwatch it started.
    The pages that read the ringtones in the background are captured once their rows are enabled (the time is printed).
 4. the captures are pulled into DIR as `<page>-<mode>.png` and removed from the device; the plugin is started once
    again (`am instrument` force-stops it) and the androidTest APK is uninstalled unless --keep-test-package.
@@ -81,6 +83,9 @@ def run(serial, args):
         others = int(values.get("chime.others", "0"))
         print(f"    language {values.get('chime.language')}, alarms besides the samples: {others}"
               + (" (they show in the list captures)" if others else ""))
+        if "chime.timers.others" in values:
+            print(f"    timers besides the samples: {values['chime.timers.others']}, "
+                  f"sample laps: {'yes' if values.get('chime.stopwatch.sample') == 'true' else 'no (the stopwatch was in use)'}")
         for key in sorted(k for k in values if k.startswith("chime.shot.")):
             name, where = key[len("chime.shot."):], values[key]
             if where.startswith("error:"):
@@ -118,7 +123,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("serial")
     parser.add_argument("--out", required=True, help="the directory for the captures")
-    parser.add_argument("--screens", default="all", choices=["all", "pages", "notice", "ring"])
+    parser.add_argument("--screens", default="all", choices=["all", "pages", "clock", "notice", "ring"])
     parser.add_argument("--modes", default="light,dark", help="plugin night modes, from light and dark")
     parser.add_argument("--direct-seconds", type=int, help="wait this long for a ring screen started directly (a system "
                                                                  "lock screen prompt answered by the maintainer)")

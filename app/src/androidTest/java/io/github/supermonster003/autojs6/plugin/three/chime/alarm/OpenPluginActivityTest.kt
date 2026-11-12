@@ -6,6 +6,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.SystemClock
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
@@ -20,19 +22,24 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
  * The `alarms.openPlugin(page)` trampoline of the installed plugin (roadmap T81): the frozen OPEN action resolves to
  * [OpenPluginActivity] alone, without a permission and without a task affinity, and every page opens its screen:
- * `permissions` the permissions page (P3.4), `settings` the settings screen (P3.5); the 1.1.0 pages and unknown values
- * open the alarm list.
+ * `permissions` the permissions page (P3.4), `settings` the settings screen (P3.5), `timers` and `stopwatch` that page of
+ * the bottom navigation (roadmap P7.4, T139); `alarms`, no page and unknown values open the alarm list.
  * zh-CN: 已安装插件的 `alarms.openPlugin(page)` 跳板 (路线图 T81): 冻结的 OPEN action 只解析到 [OpenPluginActivity], 不要求权限, 没有任务
- * 亲和性, 每个页面打开对应界面: `permissions` 打开权限页 (P3.4), `settings` 打开设置页 (P3.5); 1.1.0 的页面与未知值打开闹钟列表.
+ * 亲和性, 每个页面打开对应界面: `permissions` 打开权限页 (P3.4), `settings` 打开设置页 (P3.5), `timers` 与 `stopwatch` 打开底部导航的对应页
+ * (路线图 P7.4, T139); `alarms`, 缺省与未知值打开闹钟列表.
  */
 @RunWith(AndroidJUnit4::class)
 class OpenPluginActivityTest {
+
+    @get:Rule
+    val compose = createEmptyComposeRule()
 
     private val instrumentation: Instrumentation
         get() = InstrumentationRegistry.getInstrumentation()
@@ -92,8 +99,14 @@ class OpenPluginActivityTest {
                     close(screen)
                 } else {
                     if (list == null) list = instrumentation.waitForMonitorWithTimeout(home, WAIT_MILLIS)
-                    assertNotNull("page $page opened the alarm list", list)
-                    assertTrue("page $page resumed the alarm list", waitUntil { resumed().any { it is HomeActivity } })
+                    assertNotNull("page $page opened the home screen", list)
+                    assertTrue("page $page resumed the home screen", waitUntil { resumed().any { it is HomeActivity } })
+                    val shown = when (page) {
+                        AlarmPluginActions.PAGE_TIMERS -> "chime.timers.add"
+                        AlarmPluginActions.PAGE_STOPWATCH -> "chime.stopwatch.time"
+                        else -> "chime.home.add"
+                    }
+                    compose.waitUntil(WAIT_MILLIS) { compose.shows(hasTestTag(shown)) }
                 }
                 listOf(trampoline, home, permissions, settings).forEach { instrumentation.removeMonitor(it); monitors -= it }
             }

@@ -75,10 +75,20 @@
         <item quantity="many">%1$d sons au maximum peuvent être importés. Supprimez-en un d\'abord</item>
         <item quantity="other">%1$d sons au maximum peuvent être importés. Supprimez-en un d\'abord</item>
     </plurals>
+    <plurals name="stopwatch_lap_limit">
+        <item quantity="one">Limite de tours atteinte : %1$d tour au maximum</item>
+        <item quantity="many">Limite de tours atteinte : %1$d tours au maximum</item>
+        <item quantity="other">Limite de tours atteinte : %1$d tours au maximum</item>
+    </plurals>
     <plurals name="stopwatch_laps">
         <item quantity="one">%1$d tour</item>
         <item quantity="many">%1$d tours</item>
         <item quantity="other">%1$d tours</item>
+    </plurals>
+    <plurals name="timers_limit">
+        <item quantity="one">%1$d minuteur au maximum</item>
+        <item quantity="many">%1$d minuteurs au maximum</item>
+        <item quantity="other">%1$d minuteurs au maximum</item>
     </plurals>
     <plurals name="update_ignored_count">
         <item quantity="one">%1$d version ignorée</item>

@@ -8,12 +8,15 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.ass
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.astral
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.NextOccurrence
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.RecurrenceRule
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.timer.TimerDurations
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.timer.TimerRecord
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.intent.ClockRequests.DismissPlan
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.intent.ClockRequests.Search
 import org.autojs.plugin.alarm.api.AlarmContract
 import org.autojs.plugin.alarm.api.AlarmErrorCodes.INVALID_OPTIONS
 import org.autojs.plugin.alarm.api.AlarmLimits
 import org.autojs.plugin.alarm.api.AlarmOptionKeys
+import org.autojs.plugin.alarm.api.TimerSpec
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -27,9 +30,11 @@ import java.time.ZoneId
  * Roadmap P2.6 (D21, T79, T80): the extras of the system clock intents on plain values. `SET_ALARM` maps to valid
  * alarm options (time, label, `Calendar` weekdays, vibration, ringtone, `skipUi`) and finds the alarm it repeats;
  * `DISMISS_ALARM` picks alarms by mode (`next` / `all` / `time` / `label`, none) and dismisses within a day only;
- * `SNOOZE_ALARM` takes 1 - 60 minutes.
+ * `SNOOZE_ALARM` takes 1 - 60 minutes. Roadmap P7.5 (T140): `SET_TIMER` takes 1 s - 100 h in seconds and starts a reset
+ * timer of the same length and label again.
  * zh-CN: 路线图 P2.6 (D21, T79, T80): 以普通值检查系统时钟 Intent 的 extras. `SET_ALARM` 映射为有效的闹钟选项 (时间, 标签, `Calendar` 星期, 振动, 铃声,
  * `skipUi`) 并找到它会重复的闹钟; `DISMISS_ALARM` 按模式 (`next` / `all` / `time` / `label`, 无) 挑选闹钟, 只在一天之内关闭; `SNOOZE_ALARM` 接受 1 - 60 分钟.
+ * 路线图 P7.5 (T140): `SET_TIMER` 以秒为单位接受 1 秒 - 100 小时, 并重新开始时长与标签相同且处于重置状态的计时器.
  */
 class ClockRequestsTest {
 
@@ -178,8 +183,50 @@ class ClockRequestsTest {
         assertAlarmError(INVALID_OPTIONS, "integer") { ClockRequests.snoozeMinutes(mapOf(AlarmClock.EXTRA_ALARM_SNOOZE_DURATION to "5")) }
     }
 
+    @Test
+    fun setTimerMapsTheExtras() {
+        assertEquals(
+            ClockRequests.SetTimer(90_000L, "Tea", true),
+            ClockRequests.setTimer(mapOf(AlarmClock.EXTRA_LENGTH to 90, AlarmClock.EXTRA_MESSAGE to "  Tea  ", AlarmClock.EXTRA_SKIP_UI to true)),
+        )
+        assertEquals(ClockRequests.SetTimer(null, "Tea", false), ClockRequests.setTimer(mapOf(AlarmClock.EXTRA_MESSAGE to "Tea")))
+        assertEquals(ClockRequests.SetTimer(null, null, true), ClockRequests.setTimer(mapOf(AlarmClock.EXTRA_SKIP_UI to true, AlarmClock.EXTRA_MESSAGE to " ")))
+        assertEquals(1_000L, ClockRequests.setTimer(mapOf(AlarmClock.EXTRA_LENGTH to 1)).millis)
+        assertEquals(120_000L, ClockRequests.setTimer(mapOf(AlarmClock.EXTRA_LENGTH to 120L)).millis)
+        assertEquals("100 h, wider than the documented 24 h", TimerDurations.MAX_MILLIS, ClockRequests.setTimer(mapOf(AlarmClock.EXTRA_LENGTH to 360_000)).millis)
+        assertAlarmError(INVALID_OPTIONS, "got 0") { ClockRequests.setTimer(mapOf(AlarmClock.EXTRA_LENGTH to 0)) }
+        assertAlarmError(INVALID_OPTIONS, "got -5") { ClockRequests.setTimer(mapOf(AlarmClock.EXTRA_LENGTH to -5)) }
+        assertAlarmError(INVALID_OPTIONS, "got 360001") { ClockRequests.setTimer(mapOf(AlarmClock.EXTRA_LENGTH to 360_001)) }
+        assertAlarmError(INVALID_OPTIONS, "integer") { ClockRequests.setTimer(mapOf(AlarmClock.EXTRA_LENGTH to "60")) }
+        assertTrue(AlarmClock.EXTRA_LENGTH in ClockRequests.EXTRA_KEYS)
+        // The literals equal the platform constants (API 26 / 27). zh-CN: 字面值与平台常量 (API 26 / 27) 相同.
+        assertEquals(AlarmClock.ACTION_SHOW_TIMERS, ClockRequests.ACTION_SHOW_TIMERS)
+        assertEquals(AlarmClock.ACTION_DISMISS_TIMER, ClockRequests.ACTION_DISMISS_TIMER)
+    }
+
+    @Test
+    fun sameTimerStartsOnlyAResetTimerOfTheSameLengthAndLabel() {
+        fun timer(id: String, state: String, remaining: Long = MINUTE, label: String? = "Tea", snoozeUntil: Long? = null) =
+            TimerRecord(id, AlarmContract.SOURCE_INTENT, 1L, TimerSpec(label = label), MINUTE, state, remaining, snoozeUntil = snoozeUntil)
+        val reset = timer("t_reset", AlarmContract.TIMER_PAUSED)
+        val others = listOf(
+            timer("t_running", AlarmContract.TIMER_RUNNING),
+            timer("t_half", AlarmContract.TIMER_PAUSED, remaining = MINUTE / 2),
+            timer("t_ringing", AlarmContract.TIMER_RINGING),
+            timer("t_snoozed", AlarmContract.TIMER_RINGING, snoozeUntil = now + MINUTE),
+        )
+        assertSame(reset, ClockRequests.sameTimer(others + reset, MINUTE, "Tea"))
+        assertNull(ClockRequests.sameTimer(others, MINUTE, "Tea"))
+        assertNull("another label", ClockRequests.sameTimer(listOf(reset), MINUTE, "tea"))
+        assertNull("no label", ClockRequests.sameTimer(listOf(reset), MINUTE, null))
+        assertNull("another length", ClockRequests.sameTimer(listOf(reset), MINUTE + 1_000L, "Tea"))
+        val plain = timer("t_plain", AlarmContract.TIMER_PAUSED, label = null)
+        assertSame(plain, ClockRequests.sameTimer(listOf(reset, plain), MINUTE, null))
+    }
+
     private companion object {
         val SHANGHAI: ZoneId = ZoneId.of("Asia/Shanghai")
         const val HOUR = 60 * 60 * 1000L
+        const val MINUTE = 60 * 1000L
     }
 }

@@ -45,8 +45,14 @@
     <plurals name="ringtones_import_full">
         <item quantity="other">最多只能导入 %1$d 个铃声, 请先删除一个</item>
     </plurals>
+    <plurals name="stopwatch_lap_limit">
+        <item quantity="other">已达到计圈上限: 最多 %1$d 圈</item>
+    </plurals>
     <plurals name="stopwatch_laps">
         <item quantity="other">共 %1$d 圈</item>
+    </plurals>
+    <plurals name="timers_limit">
+        <item quantity="other">最多可以有 %1$d 个计时器</item>
     </plurals>
     <plurals name="update_ignored_count">
         <item quantity="other">已忽略 %1$d 个发行版</item>

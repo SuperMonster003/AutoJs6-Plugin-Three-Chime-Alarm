@@ -145,6 +145,13 @@ class AlarmRuntime private constructor(context: Context) {
     /** The same for the notification actions and the screens (`user`). zh-CN: 供通知动作与界面使用的同一组方法 (`user`). */
     val userTimerApi = TimerApi(timers, stopwatch, rings, validator, source = AlarmContract.SOURCE_USER, by = AlarmContract.BY_USER)
 
+    /**
+     * The same for the system clock intents (roadmap P7.5): timers start with source `intent`, dismissals are `by`
+     * `user` (T66, T140).
+     * zh-CN: 供系统时钟 Intent 使用的同一组方法 (路线图 P7.5): 计时器以来源 `intent` 启动, 关闭以 `by` `user` 记录 (T66, T140).
+     */
+    val intentTimerApi = TimerApi(timers, stopwatch, rings, validator, source = AlarmContract.SOURCE_INTENT, by = AlarmContract.BY_USER)
+
     private fun timerExists(id: String): Boolean = timers.get(id) != null
 
     init {

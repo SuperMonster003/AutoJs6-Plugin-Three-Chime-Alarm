@@ -120,6 +120,14 @@
         <item quantity="many">يمكن استيراد %1$d صوتا على الأكثر. احذف أحدها أولا</item>
         <item quantity="other">يمكن استيراد %1$d صوت على الأكثر. احذف أحدها أولا</item>
     </plurals>
+    <plurals name="stopwatch_lap_limit">
+        <item quantity="zero">تم بلوغ حد اللفات</item>
+        <item quantity="one">تم بلوغ حد اللفات: لفة واحدة على الأكثر</item>
+        <item quantity="two">تم بلوغ حد اللفات: لفتان على الأكثر</item>
+        <item quantity="few">تم بلوغ حد اللفات: %1$d لفات على الأكثر</item>
+        <item quantity="many">تم بلوغ حد اللفات: %1$d لفة على الأكثر</item>
+        <item quantity="other">تم بلوغ حد اللفات: %1$d لفة على الأكثر</item>
+    </plurals>
     <plurals name="stopwatch_laps">
         <item quantity="zero">%1$d لفة</item>
         <item quantity="one">لفة واحدة</item>
@@ -127,6 +135,14 @@
         <item quantity="few">%1$d لفات</item>
         <item quantity="many">%1$d لفة</item>
         <item quantity="other">%1$d لفة</item>
+    </plurals>
+    <plurals name="timers_limit">
+        <item quantity="zero">لا يمكن إنشاء أي مؤقت</item>
+        <item quantity="one">مؤقت واحد على الأكثر</item>
+        <item quantity="two">مؤقتان على الأكثر</item>
+        <item quantity="few">%1$d مؤقتات على الأكثر</item>
+        <item quantity="many">%1$d مؤقتا على الأكثر</item>
+        <item quantity="other">%1$d مؤقت على الأكثر</item>
     </plurals>
     <plurals name="update_ignored_count">
         <item quantity="zero">لا إصدارات متجاهلة</item>
