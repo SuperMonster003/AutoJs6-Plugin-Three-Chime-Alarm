@@ -9,9 +9,13 @@ activity to the front, waits for its result file and prints one PASS / FAIL / SK
 
 - unavailable (run by device_smoke before it installs, only when the plugin is not installed): isAvailable() is
   false, add / list fail with PLUGIN_UNAVAILABLE, an unknown key still fails with INVALID_OPTIONS first.
-- full: isAvailable() and capabilities(); the examples of roadmap appendix A section 12 (example 1 as written fails
-  with PLUGIN_INCOMPATIBLE: the host refuses the option of the 1.2.0 feature holidays before the call; then as in
-  1.0.0 with a weekday rule and its binding; the monthly and the shift rule with preview(); alarms.holidays is absent and alarms.timers is absent or
+- full: isAvailable() and capabilities(); the examples of roadmap appendix A section 12 (example 1 as written: when
+  capabilities() lists holidays (1.2.0) the alarm is made with holidays 'workdays' of CN and its next trigger is a
+  workday of CN by alarms.holidays when the host has it, otherwise it fails with PLUGIN_INCOMPATIBLE: the host refuses
+  the option of the 1.2.0 feature holidays before the call; then as in
+  1.0.0 with a weekday rule and its binding; the monthly and the shift rule with preview(); alarms.holidays is absent or
+  an object (it comes with the host holidays API of roadmap P8.5, checked by the host's device_alarms_holidays_check.py)
+  and alarms.timers is absent or
   an object (it comes with the host timer API of roadmap P7.3, checked by the host's device_alarms_timers_check.py), the list / skipNext /
   cancelSkip part runs on the test alarms; the pomodoro as a one-shot alarm with speech; alarms.system.setAlarm to
   the plugin's package and next()); the error codes INVALID_OPTIONS, INVALID_RULE, NOT_FOUND (host and plugin side),
@@ -142,6 +146,8 @@ function hasTimers() {
     var f = arr(alarms.capabilities().features);
     return f.indexOf('timers') >= 0 && typeof alarms.timers === 'object' && alarms.timers !== null;
 }
+function hasHolidays() { return arr(alarms.capabilities().features).indexOf('holidays') >= 0; }
+function hasHolidayApi() { return typeof alarms.holidays === 'object' && alarms.holidays !== null; }
 function exists(name) { return files.exists(DIR + '/' + name); }
 function readJson(name) { return JSON.parse(files.read(DIR + '/' + name)); }
 function save() {
@@ -216,11 +222,22 @@ function modeCleanup() {
 }
 
 function examples() {
-    expectCode('example 1 as written: the host refuses holidays of 1.2.0', 'PLUGIN_INCOMPATIBLE', function () {
-        return alarms.add({
-            time: '07:30', holidays: { region: 'CN', mode: 'workdays' }, label: '起床',
-            sound: { source: 'default', volume: 0.8, rampSeconds: 30 }, vibrate: [0, 500, 500, 500], snooze: { minutes: 9, max: 3 },
-        });
+    var example1 = {
+        time: '07:30', holidays: { region: 'CN', mode: 'workdays' }, label: '起床',
+        sound: { source: 'default', volume: 0.8, rampSeconds: 30 }, vibrate: [0, 500, 500, 500], snooze: { minutes: 9, max: 3 },
+    };
+    if (hasHolidays()) check('example 1 as written: workdays of CN (1.2.0)', function () {
+        var w = add(example1);
+        assert(w.holidays && w.holidays.region === 'CN' && w.holidays.mode === 'workdays', 'holidays ' + JSON.stringify(w.holidays));
+        var next = new Date(w.nextTrigger);
+        assert(next.getHours() === 7 && next.getMinutes() === 30, 'next ' + next);
+        var day = next.getFullYear() + '-' + ('0' + (next.getMonth() + 1)).slice(-2) + '-' + ('0' + next.getDate()).slice(-2);
+        var workday = hasHolidayApi() ? alarms.holidays.isWorkday(day, 'CN') : null;
+        assert(workday !== false, day + ' is not a workday of CN');
+        return 'next ' + day + ' 07:30' + (workday === null ? ' (host without alarms.holidays)' : ', a workday of CN');
+    });
+    else expectCode('example 1 as written: the host refuses holidays of 1.2.0', 'PLUGIN_INCOMPATIBLE', function () {
+        return alarms.add(example1);
     });
     var a = null;
     check('example 1 in 1.0.0: weekdays by repeat', function () {
@@ -272,9 +289,10 @@ function examples() {
         assert(s.tag === 'shift' && s.nextTrigger === times[0], 'tag ' + s.tag + ', nextTrigger ' + s.nextTrigger);
         return s.repeat + ', next ' + new Date(s.nextTrigger).toISOString();
     });
-    check('example 2: alarms.holidays absent in 1.0.0', function () {
-        assert(alarms.holidays === undefined || alarms.holidays === null, typeof alarms.holidays);
-        return 'alarms.holidays ' + typeof alarms.holidays;
+    check('example 2: alarms.holidays absent or an object', function () {
+        var h = alarms.holidays;
+        assert(h === undefined || h === null || typeof h === 'object', typeof h);
+        return 'alarms.holidays ' + (hasHolidayApi() ? "object (checked by the host's device_alarms_holidays_check.py)" : 'absent (host without the holidays API)');
     });
     check('example 2: list({ source: user, enabled: true })', function () {
         var users = arr(alarms.list({ source: 'user', enabled: true }));

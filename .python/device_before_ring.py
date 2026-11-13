@@ -7,7 +7,8 @@
     py .python/device_before_ring.py <serial> all [--locked]
     py .python/device_before_ring.py <serial> cleanup
 
-Every case is a silent one-shot alarm (label `p84-<key>`, tag `p84`, sound `silent` at volume 0, no vibration, no
+The plugin must be a debug build (the cases are dismissed and read through its RingDebugReceiver); the script stops
+at once when it is missing. Every case is a silent one-shot alarm (label `p84-<key>`, tag `p84`, sound `silent` at volume 0, no vibration, no
 snooze, auto silence after 1 minute) bound to a decider script on `beforeRing` (`leadSeconds` = --lead) and to a recorder script on `ring` / `skip`
 that appends each event to `events.txt`. The deciders write a marker `ran-<key>.json` (event type, the value their
 decision call returned, the time, the deadline).
@@ -43,7 +44,7 @@ Output: PASS / FAIL / SKIP per check with the key numbers only. Nothing here ans
 focused window is brought back to the one before the run when it was an activity that can be started again.
 
 zh-CN: 3-Chime Alarm 1.2.0 响铃前决定 (路线图 P8.4) 的单机端到端联调, 需要带 `beforeRing` 脚本 API 的宿主 (versionCode 6641 及以上, 含宿主提交
-3abe4f2f8f). 每个用例是一个静音的一次性闹钟 (标签 `p84-<key>`, 标记 `p84`, 不振动, 不贪睡, 1 分钟后自动停止), 以 `beforeRing` 绑定决定脚本
+3abe4f2f8f), 插件须为 debug 包 (经其 RingDebugReceiver 关闭与读取响铃, 缺少时脚本立即停止). 每个用例是一个静音的一次性闹钟 (标签 `p84-<key>`, 标记 `p84`, 不振动, 不贪睡, 1 分钟后自动停止), 以 `beforeRing` 绑定决定脚本
 (`leadSeconds` 为 --lead), 并以 `ring` / `skip` 绑定记录脚本 (把事件追加到 `events.txt`); 决定脚本写标记 `ran-<key>.json`.
 weather-skip / weather-ring 使用附录 A 第 5.4 节与文档中的 `weather-brief.js` 示例, 读取同目录的本地假数据 `./weather.json`; overrides 只改
 本次响铃; 全程不出声不振动 (闹钟音量 0, 设备副本的朗读使用不存在的语言 `zz-ZZ`, 振动覆盖由 BeforeRingTest 覆盖); nodecide / late / error 照常响; holiday 为今天是节假日的地区的每日闹钟, 不发 `beforeRing`, 直接 `skip` (`reason` 'holiday').
@@ -571,6 +572,22 @@ def cleanup(serial, args, report):
     p5.adb(serial, "shell", "rm", "-rf", REMOTE)
 
 
+def debug_hook_ready(serial, report):
+    """Every case is dismissed (and its ringing state read) through RingDebugReceiver, which only the debug build has.
+    With a release build an undismissed ring lasts until its auto silence (1 minute), and the next case, 40 s later, is
+    queued behind it (one ring at a time), so its checks fail.
+
+    zh-CN: 每个用例经 RingDebugReceiver 关闭响铃并读取响铃状态, 只有 debug 包有它. release 包上未关闭的响铃会持续到自动停止 (1 分钟),
+    40 秒后的下一个用例排在它后面 (同一时间只响一个), 检查因此失败.
+
+    The receiver has no intent filter, so it is resolved by its explicit component name (it is absent from the resolver
+    tables of `pm dump`). zh-CN: 该接收器没有 intent-filter, 不在 `pm dump` 的解析表里, 所以按显式组件名解析."""
+    out = p5.adb(serial, "shell", "cmd", "package", "query-receivers", "--brief", "-n", p5.HOOK, timeout=60)
+    found = p5.HOOK in out and "No receivers found" not in out
+    return report.line("debug hook (debug build of the plugin)", "PASS" if found else "FAIL",
+                       "RingDebugReceiver present" if found else "RingDebugReceiver missing: install the debug build of the same source")
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("serial")
@@ -583,6 +600,8 @@ def main(argv=None):
     report = p5.Report()
     print(f"{smoke.label(args.serial)}: before ring {args.command}", flush=True)
     if args.command != "cleanup" and not p5.host_ready(args.serial, report):
+        return 1
+    if args.command != "cleanup" and not debug_hook_ready(args.serial, report):
         return 1
     volume, focus = alarm_volume(args.serial), focused(args.serial)
     if args.command in ("cases", "all"):
