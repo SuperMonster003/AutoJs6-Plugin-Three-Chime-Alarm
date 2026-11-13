@@ -27,3 +27,6 @@ app/src/main/res/raw/keep_icon_studio_background.xml text eol=lf
 app/src/main/res/raw/keep_icon_studio_application.xml text eol=lf
 app/src/main/res/values*/icon_studio_backgrounds.xml text eol=lf
 app/src/main/res/mipmap*/ic_icon_studio_application*.xml text eol=lf
+
+# Signed holiday calendar snapshot (roadmap P8.2): byte-exact, checked against the catalog hashes
+app/src/main/assets/holiday-calendars/** binary

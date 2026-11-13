@@ -219,7 +219,10 @@ class ManifestContractTest {
     @Test
     fun `the INFO and ALARM services match the discovery constants and the ring service stays internal`() {
         assertEquals(
-            listOf(".ring.RingService", ".ring.KeepAliveService", ".service.ThreeChimeAlarmInfoService", ".service.ThreeChimeAlarmService", ".tool.ChimeToolService"),
+            listOf(
+                ".ring.RingService", ".ring.KeepAliveService", ".holiday.HolidayUpdateJob", ".service.ThreeChimeAlarmInfoService",
+                ".service.ThreeChimeAlarmService", ".tool.ChimeToolService",
+            ),
             application.children("service").map { it.android("name") },
         )
         val info = service(".service.ThreeChimeAlarmInfoService")
@@ -264,9 +267,15 @@ class ManifestContractTest {
     fun `every exported component requires a permission`() {
         val components = listOf("activity", "service", "receiver", "provider").flatMap { application.children(it) }
         val exported = components.filter { it.androidOrNull("exported") == "true" }
-        val unprotected = exported.filter { it.androidOrNull("permission") != PLUGIN_PERMISSION }
+        val unprotected = exported.filter { it.androidOrNull("permission") != PLUGIN_PERMISSION && it.androidOrNull("permission") != JOB_PERMISSION }
         // The OPEN trampoline only shows the plugin's own screens (roadmap T81); the clock intents follow the AOSP clock
         // (roadmap D21): any app holding SET_ALARM may call them.
+        // The weekly holiday data check (roadmap P8.2, T176) is the only job service: only the system may bind it.
+        assertEquals(listOf(".holiday.HolidayUpdateJob"), exported.filter { it.androidOrNull("permission") == JOB_PERMISSION }.map { it.android("name") })
+        val job = exported.single { it.androidOrNull("permission") == JOB_PERMISSION }
+        assertEquals("service", job.tagName)
+        assertEquals("true", job.android("directBootAware"))
+        assertTrue(job.children("intent-filter").isEmpty())
         assertEquals(listOf(".ui.OpenPluginActivity", ".intent.ClockIntentActivity"), unprotected.map { it.android("name") })
         assertEquals("com.android.alarm.permission.SET_ALARM", activity(".intent.ClockIntentActivity").android("permission"))
         assertTrue("no providers are declared", application.children("provider").isEmpty())
@@ -330,6 +339,7 @@ class ManifestContractTest {
 
     private companion object {
         const val PLUGIN_PERMISSION = "org.autojs.permission.PLUGIN"
+        const val JOB_PERMISSION = "android.permission.BIND_JOB_SERVICE"
         const val SET_ALARM_PERMISSION = "com.android.alarm.permission.SET_ALARM"
         const val DEFAULT_CATEGORY = "android.intent.category.DEFAULT"
         const val LAUNCHER_CATEGORY = "android.intent.category.LAUNCHER"

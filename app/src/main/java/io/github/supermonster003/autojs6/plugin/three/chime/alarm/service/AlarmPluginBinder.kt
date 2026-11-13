@@ -8,15 +8,22 @@ import android.util.Log
 import androidx.core.app.NotificationManagerCompat
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.AlarmRuntime
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmException
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.holiday.HolidayRefresher
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.net.CancelToken
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.net.OperationCancelledException
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.holiday.HolidayUpdateJob
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ring.RingService
 import org.autojs.plugin.alarm.api.AlarmBundles
 import org.autojs.plugin.alarm.api.AlarmCapabilityKeys
 import org.autojs.plugin.alarm.api.AlarmContract
 import org.autojs.plugin.alarm.api.AlarmErrorCodes
+import org.autojs.plugin.alarm.api.AlarmResultKeys
 import org.autojs.plugin.alarm.api.IAlarmEventCallback
 import org.autojs.plugin.alarm.api.IAlarmPlugin
 import org.autojs.plugin.alarm.api.IAlarmProgressCallback
 import org.autojs.plugin.common.api.PluginInfo
+import java.io.IOException
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -38,6 +45,9 @@ class AlarmPluginBinder(context: Context) : IAlarmPlugin.Stub() {
 
     private val operations = AtomicInteger()
 
+    /** The running holiday refreshes by operation id (roadmap P8.2). zh-CN: 按操作 id 记录的进行中的节假日刷新 (路线图 P8.2). */
+    private val refreshes = ConcurrentHashMap<Int, CancelToken>()
+
     override fun getInfo(): PluginInfo = context.pluginRuntimeFields().toPluginInfo()
 
     override fun getCapabilities(): Bundle = answering("getCapabilities") {
@@ -49,6 +59,7 @@ class AlarmPluginBinder(context: Context) : IAlarmPlugin.Stub() {
                 putBoolean(AlarmContract.PERMISSION_NOTIFICATIONS, NotificationManagerCompat.from(context).areNotificationsEnabled())
                 putBoolean(AlarmContract.PERMISSION_FULL_SCREEN, RingService.fullScreenAllowed(context))
             })
+            holidayCapabilities(this)
         }
     }
 
@@ -124,26 +135,47 @@ class AlarmPluginBinder(context: Context) : IAlarmPlugin.Stub() {
 
     override fun stopwatch(request: Bundle?): Bundle = call("stopwatch", request) { runtime.timerApi.stopwatch(it) }
 
-    override fun holidayRegions(query: Bundle?): Bundle = unsupported("holidayRegions", "holidays")
+    override fun holidayRegions(query: Bundle?): Bundle = call("holidayRegions", query) { runtime.holidayApi.regions(it) }
 
-    override fun checkDate(request: Bundle?): Bundle = unsupported("checkDate", "holidays")
+    override fun checkDate(request: Bundle?): Bundle = call("checkDate", request) { runtime.holidayApi.checkDate(it) }
 
-    override fun listHolidays(request: Bundle?): Bundle = unsupported("listHolidays", "holidays")
+    override fun listHolidays(request: Bundle?): Bundle = call("listHolidays", request) { runtime.holidayApi.listHolidays(it) }
 
-    override fun holidayInfo(query: Bundle?): Bundle = unsupported("holidayInfo", "holidays")
+    override fun holidayInfo(query: Bundle?): Bundle = call("holidayInfo", query) { runtime.holidayApi.info(it) }
 
     /**
-     * Answers an operation id and reports `UNSUPPORTED` through [callback] at once.
-     * zh-CN: 返回一个操作 id, 并立即经 [callback] 报告 `UNSUPPORTED`.
+     * Starts a refresh of the whole holiday data (roadmap P8.2, T175) and answers its operation id; progress, the new
+     * `info` or the failure arrive through [callback]. A request that cannot start (unknown key, malformed region) throws
+     * `IllegalArgumentException` with the encoded error, which Binder carries to the host (appendix A section 4.1).
+     * zh-CN: 开始刷新整套节假日数据 (路线图 P8.2, T175) 并返回操作 id; 进度, 新的 `info` 或失败经 [callback] 送达. 无法开始的请求 (未知键, 地区格式
+     * 错误) 抛出带编码错误的 `IllegalArgumentException`, 由 Binder 传给宿主 (附录 A 第 4.1 节).
      */
     override fun refreshHolidays(request: Bundle?, callback: IAlarmProgressCallback?): Int {
+        try {
+            runtime.holidayApi.checkRefresh(AlarmBundles.fromBundle(request))
+        } catch (e: AlarmException) {
+            throw IllegalArgumentException(e.message)
+        } catch (e: IllegalArgumentException) {
+            throw IllegalArgumentException(AlarmException.of(e).message)
+        }
         val op = operations.incrementAndGet()
-        runCatching { callback?.onFailed(op, unsupported("refreshHolidays", "holidays")) }
+        val cancel = CancelToken()
+        refreshes[op] = cancel
+        val progress = callback?.let { target -> HolidayRefresher.Progress { done, total -> runCatching { target.onProgress(op, done, total) } } }
+        runtime.refreshHolidays(cancel, progress) { result ->
+            refreshes.remove(op)
+            val answer = result.fold(
+                onSuccess = { AlarmBundles.of(mapOf(AlarmResultKeys.HOLIDAY_INFO to runtime.holidayApi.infoValues(it.info))) },
+                onFailure = ::refreshError,
+            )
+            runCatching { if (result.isSuccess) callback?.onCompleted(op, answer) else callback?.onFailed(op, answer) }
+                .onFailure { Log.w(HolidayUpdateJob.TAG, "refresh $op: the host callback failed: ${it.javaClass.simpleName}") }
+        }
         return op
     }
 
     override fun cancelOperation(opId: Int) {
-        // zh-CN: 本构建没有可取消的长操作.
+        refreshes.remove(opId)?.cancel()
     }
 
     // ------------------------------------------------------------------ internals
@@ -162,6 +194,32 @@ class AlarmPluginBinder(context: Context) : IAlarmPlugin.Stub() {
     } catch (e: RuntimeException) {
         Log.e(TAG, "$method failed", e)
         AlarmBundles.error(AlarmErrorCodes.INTERNAL, "$method failed: ${e.javaClass.simpleName}")
+    }
+
+    /**
+     * The holiday entries of `getCapabilities` (roadmap P8.2, T173): the data version and the warnings about missing or
+     * estimated years. Data that cannot be opened is a warning too, never a failed answer.
+     * zh-CN: `getCapabilities` 中的节假日条目 (路线图 P8.2, T173): 数据版本, 以及缺失或推算年份的警告. 数据无法打开时也只是一条警告, 不让应答失败.
+     */
+    private fun holidayCapabilities(capabilities: Bundle) {
+        try {
+            capabilities.putString(AlarmCapabilityKeys.HOLIDAY_DATA_VERSION, runtime.holidays.info().version)
+            val warnings = runtime.holidayApi.warnings()
+            if (warnings.isNotEmpty()) capabilities.putStringArray(AlarmCapabilityKeys.WARNINGS, warnings.toTypedArray())
+        } catch (e: Exception) {
+            Log.e(TAG, "holiday capabilities failed", e)
+            capabilities.putStringArray(AlarmCapabilityKeys.WARNINGS, arrayOf("Holiday data cannot be opened (${e.javaClass.simpleName}); alarms with holiday rules ring by their weekday rules only"))
+        }
+    }
+
+    private fun refreshError(error: Throwable): Bundle = when (error) {
+        is AlarmException -> AlarmBundles.error(error.code, error.detail)
+        is OperationCancelledException -> AlarmBundles.error(AlarmErrorCodes.IO_FAILED, "the holiday refresh was cancelled")
+        is IOException -> AlarmBundles.error(AlarmErrorCodes.IO_FAILED, "holiday refresh failed: ${error.message ?: error.javaClass.simpleName}")
+        else -> {
+            Log.e(TAG, "refreshHolidays failed", error)
+            AlarmBundles.error(AlarmErrorCodes.INTERNAL, "refreshHolidays failed: ${error.javaClass.simpleName}")
+        }
     }
 
     private fun unsupported(method: String, feature: String): Bundle =

@@ -8,9 +8,17 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.Ala
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmStore
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.api.AlarmApi
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.api.BindingHints
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.api.HolidayApi
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.api.TimerApi
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.event.AlarmEventBus
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.event.ChangeEvents
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.holiday.CatalogSignatureVerifier
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.holiday.HolidayData
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.holiday.HolidayJudge
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.holiday.HolidayRefresher
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.holiday.HolidayStore
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.net.CancelToken
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.net.UrlConnectionTransport
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.ring.RingCoordinator
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.ring.RingVolume
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.ring.RingtoneLibrary
@@ -21,6 +29,9 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.timer.Jso
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.timer.Stopwatch
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.timer.TimerEngine
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.timer.TimerStore
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.holiday.AndroidAssetSource
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.holiday.HolidaySettings
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.holiday.HolidayUpdateJob
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ring.AlarmStreamVolume
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ring.KeepAliveService
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ring.RingDefaultsStore
@@ -59,6 +70,38 @@ class AlarmRuntime private constructor(context: Context) {
     private val deviceFilesDir: File = this.context.createDeviceProtectedStorageContext().filesDir
 
     val events = AlarmEventBus()
+
+    /** The holiday settings (roadmap P8.2 / P8.3, T176). zh-CN: 节假日设置 (路线图 P8.2 / P8.3, T176). */
+    val holidaySettings = HolidaySettings(this.context)
+
+    /**
+     * The bundled snapshot and the downloaded holiday set (roadmap P8.2, T174), opened on first use.
+     * zh-CN: 内置快照与下载的节假日数据集 (路线图 P8.2, T174), 首次使用时打开.
+     */
+    private val holidayStore: HolidayStore by lazy {
+        HolidayStore(File(deviceFilesDir, HOLIDAY_DIRECTORY), AndroidAssetSource(this.context.assets), CatalogSignatureVerifier.official()) { message, error ->
+            Log.w(HolidayUpdateJob.TAG, message, error)
+        }
+    }
+
+    /**
+     * The holiday data in use (roadmap P8.2): loaded on first use, which verifies the signature of the catalog once.
+     * zh-CN: 正在使用的节假日数据 (路线图 P8.2): 首次使用时加载, 此时校验一次目录签名.
+     */
+    val holidays: HolidayData by lazy { HolidayData(holidayStore.load()) { holidaySettings.defaultRegion(holidays.set.catalog) } }
+
+    /**
+     * The judgement of the rule engine (roadmap P8.3): unknown (the weekday rules) when the data cannot be opened.
+     * zh-CN: 规则引擎的判定 (路线图 P8.3): 数据无法打开时为未知 (按星期规则).
+     */
+    val holidayJudge = HolidayJudge { date, region ->
+        try {
+            holidays.day(date, region)
+        } catch (e: Exception) {
+            Log.e(HolidayUpdateJob.TAG, "holiday data unavailable", e)
+            null
+        }
+    }
 
     val port = AndroidAlarmSchedulePort(this.context) { record, request ->
         rings.offer(record, request)
@@ -136,6 +179,64 @@ class AlarmRuntime private constructor(context: Context) {
         source = AlarmContract.SOURCE_TOOL, by = AlarmContract.BY_TOOL, timerExists = ::timerExists,
     )
 
+    /**
+     * The holiday methods (roadmap P8.2 / P8.3); the warnings cover the default region and the regions of the enabled alarms
+     * that filter by holidays.
+     * zh-CN: 节假日方法 (路线图 P8.2 / P8.3); 警告涵盖默认地区以及按节假日过滤的已启用闹钟所用的地区.
+     */
+    val holidayApi: HolidayApi by lazy {
+        HolidayApi(holidays, alarmRegions = { repository.list().filter { it.enabled }.mapNotNull { record -> record.spec.holidays?.let { listOf(it.region) } }.flatten() })
+    }
+
+    private val holidayRefresher: HolidayRefresher by lazy {
+        HolidayRefresher(holidayStore, holidays, UrlConnectionTransport(userAgent = "Three-Chime-Alarm-holidays/${BuildConfig.VERSION_NAME}"))
+    }
+
+    /** One thread for holiday refreshes, apart from the scheduler work. zh-CN: 节假日刷新所用的单线程, 与调度工作分开. */
+    private val holidayExecutor: ExecutorService = Executors.newSingleThreadExecutor { Thread(it, "chime-holidays") }
+
+    /**
+     * Refreshes the holiday data in the background (roadmap P8.2: script `holidays.refresh` and the weekly check) and
+     * answers through [done] on the holiday thread. A newer catalog replans the alarms (T8, the sixth moment); a check that
+     * succeeds records its time.
+     * zh-CN: 在后台刷新节假日数据 (路线图 P8.2: 脚本的 `holidays.refresh` 与每周检查), 在节假日线程上经 [done] 返回结果. 更新的目录会重排闹钟 (T8
+     * 第六个时机); 成功的检查记录其时间.
+     */
+    fun refreshHolidays(cancel: CancelToken, progress: HolidayRefresher.Progress?, done: (Result<HolidayRefresher.Result>) -> Unit) {
+        holidayExecutor.execute {
+            val result = try {
+                Result.success(holidayRefresher.refresh(cancel, progress ?: HolidayRefresher.Progress { _, _ -> }))
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+            result.getOrNull()?.let {
+                holidaySettings.lastCheckAt = System.currentTimeMillis()
+                if (it.updated) replanHolidays("holiday data ${it.info.version}")
+            }
+            done(result)
+        }
+    }
+
+    /**
+     * Applies a change of the holiday settings (roadmap P8.6): the weekly check follows its switches, and the alarms are
+     * replanned for another default region.
+     * zh-CN: 应用节假日设置的改动 (路线图 P8.6): 每周检查跟随其开关, 并为新的默认地区重排闹钟.
+     */
+    fun holidaySettingsChanged() {
+        HolidayUpdateJob.sync(context, holidaySettings)
+        replanHolidays("holiday settings")
+    }
+
+    private fun replanHolidays(why: String) {
+        executor.execute {
+            try {
+                log(why, schedule.reconcile(AlarmPlanner.Cause.HOLIDAYS).values)
+            } catch (e: RuntimeException) {
+                Log.e(AndroidAlarmSchedulePort.TAG, "$why: reconcile failed", e)
+            }
+        }
+    }
+
     /** The timer and stopwatch methods for host scripts (roadmap P7.3). zh-CN: 供宿主脚本使用的计时器与秒表方法 (路线图 P7.3). */
     val timerApi = TimerApi(timers, stopwatch, rings, validator)
 
@@ -195,6 +296,7 @@ class AlarmRuntime private constructor(context: Context) {
                 if (resumed > 0) Log.i(RingService.TAG, "start: $resumed interrupted rings resumed")
                 if (rings.sounding != null) RingService.start(context) else volume.restore()
                 KeepAliveService.sync(context)
+                HolidayUpdateJob.sync(context, holidaySettings)
             } catch (e: RuntimeException) {
                 Log.e(AndroidAlarmSchedulePort.TAG, "start reconcile failed", e)
             }
@@ -217,6 +319,9 @@ class AlarmRuntime private constructor(context: Context) {
 
         /** The directory of `alarms.json` under device-protected `filesDir` (roadmap P2.1). zh-CN: `alarms.json` 所在目录. */
         const val STORE_DIRECTORY = "alarms"
+
+        /** The downloaded holiday sets under device-protected `filesDir` (T174). zh-CN: 下载的节假日数据集所在目录 (T174). */
+        const val HOLIDAY_DIRECTORY = "holidays"
 
         /** Device-protected preferences with the boot count of the previous process start (T96). zh-CN: 保存上次进程启动时开机次数的设备加密偏好. */
         private const val BOOT_PREFERENCES = "boot"

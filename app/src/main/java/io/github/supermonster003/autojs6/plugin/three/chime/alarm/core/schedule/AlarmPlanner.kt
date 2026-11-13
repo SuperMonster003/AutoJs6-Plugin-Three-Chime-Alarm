@@ -58,6 +58,12 @@ object AlarmPlanner {
          * boot. zh-CN: 升级, 精确闹钟权限, 非开机后首次的插件进程启动.
          */
         RESTORE,
+
+        /**
+         * New holiday data or another default region (roadmap P8.2, T8 the sixth moment): replans like [RESTORE].
+         * zh-CN: 节假日数据更新或默认地区改变 (路线图 P8.2, T8 第六个时机): 与 [RESTORE] 一样重排.
+         */
+        HOLIDAYS,
     }
 
     /**

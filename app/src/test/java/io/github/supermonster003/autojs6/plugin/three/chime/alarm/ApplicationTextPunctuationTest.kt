@@ -8,10 +8,11 @@ import java.nio.file.Path
 
 /**
  * Every language uses ASCII punctuation (D:/idea-projects/COMMON_AGENTS.md): resources, generated documents, JSON
- * sources, code comments and repository documents. Upstream files kept byte for byte (the Gradle wrapper script and the
- * shared Icon Studio kernel) are the documented exceptions and are not scanned.
+ * sources, code comments and repository documents. Upstream files kept byte for byte (the Gradle wrapper script, the
+ * shared Icon Studio kernel and the signed holiday data, whose names stay as python-holidays writes them, T161) are the
+ * documented exceptions and are not scanned.
  * zh-CN: 所有语言只用 ASCII 标点 (COMMON_AGENTS.md): 资源, 生成文档, JSON 源, 代码注释与仓库文档. 原样保存的上游文件
- * (Gradle Wrapper 脚本与共享的 Icon Studio 内核) 属于规范例外, 不扫描.
+ * (Gradle Wrapper 脚本, 共享的 Icon Studio 内核与已签名的节假日数据, 其节日名称照搬 python-holidays, T161) 属于规范例外, 不扫描.
  */
 class ApplicationTextPunctuationTest {
 
@@ -44,7 +45,8 @@ class ApplicationTextPunctuationTest {
 
     private fun Path.isExcluded(): Boolean {
         val relative = RepositoryFiles.root.relativize(this).toString().replace('\\', '/')
-        return relative in EXCLUDED_FILES || relative.split('/').any { it == "build" || it == ".gradle" || it == ".kotlin" }
+        return relative in EXCLUDED_FILES || EXCLUDED_DIRECTORIES.any { relative.startsWith("$it/") } ||
+            relative.split('/').any { it == "build" || it == ".gradle" || it == ".kotlin" }
     }
 
     private companion object {
@@ -58,6 +60,8 @@ class ApplicationTextPunctuationTest {
         val NAMES = setOf(".gitignore", ".gitattributes")
         // Upstream files kept byte for byte (COMMON_AGENTS.md exception): the shared Icon Studio kernel.
         val EXCLUDED_FILES = setOf(".python/icon_studio_runtime.py")
+        // The bundled holiday data (roadmap P8.2): signed and hash-checked, the holiday names verbatim from upstream (T161).
+        val EXCLUDED_DIRECTORIES = setOf("app/src/main/assets/holiday-calendars")
     }
 
 }

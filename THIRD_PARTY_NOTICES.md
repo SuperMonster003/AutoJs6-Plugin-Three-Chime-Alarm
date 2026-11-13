@@ -54,6 +54,31 @@ Copyright 2017 dmfs GmbH- http://dmfs.org
 | --- | --- | --- | --- |
 | desugar_jdk_libs (`com.android.tools:desugar_jdk_libs`, `java.time` and other JDK APIs on API 24 and 25 devices) | 2.1.5 | https://github.com/google/desugar_jdk_libs | GPL-2.0 with the Classpath Exception |
 
+## Holiday data
+
+| Files | Source | License |
+| --- | --- | --- |
+| `app/src/main/assets/holiday-calendars/` (the signed catalog and one calendar file per region, roadmap P8.2) | Generated from python-holidays 0.108 (https://github.com/vacanza/holidays) by the `holiday-calendars` family of AutoJs6-Shared-Assets (https://github.com/SuperMonster003/AutoJs6-Shared-Assets), release `holiday-calendars-v1` | MIT |
+
+The MIT license text and the contributor list of python-holidays ship next to the data as
+`LICENSE-python-holidays.txt` and `CONTRIBUTORS-python-holidays.txt`. A downloaded update of the data
+comes from the same family and carries the same terms; `.python/sync_holiday_snapshot.py` refreshes the
+bundled snapshot before a release.
+
+## Trust anchors
+
+| File | Source | Terms |
+| --- | --- | --- |
+| `app/src/main/res/raw/isrg_root_x1.der` | ISRG Root X1, the root certificate of Let's Encrypt (Internet Security Research Group), downloaded from https://letsencrypt.org/certs/isrgrootx1.der | A public certificate, not a licensed work; redistributed byte for byte |
+
+GitHub serves the holiday catalog (`raw.githubusercontent.com`) and the release assets of the calendar
+files (`release-assets.githubusercontent.com`) with a certificate chain that ends at ISRG Root X1, which
+the system trust store of Android 7.0 (API 24, the plugin's minimum version) lacks.
+`res/xml/network_security_config.xml` adds this certificate next to the system store, never instead of
+it, without trusting user-installed certificates or cleartext traffic, so holiday data updates work on
+Android 7.0 as well; Android 7.1.1 and later already carry it. The SHA-256 digest of the DER file is
+recorded in `locks/trust-anchors.lock` and checked during the build and by `TrustAnchorsTest`.
+
 The full text of the Apache License 2.0 is available at https://www.apache.org/licenses/LICENSE-2.0.
 
 Libraries used only by the JVM and device tests (JUnit, AndroidX Test) are not part of the APK.

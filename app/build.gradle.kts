@@ -82,6 +82,25 @@ val hostApiAars: List<File> = run {
     }
 }
 
+run {
+    // The extra TLS trust anchor of res/xml/network_security_config.xml (roadmap P8.2, the holiday data refresh on Android
+    // 7.0; copied from 3-Macaw Speech cf32b5e): the ISRG Root X1 certificate in DER form, locked in locks/trust-anchors.lock
+    // and checked again by TrustAnchorsTest.
+    // zh-CN: res/xml/network_security_config.xml 的额外 TLS 信任锚 (路线图 P8.2, Android 7.0 上的节假日数据刷新; 照搬 3-Macaw Speech
+    // cf32b5e): DER 格式的 ISRG Root X1 证书, 锁定在 locks/trust-anchors.lock 中, TrustAnchorsTest 再次核对.
+    val entries = readLock("locks/trust-anchors.lock")
+    val names = entries.keys.filter { it.endsWith(".path") }.map { it.removeSuffix(".path") }.sorted()
+    check(names == listOf("isrg-root-x1")) { "locks/trust-anchors.lock must list isrg-root-x1" }
+    check(entries.keys == setOf("format") + names.flatMap { name -> listOf("path", "sha256", "url", "subject", "notAfter").map { "$name.$it" } }) {
+        "Unexpected keys in locks/trust-anchors.lock"
+    }
+    names.forEach { name ->
+        val path = entries.getValue("$name.path")
+        check(path == "app/src/main/res/raw/${name.replace('-', '_')}.der") { "trust anchor $name must be the DER file of res/raw" }
+        verifiedFile(path, entries["$name.sha256"], "trust anchor $name")
+    }
+}
+
 // Native code inventory (roadmap T34): the plugin has no native code of its own, but Compose ui-graphics depends on
 // androidx.graphics:graphics-path, whose libandroidx.graphics.path.so is packaged for the four Android ABIs. The APK stays
 // one universal package without ABI splits; the release gate verifies that exactly these libraries are present, stored
