@@ -372,7 +372,7 @@ io.github.supermonster003.autojs6.plugin.three.chime.alarm
 | P5 | 1.0.0 | 验证: AVD 矩阵, 真机矩阵, 时间与系统事件场景, ColorOS 激活, 联动边界, 基线 | 完成 (chime-p5, 2026-11-07; 修复 T96 - T99, ColorOS 被杀进程不响见 Q23, 已决 (b)) |
 | P6 | 1.0.0 | 文档, 声明, 四仓库同步, README / changelog / 截图, 发布与索引登记 | 完成 (chime-p6, 2026-11-08; 含 Q23 (b) 实施; 1.0.0 与修复 Q25 / Q27 的 1.0.1 已发布并登记索引, 见附录 G) |
 | P7 | 1.1.0 | 计时器与秒表 | 完成 (chime-p7-core 做 P7.1 / P7.2 / P7.3 插件侧 / P7.6, chime-p7-host 做 P7.3 宿主侧, chime-p7-ui 做 P7.3 联调 / P7.4 / P7.5, chime-p7-release 做 P7.7, 2026-11-12; 1.1.0 已发布并登记索引, 见附录 G) |
-| P8 | 1.2.0 | 节假日与 `beforeRing` | 进行中 (P8.1 数据管线已提前完成: chime-p8-data, 2026-11-12, `holiday-calendars-v1` 已由维护者发布; chime-p8-plugin 做 P8.2 / P8.3 / P8.7 与 P8.4 插件侧, chime-p8-host 做 P8.5 与 P8.4 宿主侧, 2026-11-13; 余 P8.4 真机联调, P8.6, P8.8) |
+| P8 | 1.2.0 | 节假日与 `beforeRing` | 进行中 (P8.1 数据管线已提前完成: chime-p8-data, 2026-11-12, `holiday-calendars-v1` 已由维护者发布; chime-p8-plugin 做 P8.2 / P8.3 / P8.7 与 P8.4 插件侧, chime-p8-host 做 P8.5 与 P8.4 宿主侧, 2026-11-13; chime-p8-ui 做 P8.4 真机联调与 P8.6, 2026-11-13; 余 P8.8) |
 | P9 | 1.3.0 | 关闭挑战 | 未开始 |
 
 依赖顺序:
@@ -668,7 +668,7 @@ P0 (插件骨架, 含 P0.2 评估)          P1.1 - P1.3 (宿主契约, 桥接, �
 
 ### P8.4 `beforeRing`
 
-- [ ] (插件) 在 `scheduledAt - leadSeconds` (15 - 300, 默认 60) 用第二个精确闹钟唤醒自己, 发 `beforeRing` 给宿主 (回调 + 有绑定时的广播), `deadline` 默认 `scheduledAt - 5 s`; 收到任何 `skip` 本次不响 (发 `skip`, `reason: 'script'`); `ring(overrides)` 只改本次 `label` / `sound` / `speak` / `vibrate`, 多个脚本按到达顺序合并; 到 `deadline` 无决定, 宿主不可用, 设备未解锁或脚本出错一律照常响. (宿主) `AlarmEvent.skip` / `ring` 方法, `BindOptions.leadSeconds`, 绑定脚本的启动与超时. 证据: 两侧提交 hash; 设备: XQ-AT72 上附录 A 第 5.4 节的 `weather-brief.js` 示例 (改为本地假数据) 两个分支各跑一次, 以及宿主被杀时照常响. 进度 (2026-11-13, chime-p8-plugin 回填): 插件侧提交 `b9b65ad` (T186 - T191, JVM `BeforeRingTest` 等全部通过); 宿主侧提交 `3abe4f2f8f` (chime-p8-host, T207 - T209); 剩 XQ-AT72 上 `weather-brief.js` 两个分支与宿主被杀照常响的真机联调, 完成后再勾选.
+- [x] (插件) 在 `scheduledAt - leadSeconds` (15 - 300, 默认 60) 用第二个精确闹钟唤醒自己, 发 `beforeRing` 给宿主 (回调 + 有绑定时的广播), `deadline` 默认 `scheduledAt - 5 s`; 收到任何 `skip` 本次不响 (发 `skip`, `reason: 'script'`); `ring(overrides)` 只改本次 `label` / `sound` / `speak` / `vibrate`, 多个脚本按到达顺序合并; 到 `deadline` 无决定, 宿主不可用, 设备未解锁或脚本出错一律照常响. (宿主) `AlarmEvent.skip` / `ring` 方法, `BindOptions.leadSeconds`, 绑定脚本的启动与超时. 证据: 两侧提交 hash; 设备: XQ-AT72 上附录 A 第 5.4 节的 `weather-brief.js` 示例 (改为本地假数据) 两个分支各跑一次, 以及宿主被杀时照常响. 进度 (2026-11-13, chime-p8-plugin 回填): 插件侧提交 `b9b65ad` (T186 - T191, JVM `BeforeRingTest` 等全部通过); 宿主侧提交 `3abe4f2f8f` (chime-p8-host, T207 - T209); 证据 (设备, 2026-11-13, chime-p8-ui): 联调脚本 `.python/device_before_ring.py` (本次提交); XQ-AT72 (QV710AF65F, API 31, 克隆 debug 宿主 6641 含 `3abe4f2f8f`, 插件 debug 1.1.0 构建 72 加 `6798f6d` 的改动). 宿主检查 `tools/alarms/device_alarms_holidays_check.py --expect full` failed=0 (`holidays` 模块 7 个函数, 形状检查 7 个 `INVALID_OPTIONS`, 250 个地区, 列表与判定, `holiday-calendars-v1` / python-holidays 0.108, 带 `holidays` 选项的绑定 (提前量 120 s), 无残留). `cases` 59 / 59 PASS (提前量 30 s): 每例 `beforeRing` 只发一次 (比 `at - 30 s` 迟 35 - 44 ms), `deadline` 为 `scheduledAt - 5 s`, 宿主应答 `launched=1`; `weather-brief.js` (附录 A 第 5.4 节的示例, 改读本地假数据) 休息分支在唤醒后 133 ms 决定, 不响, 发 `skip` (`reason` 'script', `detail` '今天休息'), 上班分支照常响并在铃声后朗读, `ring` 事件照常; `ring(overrides)` 本次响铃与 `ring` 事件的标签为覆盖值, 闹钟自身标签不变, 同一脚本的第二次决定返回 false; 不决定, 脚本抛出, 迟到 (截止后 1167 ms 的 `skip` 返回 false) 均照常响; 节假日过滤 (ME 今天放假) 不发 `beforeRing`, 决定脚本不运行, 直接发 `skip` (`reason` 'holiday'), 下一次在 24 h 后. `hoststop` (唤醒前 26 s 强行停止宿主一次): 插件记 `scriptSkipped=unavailable`, 照常响, 宿主保持停止, 决定脚本未运行, 无障碍设置复原; 17 项中唯一的 FAIL 是脚本期望绑定的记录脚本收到 `ring` 事件, 而系统不向被强行停止的应用投递广播 (P5 已记录, 非缺陷), 脚本已改为核对 "被停止的宿主收不到事件", 借用条件只许停止宿主一次, 未重跑. `locked` (锁屏后宿主照常启动决定脚本) 未跑: 该机设了安全锁屏, 需要维护者解锁, 且借自另一主题的手测; 锁屏响铃本身由 P2.4 / P3.2 覆盖. 全程不出声不振动: 闹钟声音 `silent` 音量 0, 朗读用不存在的语言 `zz-ZZ` 使其失败 (回落的默认铃声增益为 0), 振动覆盖只由 JVM `BeforeRingTest` 覆盖; 结束后闹钟音量 7 -> 7, 系统提示音与前台复原, 测试闹钟, 推送目录与插件均已删除. 均只本地提交.
 
 ### P8.5 脚本 API 与能力
 
@@ -676,7 +676,7 @@ P0 (插件骨架, 含 P0.2 评估)          P1.1 - P1.3 (宿主契约, 桥接, �
 
 ### P8.6 界面
 
-- [ ] (插件) 设置页默认地区 (列表来自 `regions()`, 显示数据年份范围与是否含补班日), 编辑页节假日选项 (三种 mode 与地区), 列表显示 "下一次 (已跳过 N 个节假日)" 与数据更新状态; 推算年份 (T162) 在默认地区的年份范围, 编辑页与下一次响铃落在推算年份时标 "推算", 并提示可能有调休或补班 (Q47 (a)). 证据: 提交 hash; E4.
+- [x] (插件) 设置页默认地区 (列表来自 `regions()`, 显示数据年份范围与是否含补班日), 编辑页节假日选项 (三种 mode 与地区), 列表显示 "下一次 (已跳过 N 个节假日)" 与数据更新状态; 推算年份 (T162) 在默认地区的年份范围, 编辑页与下一次响铃落在推算年份时标 "推算", 并提示可能有调休或补班 (Q47 (a)). 证据: 提交 hash; E4. 证据 (E4, 2026-11-13, chime-p8-ui): 提交 `7952b6f` (T220 - T224, 11 种语言文案, 截图模式 `holidays`) 与 `6798f6d` (T225: 地区对话框打开时定位到已选地区, 截图首轮发现; 截图探针修正); JVM 单测 314 / 314; 全量 connectedDebugAndroidTest (emulator-5984, AVD_API_33 只读实例, 含 `6798f6d` 的改动) 58 例 0 失败 6 跳过 (5 个探针需仪器参数, 1 个通知用例因全新安装未授通知权限); E4: `py .python/device_screens.py emulator-5984 --screens holidays` 浅色 / 深色 12 张 PASS (列表与节假日数据卡片, 下一次 "已跳过 1 个节假日" 与推算提示, 编辑页与节假日行, 模式对话框, 设置页节假日组, 默认地区对话框定位到 US), 截图在调度共享笔记 `chime-p8-ui-screenshots/`. 均只本地提交.
 
 ### P8.7 工具
 
