@@ -238,7 +238,7 @@ class ScreenshotProbe {
             "chime.shot.$name",
             runCatching {
                 val started = SystemClock.uptimeMillis()
-                show(intent, tags, ready)
+                if (show(intent, tags, ready)) out.putString("chime.reopened.$name", "true")
                 if (ready != null) out.putString("chime.ready.$name", (SystemClock.uptimeMillis() - started - SETTLE_MILLIS).toString())
                 if (action != null) {
                     action()
@@ -345,18 +345,34 @@ class ScreenshotProbe {
         appearance.edit().putString(AppearancePreferences.KEY_DARK_MODE, mode).commit()
     }
 
-    /** Starts [intent], waits for one of [tags] and, when given, for the [ready] node to be enabled. zh-CN: 启动 [intent], 等待 [tags] 之一出现, 给出 [ready] 时再等该节点变为可用. */
-    private fun show(intent: Intent, tags: List<String>, ready: String? = null) {
+    /**
+     * Starts [intent], waits for one of [tags] and, when given, for the [ready] node to be enabled; returns whether the
+     * screen had to be reopened. Under the test recomposer a screen that loads in two background blocks at once now and
+     * then never applies a result (the settings page on API 33, about once in twenty: every thread idle, nothing logged);
+     * the app runs its effects on the main dispatcher instead, so such a screen is reopened once and the shot says so.
+     * zh-CN: 启动 [intent], 等待 [tags] 之一出现, 给出 [ready] 时再等该节点变为可用; 返回是否重开过页面. 在测试重组器下,
+     * 同时在后台加载两块数据的页面偶尔不应用其中一个结果 (API 33 上的设置页约二十次一次: 各线程空闲, 无日志); 应用本身在主线程调度器上运行副作用,
+     * 因此这种页面重开一次, 截图结果注明.
+     */
+    private fun show(intent: Intent, tags: List<String>, ready: String? = null): Boolean {
         context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         compose.waitUntil(WAIT_MILLIS) { tags.any { compose.onAllNodesWithTag(it).fetchSemanticsNodes().isNotEmpty() } }
-        if (ready != null) {
-            compose.waitUntil(READY_MILLIS) {
-                compose.onAllNodesWithTag(ready).fetchSemanticsNodes().any { SemanticsProperties.Disabled !in it.config }
-            }
+        var reopened = false
+        if (ready != null && !enabledWithin(ready, READY_MILLIS / 2)) {
+            finishAll()
+            reopened = true
+            context.startActivity(intent)
+            compose.waitUntil(WAIT_MILLIS) { tags.any { compose.onAllNodesWithTag(it).fetchSemanticsNodes().isNotEmpty() } }
+            compose.waitUntil(READY_MILLIS) { enabled(ready) }
         }
         compose.waitForIdle()
         SystemClock.sleep(SETTLE_MILLIS)
+        return reopened
     }
+
+    private fun enabled(tag: String): Boolean = compose.onAllNodesWithTag(tag).fetchSemanticsNodes().any { SemanticsProperties.Disabled !in it.config }
+
+    private fun enabledWithin(tag: String, millis: Long): Boolean = runCatching { compose.waitUntil(millis) { enabled(tag) } }.isSuccess
 
     private fun capture(name: String): String {
         val path = "$DEVICE_DIR/$name.png"
@@ -383,10 +399,20 @@ class ScreenshotProbe {
         return fields.joinToString(" ").take(900)
     }
 
+    /**
+     * Finishes every screen and waits until they are destroyed: a finished screen keeps its compose root until then (on
+     * API 33 up to about 2 s after the next one shows), so the next shot would find its tags and act on it.
+     * zh-CN: 结束全部页面并等待它们被销毁: 已结束的页面在销毁前仍保留 compose 根 (API 33 上可到下一页面显示后约 2 秒),
+     * 下一张截图会找到它的标签并在它上面操作.
+     */
     private fun finishAll() {
-        instrumentation.runOnMainSync {
-            val monitor = ActivityLifecycleMonitorRegistry.getInstance()
-            listOf(Stage.RESUMED, Stage.PAUSED, Stage.STOPPED).flatMap { monitor.getActivitiesInStage(it) }.forEach(Activity::finish)
+        val monitor = ActivityLifecycleMonitorRegistry.getInstance()
+        val alive = listOf(Stage.PRE_ON_CREATE, Stage.CREATED, Stage.STARTED, Stage.RESTARTED, Stage.RESUMED, Stage.PAUSED, Stage.STOPPED)
+        instrumentation.runOnMainSync { alive.flatMap { monitor.getActivitiesInStage(it) }.forEach(Activity::finish) }
+        within(WAIT_MILLIS) {
+            var none = false
+            instrumentation.runOnMainSync { none = alive.all { monitor.getActivitiesInStage(it).isEmpty() } }
+            none
         }
         SystemClock.sleep(500)
     }

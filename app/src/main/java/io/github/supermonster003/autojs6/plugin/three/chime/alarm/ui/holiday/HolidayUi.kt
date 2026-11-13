@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -220,6 +221,9 @@ internal fun RegionDialog(
         else all.filter { (region, name) -> name.contains(needle, ignoreCase = true) || region.name.contains(needle, ignoreCase = true) || region.code.equals(needle, ignoreCase = true) }
     }
     val country = pending.substringBefore('-')
+    // The list holds about two hundred regions sorted by name, so it opens at the selected one.
+    // zh-CN: 列表按名称排列约两百个地区, 因此打开时定位到已选的那一个.
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = shown.indexOfFirst { it.first.code == country }.coerceAtLeast(0))
     ChimeDialog(
         title = title,
         onDismissRequest = onDismiss,
@@ -237,7 +241,7 @@ internal fun RegionDialog(
             label = { Text(stringResource(R.string.holiday_region_search)) },
             modifier = Modifier.fillMaxWidth().padding(horizontal = DialogDefaults.contentPadding, vertical = 8.dp).testTag("$tag.search"),
         )
-        LazyColumn(Modifier.weight(1f, fill = false).heightIn(max = 360.dp).testTag("$tag.list")) {
+        LazyColumn(Modifier.weight(1f, fill = false).heightIn(max = 360.dp).testTag("$tag.list"), state = listState) {
             items(shown, key = { it.first.code }) { (region, name) ->
                 Column {
                     ChoiceRow(

@@ -19,7 +19,8 @@
    (workdays, daily skipping holidays from New Year's Day of next year, daily on holidays only) and captures the list
    with the holiday data card, the editor (the next ring with the holidays skipped and the estimated year hint), its
    holiday rows, the holiday mode dialog, the settings page at the holiday rows and the default region dialog.
-   The pages that read the ringtones in the background are captured once their rows are enabled (the time is printed).
+   The pages that read the ringtones in the background are captured once their rows are enabled (the time is printed);
+   one whose rows are still disabled after 15 s is closed and opened once more, and its line says "reopened once".
 4. the captures are pulled into DIR as `<page>-<mode>.png` and removed from the device; the plugin is started once
    again (`am instrument` force-stops it) and the androidTest APK is uninstalled unless --keep-test-package.
 
@@ -105,6 +106,8 @@ def run(serial, args):
                        f"notification carries it {values.get(f'chime.fullScreenIntent.{mode}')})")
             if f"chime.ready.{name}" in values:
                 how += f", rows enabled after {values[f'chime.ready.{name}']} ms"
+            if values.get(f"chime.reopened.{name}") == "true":
+                how += ", reopened once (a result was never applied under the test recomposer)"
             if name == "notice-system":
                 how += ", ring screen opened instead" if values.get("chime.notice.screen") == "true" else ", heads-up"
             report.check(name, size is not None, f"{size[0]}x{size[1]}, {target.stat().st_size // 1024} KiB{how}" if size else "pull failed")

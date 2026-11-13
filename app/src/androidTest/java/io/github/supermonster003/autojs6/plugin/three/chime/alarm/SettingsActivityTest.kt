@@ -6,8 +6,10 @@ import android.content.Intent
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isEnabled
@@ -179,6 +181,8 @@ class SettingsActivityTest {
         row("chime.settings.holidayRegion").performClick()
         val dialog = "chime.dialog.holidayRegion"
         compose.waitUntil(WAIT_MILLIS) { compose.onAllNodesWithTag(dialog).fetchSemanticsNodes().isNotEmpty() }
+        // The list opens at the selected region, not at the top of the alphabet. zh-CN: 列表打开时定位到已选地区, 而不是字母表开头.
+        if (current != null) compose.onNodeWithTag("$dialog.region.$current").assertIsDisplayed().assertIsSelected()
         if (target == null) {
             compose.onNodeWithTag("$dialog.first").performClick()
         } else {
