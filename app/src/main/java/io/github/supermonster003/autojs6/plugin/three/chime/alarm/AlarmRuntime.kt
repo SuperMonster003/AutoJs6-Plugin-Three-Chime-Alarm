@@ -47,6 +47,7 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.service.System
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.timer.AndroidTimerPort
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.timer.TimerNotifications
 import org.autojs.plugin.alarm.api.AlarmContract
+import org.autojs.plugin.alarm.api.AlarmLimits
 import java.io.File
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -145,7 +146,7 @@ class AlarmRuntime private constructor(context: Context) {
         holidayRegion = holidayRegion,
     )
 
-    val schedule: AlarmSchedule = AlarmSchedule(repository, port, events, judge = holidayJudge)
+    val schedule: AlarmSchedule = AlarmSchedule(repository, port, events, judge = holidayJudge, beforeRingLead = ::beforeRingLead)
 
     /** The plugin defaults of the settings screen (T84). zh-CN: 设置页的插件默认值 (T84). */
     val defaults = RingDefaultsStore(this.context)
@@ -180,7 +181,7 @@ class AlarmRuntime private constructor(context: Context) {
     val stopwatch: Stopwatch = Stopwatch(JsonDocumentFile(File(deviceFilesDir, Stopwatch.FILE_NAME), Stopwatch.FORMAT, Stopwatch.VERSION), boot = bootCount)
 
     /** The ringing state of alarms and timers (roadmap P2.4, P7.1). zh-CN: 闹钟与计时器的响铃状态 (路线图 P2.4, P7.1). */
-    val rings: RingCoordinator = RingCoordinator(repository, schedule, events, defaults = defaults::get, timers = timers)
+    val rings: RingCoordinator = RingCoordinator(repository, schedule, events, defaults = defaults::get, timers = timers, validator = alarmValidator)
 
     /** The independent volume of rings (T14, T68). zh-CN: 响铃的独立音量 (T14, T68). */
     val volume: RingVolume = RingVolume(AlarmStreamVolume(this.context), StoredVolumeMemory(this.context))
@@ -200,7 +201,7 @@ class AlarmRuntime private constructor(context: Context) {
     /** The `IAlarmPlugin` methods on value trees (roadmap P2.5). zh-CN: 以值树实现的 `IAlarmPlugin` 方法 (路线图 P2.5). */
     val api = AlarmApi(
         repository, rings, hints, ringtones, { SystemRingtones.list(this.context) }, validator = alarmValidator,
-        timerExists = ::timerExists, judge = holidayJudge, holidayRegion = holidayRegion,
+        timerExists = ::timerExists, judge = holidayJudge, holidayRegion = holidayRegion, schedule = schedule,
     )
 
     /**
@@ -290,6 +291,15 @@ class AlarmRuntime private constructor(context: Context) {
 
     private fun timerExists(id: String): Boolean = timers.get(id) != null
 
+    /**
+     * The `beforeRing` lead of an alarm (roadmap P8.4): the smallest lead of the binding hint rows that ask for it, or the
+     * default 60 s when only a live callback listens; null when nobody does, so no wake-up is set.
+     * zh-CN: 闹钟的 `beforeRing` 提前量 (路线图 P8.4): 请求该事件的绑定提示行中最小的提前量, 只有实时回调监听时为默认的 60 秒; 无人监听时为 null,
+     * 不设唤醒.
+     */
+    private fun beforeRingLead(alarmId: String): Int? =
+        hints.beforeRingLead(alarmId) ?: AlarmLimits.DEFAULT_LEAD_SECONDS.takeIf { callbacks.listens(AlarmContract.EVENT_BEFORE_RING) }
+
     init {
         // Every change of the alarm list, whoever made it, becomes a `change` event (roadmap P2.5, T18).
         // zh-CN: 闹钟列表的每次变更, 无论由谁发起, 都成为 `change` 事件 (路线图 P2.5, T18).
@@ -303,6 +313,9 @@ class AlarmRuntime private constructor(context: Context) {
             executor.execute { KeepAliveService.sync(this.context) }
         }
         stopwatch.addListener { TimerNotifications.stopwatch(this.context, it) }
+        // The beforeRing wake-ups follow who listens (roadmap P8.4). zh-CN: beforeRing 唤醒跟随监听者 (路线图 P8.4).
+        hints.onBeforeRingChange = { ids -> executor.execute { schedule.beforeRingListenersChanged(ids) } }
+        callbacks.onListenedChange = { executor.execute { schedule.beforeRingListenersChanged() } }
     }
 
     /** One thread for the scheduler work of receivers. zh-CN: 接收器的调度工作所用的单线程. */

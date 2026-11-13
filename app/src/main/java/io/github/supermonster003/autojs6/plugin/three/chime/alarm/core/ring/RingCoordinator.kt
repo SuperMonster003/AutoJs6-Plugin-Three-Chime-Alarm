@@ -2,11 +2,13 @@ package io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.ring
 
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmChange
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmException
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmOptionsValidator
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmRecord
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmRepository
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.event.AlarmEventBus
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.schedule.AlarmPlanner
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.schedule.AlarmSchedule
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.schedule.BeforeRingOverrides
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.timer.TimerRecord
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.timer.TimerRounds
 import org.autojs.plugin.alarm.api.AlarmContract
@@ -38,6 +40,7 @@ class RingCoordinator(
     private val clock: () -> Long = System::currentTimeMillis,
     private val defaults: () -> RingDefaults = { RingDefaults.PROTOCOL },
     private val timers: TimerRounds? = null,
+    private val validator: AlarmOptionsValidator = AlarmOptionsValidator(),
 ) {
 
     /**
@@ -103,7 +106,9 @@ class RingCoordinator(
      * zh-CN: 接收调度器给出的到时响铃: 没有其他闹钟发声时立即发声, 否则排队. 正在发声或排队的闹钟又来新的一轮时取代旧的一轮; 同一轮再来不做改变.
      */
     fun offer(record: AlarmRecord, request: AlarmPlanner.RingRequest) {
-        act { batch -> enqueue(Ring(record, request, RingSettings.of(record.spec, defaults()), record.state.ringSince ?: request.firedAt), batch) }
+        // The beforeRing overrides of the instance change only this ring (roadmap P8.4). zh-CN: 该次的 beforeRing 覆盖只改变这次响铃 (路线图 P8.4).
+        val spec = BeforeRingOverrides.apply(record.spec, request.overrides, validator)
+        act { batch -> enqueue(Ring(record, request, RingSettings.of(spec, defaults()), record.state.ringSince ?: request.firedAt, label = spec.label), batch) }
     }
 
     /**
@@ -199,7 +204,7 @@ class RingCoordinator(
         val ids = active.mapTo(HashSet()) { it.alarmId }
         val rings = active.map { RingingSnapshot(it.alarmId, it.kind, it.label, it.since, false, it.request.snoozeCount) }
         val snoozes = snoozed(null).filter { it.id !in ids }.map {
-            RingingSnapshot(it.id, AlarmContract.KIND_ALARM, it.spec.label, it.state.ringSince ?: it.state.snoozeUntil!!, true, it.state.snoozeCount)
+            RingingSnapshot(it.id, AlarmContract.KIND_ALARM, labelOf(it), it.state.ringSince ?: it.state.snoozeUntil!!, true, it.state.snoozeCount)
         }
         val timerSnoozes = timers?.snoozed(null).orEmpty().filter { it.id !in ids }.map {
             RingingSnapshot(it.id, AlarmContract.KIND_TIMER, it.spec.label, it.ringSince ?: it.snoozeUntil!!, true, it.snoozeCount)
@@ -222,7 +227,7 @@ class RingCoordinator(
             val ringingAt = record.state.ringingAt ?: continue
             if (now - ringingAt < RingSettings.of(record.spec, defaults()).autoSilenceMillis) {
                 val occurrence = record.state.occurrence ?: AlarmPlanner.occurrenceOf(record.id, ringingAt, record.state.snoozeCount)
-                offer(record, AlarmPlanner.RingRequest(record.id, ringingAt, now, occurrence, record.state.snoozeCount))
+                offer(record, AlarmPlanner.RingRequest(record.id, ringingAt, now, occurrence, record.state.snoozeCount, record.state.ringOverrides))
                 resumed++
             } else {
                 schedule.endRound(record.id)
@@ -305,8 +310,8 @@ class RingCoordinator(
         if (after != null && after.enabled) {
             // Other changes keep the round as it sounds; the record shows the new label. zh-CN: 其他变更不改变发声, 记录显示新标签.
             act {
-                current = current?.let { if (it.alarmId == after.id) it.copy(record = after, label = after.spec.label) else it }
-                queue.replaceAll { if (it.alarmId == after.id) it.copy(record = after, label = after.spec.label) else it }
+                current = current?.let { if (it.alarmId == after.id) it.copy(record = after, label = labelOf(after, it.request.overrides)) else it }
+                queue.replaceAll { if (it.alarmId == after.id) it.copy(record = after, label = labelOf(after, it.request.overrides)) else it }
             }
             return
         }
@@ -359,9 +364,16 @@ class RingCoordinator(
             occurrence = record.state.occurrence ?: AlarmPlanner.occurrenceOf(record.id, until),
             firedAt = now,
             scheduledAt = until,
-            label = record.spec.label,
+            label = labelOf(record),
         )
     }
+
+    /**
+     * The label [record] rings with: its own, or the `beforeRing` override of the instance (roadmap P8.4).
+     * zh-CN: [record] 响铃所用的标签: 自己的, 或该次的 `beforeRing` 覆盖 (路线图 P8.4).
+     */
+    private fun labelOf(record: AlarmRecord, overrides: Map<String, Any?>? = record.state.ringOverrides): String? =
+        BeforeRingOverrides.apply(record.spec, overrides, validator).label
 
     companion object {
 

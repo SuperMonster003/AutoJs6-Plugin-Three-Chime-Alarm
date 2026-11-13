@@ -12,6 +12,8 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.ring.Ring
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.NextOccurrence
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.RecurrenceRule
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.RepeatText
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.schedule.AlarmSchedule
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.schedule.BeforeRingOverrides
 import org.autojs.plugin.alarm.api.AlarmContract
 import org.autojs.plugin.alarm.api.AlarmLimits
 import org.autojs.plugin.alarm.api.AlarmOptionKeys
@@ -33,13 +35,14 @@ import java.util.Locale
  * `LIMIT_EXCEEDED`; `getAlarm` of an unknown id answers no `alarm`, `dismiss` / `snooze` of an alarm that is not
  * ringing answer `handled` false (T75). From 1.2.0 `upcoming` and `preview` count the holiday filter through [judge]
  * (roadmap P8.3), and `preview` checks an explicit `holidays.region` like `addAlarm` ([holidayRegion], T182).
+ * `decideBeforeRing` (roadmap P8.4) needs [schedule]; the instance of the plugin tools has none (T17).
  *
  * zh-CN: 以值树实现 `IAlarmPlugin` 的 1.0.0 方法 (路线图 P2.5, 附录 A 第 4.1 节), 使 JVM 测试覆盖完整的请求与应答映射; Binder 服务只负责 Bundle 的
  * 解码与编码. Binder 服务所用的实例服务于宿主脚本: 变更以 [source] `script` 记录, 关闭以 [by] `script` 记录 (T18); 插件工具 (路线图 P4.1)
  * 另用一个记 `tool` 的实例. 请求按附录 A 第 11 节检查: 未知键与类型不符报
  * `INVALID_OPTIONS`, 数量超出上限报 `LIMIT_EXCEEDED`; `getAlarm` 查不到 id 时应答不含 `alarm`, 对未在响铃的闹钟 `dismiss` / `snooze` 应答 `handled`
  * 为 false (T75). 自 1.2.0 起 `upcoming` 与 `preview` 经 [judge] 计入节假日过滤 (路线图 P8.3), `preview` 像 `addAlarm` 一样检查显式的
- * `holidays.region` ([holidayRegion], T182).
+ * `holidays.region` ([holidayRegion], T182). `decideBeforeRing` (路线图 P8.4) 需要 [schedule]; 插件工具所用的实例没有 (T17).
  */
 class AlarmApi(
     private val repository: AlarmRepository,
@@ -56,6 +59,7 @@ class AlarmApi(
     private val timerExists: (String) -> Boolean = { false },
     private val judge: HolidayJudge = HolidayJudge.NONE,
     private val holidayRegion: (String) -> String = { it },
+    private val schedule: AlarmSchedule? = null,
 ) {
 
     fun addAlarm(values: Map<String, Any?>): Map<String, Any?> {
@@ -175,6 +179,39 @@ class AlarmApi(
         return mapOf(AlarmResultKeys.UNKNOWN_IDS to unknown)
     }
 
+    /**
+     * `decideBeforeRing` (roadmap P8.4, appendix A section 5.4): `decision` `skip` with an optional `reason` (at most
+     * [BeforeRingOverrides.MAX_REASON_CHARS] characters) or `ring` with optional `overrides` ([BeforeRingOverrides]).
+     * A malformed request or override is `INVALID_OPTIONS`; a decision that comes too late, names an unknown alarm or
+     * `occurrence`, or follows a skip is ignored. The answer is empty either way.
+     * zh-CN: `decideBeforeRing` (路线图 P8.4, 附录 A 第 5.4 节): `decision` 为 `skip` 加可选的 `reason` (至多 [BeforeRingOverrides.MAX_REASON_CHARS]
+     * 个字符), 或 `ring` 加可选的 `overrides` ([BeforeRingOverrides]). 请求或覆盖格式错误报 `INVALID_OPTIONS`; 迟到, 闹钟或 `occurrence` 未知,
+     * 或在跳过之后的决定被忽略. 两种情况的应答都为空.
+     */
+    fun decideBeforeRing(values: Map<String, Any?>): Map<String, Any?> {
+        val schedule = schedule ?: throw AlarmException.unsupported("decideBeforeRing is not offered here")
+        val request = AlarmRequest.of(values, DECIDE_KEYS)
+        val occurrence = request.requireString(AlarmOptionKeys.OCCURRENCE)
+        if (occurrence.length > AlarmLimits.MAX_OCCURRENCE_CHARS) {
+            throw AlarmException.invalidOptions("'${AlarmOptionKeys.OCCURRENCE}' must be at most ${AlarmLimits.MAX_OCCURRENCE_CHARS} characters")
+        }
+        val alarmId = request.requireString(AlarmOptionKeys.ALARM_ID)
+        val decision = request.requireString(AlarmOptionKeys.DECISION)
+        if (decision !in AlarmContract.DECISIONS) {
+            throw AlarmException.invalidOptions("'${AlarmOptionKeys.DECISION}' must be one of ${AlarmContract.DECISIONS.joinToString()}, got '$decision'")
+        }
+        val skip = decision == AlarmContract.DECISION_SKIP
+        val reason = request.string(AlarmOptionKeys.REASON)
+        val overrides = request.map(AlarmOptionKeys.OVERRIDES)
+        if (reason != null && !skip) throw AlarmException.invalidOptions("'${AlarmOptionKeys.REASON}' goes only with the decision '${AlarmContract.DECISION_SKIP}'")
+        if (overrides != null && skip) throw AlarmException.invalidOptions("'${AlarmOptionKeys.OVERRIDES}' goes only with the decision '${AlarmContract.DECISION_RING}'")
+        if (reason != null && reason.length > BeforeRingOverrides.MAX_REASON_CHARS) {
+            throw AlarmException.invalidOptions("'${AlarmOptionKeys.REASON}' must be at most ${BeforeRingOverrides.MAX_REASON_CHARS} characters")
+        }
+        schedule.decide(alarmId, occurrence, skip, reason, overrides, validator)
+        return emptyMap()
+    }
+
     /** The contract snapshot of [record]. zh-CN: [record] 的契约快照. */
     fun snapshot(record: AlarmRecord): AlarmSnapshot = record.toSnapshot(repeatTextOf(record.spec), hints.hasBindings(record.id))
 
@@ -204,5 +241,8 @@ class AlarmApi(
         val IMPORT_KEYS: Set<String> = setOf(AlarmOptionKeys.DISPLAY_NAME, AlarmOptionKeys.MIME_TYPE)
         val EVENTS_KEYS: Set<String> = setOf(AlarmOptionKeys.EVENTS)
         val HINTS_KEYS: Set<String> = setOf(AlarmOptionKeys.HINTS)
+        val DECIDE_KEYS: Set<String> = setOf(
+            AlarmOptionKeys.OCCURRENCE, AlarmOptionKeys.ALARM_ID, AlarmOptionKeys.DECISION, AlarmOptionKeys.REASON, AlarmOptionKeys.OVERRIDES,
+        )
     }
 }

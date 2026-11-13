@@ -31,11 +31,11 @@ import java.util.concurrent.atomic.AtomicInteger
  * Bundles, runs [io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.api.AlarmApi] and encodes the answer.
  * A failure becomes an error answer (`errorCode`, `errorMessage`), never an exception across Binder: a contract error
  * keeps its code, a value outside the value tree is `INVALID_OPTIONS`, anything else `INTERNAL` (logged under
- * `ChimeService`). The methods of the features this build does not declare (`timers`, `stopwatch`, `holidays`,
- * `beforeRing`, `challenges`) answer `UNSUPPORTED` (T25).
+ * `ChimeService`). The methods of the features this build does not declare (`challenges`, 1.3.0) answer `UNSUPPORTED`
+ * (T25, T78).
  * zh-CN: [ThreeChimeAlarmService] 的 `IAlarmPlugin` Binder (路线图 P2.5, 附录 A 第 4 节): 解码请求 Bundle, 调用 AlarmApi 并编码应答. 失败一律变为
  * 错误应答 (`errorCode`, `errorMessage`), 不跨 Binder 抛异常: 契约错误保留其错误码, 超出值树的值报 `INVALID_OPTIONS`, 其他报 `INTERNAL` (以
- * `ChimeService` 记录). 本构建未声明的功能 (`timers`, `stopwatch`, `holidays`, `beforeRing`, `challenges`) 的方法返回 `UNSUPPORTED` (T25).
+ * `ChimeService` 记录). 本构建未声明的功能 (`challenges`, 1.3.0) 的方法返回 `UNSUPPORTED` (T25, T78).
  */
 class AlarmPluginBinder(context: Context) : IAlarmPlugin.Stub() {
 
@@ -121,9 +121,7 @@ class AlarmPluginBinder(context: Context) : IAlarmPlugin.Stub() {
         }
     }
 
-    // ------------------------------------------------------------------ features this build does not declare (T25)
-
-    override fun decideBeforeRing(decision: Bundle?): Bundle = unsupported("decideBeforeRing", "beforeRing")
+    override fun decideBeforeRing(decision: Bundle?): Bundle = call("decideBeforeRing", decision) { runtime.api.decideBeforeRing(it) }
 
     override fun startTimer(request: Bundle?): Bundle = call("startTimer", request) { runtime.timerApi.startTimer(it) }
 
@@ -221,9 +219,6 @@ class AlarmPluginBinder(context: Context) : IAlarmPlugin.Stub() {
             AlarmBundles.error(AlarmErrorCodes.INTERNAL, "refreshHolidays failed: ${error.javaClass.simpleName}")
         }
     }
-
-    private fun unsupported(method: String, feature: String): Bundle =
-        AlarmBundles.error(AlarmErrorCodes.UNSUPPORTED, "$method needs the feature '$feature', which this plugin build does not declare")
 
     /** The package of the calling host (the owner of its hint table). zh-CN: 调用方宿主的包名 (其提示表的归属). */
     private fun callingPackage(): String? =

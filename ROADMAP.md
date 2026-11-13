@@ -225,6 +225,12 @@ T1 - T18 来自设计稿 (2026-11-03), T19 - T25 为立项时补充, T26 起由�
 | T183 | 一次性闹钟 (P8.3): 隐含日期 (只给 `hour` / `minute`) 不为避开节假日而顺延; 一次性闹钟那次被过滤时发 `skip` 后退役; `only` 模式的一次性闹钟落在非节假日时没有响铃 (`upcoming` 为空), 也不发事件 | 一次性闹钟的含义是 "那一次", 不应被推到另一天 | 无 |
 | T184 | `repeatText` (P8.3): `workdays` 显示 "工作日" (10 种界面语言), 带 `UNTIL` 时仍显示规则文字; `skip` / `only` 的说明留给界面 (P8.6) | 列表与工具输出能直接看出闹钟按工作日响 | P8.6 |
 | T185 | 计入过滤的其他入口 (P8.3): 系统时钟 Intent 的 "下一个闹钟" 匹配与关闭, 列表的 "跳过下一次" 菜单 (过滤后的下一次), `upcoming` / `preview`; 判定失败的日志每分钟至多一行 | 用户在任何入口看到的 "下一次" 都与实际响铃一致 | 无 |
+| T186 | `beforeRing` 唤醒的条件与提前量 (P8.4): 有宿主的绑定提示行含 `beforeRing` 时, 提前量取这些行的最小值 (行没有 `leadSeconds` 按 60 计); 没有这样的行但有实时回调监听 `beforeRing` 时按 60; 都没有时不设唤醒; 提示表或监听集合变化时重排受影响闹钟的唤醒 | 附录 A 第 5.4 节要 "分发给实时监听者", 没有绑定的实时监听也要收到; 没人监听时不多占一个精确闹钟 | 无 |
+| T187 | `beforeRing` 唤醒 (P8.4) 用 `setExactAndAllowWhileIdle`, 不作为系统 "下一个闹钟" 显示; 算出的唤醒时刻已过但未到 `deadline` (例如刚加的闹钟, 提前量变大) 时尽快发, 已过 `deadline` 不发; 每个响铃实例只发一次, `occurrence` 与该次的响铃事件相同 | 状态栏的闹钟图标只代表真正的响铃; 脚本用 `occurrence` 把决定对应到那一次 | 无 |
+| T188 | 决定的校验 (P8.4): `decision` 不是 `skip` / `ring`, `reason` 超过 100 字符或用于 `ring`, `overrides` 用于 `skip` 或含 `label` / `sound` / `speak` / `vibrate` (及 `vibratePattern`) 之外的键, `occurrence` 超过 128 字符, 覆盖值不合闹钟选项的校验, 均为 `INVALID_OPTIONS`; 形状合法但迟到 (过了 `deadline`), 闹钟未知, 不是当前待决的那一次, 或该次已有 `skip` 时忽略, 应答为空 | 脚本写错能马上知道; 迟到与竞态不算错误 (宿主的超时与插件的 `deadline` 各自计时) | 无 |
+| T189 | 决定的效果 (P8.4): `skip` 优先, 即使唤醒或响铃本身晚了也照样跳过 (发 `skip` 而不发 `miss`, 不留错过通知); `ring(overrides)` 按到达顺序合并, 只用于该次 (含它的贪睡轮次与进程重启后恢复的响铃), 该次结束时清除; 合并结果在响铃时再校验一次, 不合法时退回闹钟自身的设置 | 覆盖是 "本次" 的, 贪睡后再响仍属同一次; 已同意的覆盖不应因后来改了闹钟而让响铃失败 | 无 |
+| T190 | 决定的存储 (P8.4): 待决的那一次 (`beforeRingFor`), `skip` 标记与合并后的覆盖存在闹钟的运行状态里, 跨进程保留; 改动使下一次响铃时刻变化时丢弃这些决定, 按新时刻重排 `beforeRing`; 覆盖不改闹钟自身的设置 (`get` 仍返回原 `label`) | 进程被杀后仍按决定响; 改了时间的闹钟不沿用旧决定 | 无 |
+| T191 | 插件工具用的 API 实例 (`AlarmRuntime.toolApi`) 不提供 `decideBeforeRing` (`UNSUPPORTED`) | 同 T17, 远端 AI 助手不能替脚本作决定 | 无 |
 
 ---
 
@@ -638,7 +644,7 @@ P0 (插件骨架, 含 P0.2 评估)          P1.1 - P1.3 (宿主契约, 桥接, �
 
 ### P8.3 过滤进规则引擎
 
-- [ ] (插件) `HolidayFilter` 三种 `mode` (`skip` / `only` / `workdays`): `workdays` 的工作日 = 不在该地区数据 `weekend` 中 (按年份与下级地区覆盖, T165) 且非节假日, 或是补班日 (Q46 (a); 原文 "无补班日地区退化为 '周一至周五且非节假日'" 已按此改写, 无补班日的地区自然只剩前一半), 并限制 `repeat` 只能省略或 `daily` 间隔 1 (否则 `INVALID_OPTIONS`); 推算年份 (T162) 照常判定, 不当作缺年 (Q47 (a)); `upcoming` / `preview` 计入; 被过滤的那次发 `skip` (`reason: 'holiday'`), 不触发 `beforeRing`; `region` 省略时用设置页默认地区 (首次按系统区域推断); `holidays.regions` / `isHoliday` / `isWorkday` / `list`. 证据: 提交 hash; JVM 测试 (中国大陆 2026 年调休表: 补班日响, 节假日不响).
+- [x] (插件) `HolidayFilter` 三种 `mode` (`skip` / `only` / `workdays`): `workdays` 的工作日 = 不在该地区数据 `weekend` 中 (按年份与下级地区覆盖, T165) 且非节假日, 或是补班日 (Q46 (a); 原文 "无补班日地区退化为 '周一至周五且非节假日'" 已按此改写, 无补班日的地区自然只剩前一半), 并限制 `repeat` 只能省略或 `daily` 间隔 1 (否则 `INVALID_OPTIONS`); 推算年份 (T162) 照常判定, 不当作缺年 (Q47 (a)); `upcoming` / `preview` 计入; 被过滤的那次发 `skip` (`reason: 'holiday'`), 不触发 `beforeRing`; `region` 省略时用设置页默认地区 (首次按系统区域推断); `holidays.regions` / `isHoliday` / `isWorkday` / `list`. 证据: 提交 hash; JVM 测试 (中国大陆 2026 年调休表: 补班日响, 节假日不响). 证据 (E1, 2026-11-13, chime-p8-plugin): 提交 `51a8a6b` (T179 - T185, Q50 (a) 先行); JVM `HolidayFilterTest` 全部通过, 其中 "workdays rings on the CN 2026 makeup workdays and never on a holiday" (2026 年 1 月 4 日, 2 月 14 / 28 日, 5 月 9 日, 9 月 20 日, 10 月 10 日补班日响, 春节, 国庆等放假日不响) 与 "the scheduler sends skip with reason holiday and rings the makeup workday" (调度器对被过滤的那次发 `skip` (`reason: 'holiday'`) 且不发 `beforeRing`, 补班日照常响).
 
 ### P8.4 `beforeRing`
 

@@ -18,7 +18,6 @@ import org.autojs.plugin.alarm.api.AlarmLimits
 import org.autojs.plugin.alarm.api.AlarmResultKeys
 import org.autojs.plugin.alarm.api.IAlarmEventCallback
 import org.autojs.plugin.alarm.api.IAlarmPlugin
-import org.autojs.plugin.alarm.api.IAlarmProgressCallback
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -39,17 +38,19 @@ import java.util.concurrent.atomic.AtomicReference
 /**
  * The `IAlarmPlugin` methods of the installed plugin through Parcels (roadmap P2.5): the happy path `add` -> `get` ->
  * `list` -> `update` -> `setAlarmEnabled` -> `remove` with its `change` events, refused requests and their error codes,
- * the limits, the methods of undeclared features (`UNSUPPORTED`), bounded event callbacks that are released again,
- * ringtone imports that close the descriptor and outlive the original file (T15), binding hints, and repeated binds
- * that leave no descriptor behind. Since 1.1.0 (roadmap P7.3) the timer and stopwatch methods round-trip too.
+ * the limits, bounded event callbacks that are released again, ringtone imports that close the descriptor and outlive
+ * the original file (T15), binding hints, and repeated binds that leave no descriptor behind. Since 1.1.0 (roadmap P7.3)
+ * the timer and stopwatch methods round-trip too; since 1.2.0 the holiday methods answer (P8.2) and `beforeRing` reaches
+ * a fake host callback whose `skip` and `ring(overrides)` decisions apply (P8.4).
  *
  * Every alarm and timer here carries the label prefix `p25-probe`; [cleanUp] removes them, the hint table of this
  * package and the imported test tone, so a run leaves the alarm and timer lists as it found them. The stopwatch is
  * touched only while it is idle, and left idle.
  *
  * zh-CN: 经 Parcel 调用已安装插件的 `IAlarmPlugin` 方法 (路线图 P2.5): happy path `add` -> `get` -> `list` -> `update` -> `setAlarmEnabled` ->
- * `remove` 及其 `change` 事件, 被拒请求与错误码, 上限, 未声明功能的方法 (`UNSUPPORTED`), 有上限且会释放的事件回调, 关闭描述符并比原文件存活更久的
- * 铃声导入 (T15), 绑定提示, 以及不留下描述符的反复绑定. 1.1.0 起 (路线图 P7.3) 计时器与秒表方法也做往返. 这里的闹钟与计时器都带标签前缀
+ * `remove` 及其 `change` 事件, 被拒请求与错误码, 上限, 有上限且会释放的事件回调, 关闭描述符并比原文件存活更久的铃声导入 (T15), 绑定提示,
+ * 以及不留下描述符的反复绑定. 1.1.0 起 (路线图 P7.3) 计时器与秒表方法也做往返; 1.2.0 起节假日方法有应答 (P8.2), `beforeRing` 送达假宿主回调,
+ * 其 `skip` 与 `ring(overrides)` 决定生效 (P8.4). 这里的闹钟与计时器都带标签前缀
  * `p25-probe`; [cleanUp] 删除它们, 本包的提示表与导入的测试铃声, 运行后闹钟与计时器列表保持原样. 只在秒表空闲时动它, 并让它回到空闲.
  */
 @RunWith(AndroidJUnit4::class)
@@ -184,26 +185,72 @@ class AlarmPluginBinderTest {
     }
 
     @Test
-    fun featuresThisBuildDoesNotDeclareAnswerUnsupported() = withPlugin { plugin ->
+    fun theFeaturesOf120AnswerInsteadOfUnsupported() = withPlugin { plugin ->
         val empty = request()
-        listOf(
-            plugin.decideBeforeRing(empty), plugin.holidayRegions(empty), plugin.checkDate(empty), plugin.listHolidays(empty),
-            plugin.holidayInfo(empty),
-        ).forEach { assertError(AlarmErrorCodes.UNSUPPORTED, it) }
-        val failed = AtomicReference<Bundle>()
-        val latch = CountDownLatch(1)
-        val progress = object : IAlarmProgressCallback.Stub() {
-            override fun onProgress(opId: Int, done: Long, total: Long) = Unit
-            override fun onCompleted(opId: Int, result: Bundle?) = latch.countDown()
-            override fun onFailed(opId: Int, error: Bundle?) {
-                failed.set(error)
-                latch.countDown()
+        listOf(plugin.holidayRegions(empty), plugin.holidayInfo(empty), plugin.checkDate(empty), plugin.listHolidays(empty)).forEach {
+            assertFalse("the holiday methods answer since P8.2", AlarmBundles.errorOf(it)?.first == AlarmErrorCodes.UNSUPPORTED)
+        }
+        assertNoError(plugin.holidayRegions(empty))
+        assertNoError(plugin.holidayInfo(empty))
+        assertError(AlarmErrorCodes.INVALID_OPTIONS, plugin.decideBeforeRing(empty))
+        val decision = arrayOf<Pair<String, Any?>>("occurrence" to "a_p25missing@1", "alarmId" to "a_p25missing")
+        assertError(AlarmErrorCodes.INVALID_OPTIONS, plugin.decideBeforeRing(request(*decision, "decision" to "wake")))
+        assertError(AlarmErrorCodes.INVALID_OPTIONS, plugin.decideBeforeRing(request(*decision, "decision" to AlarmContract.DECISION_SKIP, "overrides" to mapOf("label" to "x"))))
+        assertError(AlarmErrorCodes.INVALID_OPTIONS, plugin.decideBeforeRing(request(*decision, "decision" to AlarmContract.DECISION_RING, "reason" to "x")))
+        assertError(AlarmErrorCodes.INVALID_OPTIONS, plugin.decideBeforeRing(request(*decision, "decision" to AlarmContract.DECISION_SKIP, "reason" to "x".repeat(101))))
+        assertTrue("a decision for no pending beforeRing is ignored", answerOf(plugin.decideBeforeRing(request(*decision, "decision" to AlarmContract.DECISION_SKIP))).isEmpty())
+    }
+
+    @Test
+    fun beforeRingReachesAFakeHostAndItsDecisionsApply() = withPlugin { plugin ->
+        val events = CopyOnWriteArrayList<Map<String, Any?>>()
+        val callback = object : IAlarmEventCallback.Stub() {
+            override fun onEvent(event: Bundle?) {
+                events += AlarmBundles.fromBundle(event)
             }
         }
-        plugin.refreshHolidays(empty, progress)
-        assertTrue(latch.await(5, TimeUnit.SECONDS))
-        assertError(AlarmErrorCodes.UNSUPPORTED, failed.get())
-        plugin.cancelOperation(1)
+        val quiet = arrayOf<Pair<String, Any?>>("sound" to mapOf("source" to AlarmContract.SOUND_SILENT), "vibrate" to false)
+        val now = System.currentTimeMillis()
+        val skipAt = now + 30_000L
+        val ringAt = now + 33_000L
+        val skipped = alarmOf(plugin.addAlarm(request("at" to skipAt, "label" to "$label-skip", *quiet)))["id"] as String
+        val rung = alarmOf(plugin.addAlarm(request("at" to ringAt, "label" to "$label-ring", *quiet)))["id"] as String
+        assertNoError(plugin.setBindingHints(request("hints" to listOf(skipped, rung).map {
+            mapOf("alarmId" to it, "events" to listOf(AlarmContract.EVENT_BEFORE_RING), "leadSeconds" to LEAD_SECONDS)
+        })))
+        val types = listOf(AlarmContract.EVENT_BEFORE_RING, AlarmContract.EVENT_SKIP, AlarmContract.EVENT_RING)
+        assertNoError(plugin.registerEventCallback(callback, request("events" to types)))
+        try {
+            fun of(id: String, type: String) = events.filter { it["alarmId"] == id && it["type"] == type }
+
+            val skipBefore = await(1, BEFORE_RING_WAIT_MILLIS) { of(skipped, AlarmContract.EVENT_BEFORE_RING) }.single()
+            assertEquals(skipAt, skipBefore["scheduledAt"])
+            assertEquals(skipAt - AlarmLimits.BEFORE_RING_DEADLINE_MARGIN_MILLIS, skipBefore["deadline"])
+            val firedEarly = skipAt - (skipBefore["firedAt"] as Long)
+            assertTrue("beforeRing fires about $LEAD_SECONDS s ahead, got $firedEarly ms", firedEarly in 6_000L..(LEAD_SECONDS * 1_000L + 2_000L))
+            val occurrence = skipBefore["occurrence"] as String
+            assertTrue(answerOf(plugin.decideBeforeRing(request("occurrence" to occurrence, "alarmId" to skipped, "decision" to AlarmContract.DECISION_SKIP, "reason" to "p25 probe"))).isEmpty())
+            val skip = await(1, 5_000) { of(skipped, AlarmContract.EVENT_SKIP) }.single()
+            assertEquals(AlarmContract.SKIP_REASON_SCRIPT, skip["reason"])
+            assertEquals(occurrence, skip["occurrence"])
+
+            val ringBefore = await(1, BEFORE_RING_WAIT_MILLIS) { of(rung, AlarmContract.EVENT_BEFORE_RING) }.single()
+            val overridden = "$label-overridden"
+            assertTrue(answerOf(plugin.decideBeforeRing(request(
+                "occurrence" to ringBefore["occurrence"], "alarmId" to rung, "decision" to AlarmContract.DECISION_RING,
+                "overrides" to mapOf("label" to overridden),
+            ))).isEmpty())
+            val ring = await(1, RING_WAIT_MILLIS) { of(rung, AlarmContract.EVENT_RING) }.single()
+            assertEquals("ring(overrides) changes the label of this ring", overridden, ring["label"])
+            assertEquals(ringBefore["occurrence"], ring["occurrence"])
+            assertEquals(true, answerOf(plugin.dismiss(request("id" to rung)))[AlarmResultKeys.HANDLED])
+            assertTrue("a skipped instance never rings", of(skipped, AlarmContract.EVENT_RING).isEmpty())
+            val kept = answerOf(plugin.getAlarm(request("id" to rung)))[AlarmResultKeys.ALARM] as Map<*, *>?
+            assertTrue("the alarm keeps its own label", kept == null || kept["label"] == "$label-ring")
+        } finally {
+            plugin.unregisterEventCallback(callback)
+            plugin.dismiss(request("id" to rung))
+        }
     }
 
     @Test
@@ -315,8 +362,10 @@ class AlarmPluginBinderTest {
         assertTrue(message.toByteArray(Charsets.UTF_8).size <= AlarmLimits.MAX_ERROR_MESSAGE_BYTES)
     }
 
-    private fun <T> await(count: Int, read: () -> List<T>): List<T> {
-        val deadline = System.currentTimeMillis() + 5_000
+    private fun <T> await(count: Int, read: () -> List<T>): List<T> = await(count, 5_000, read)
+
+    private fun <T> await(count: Int, timeoutMillis: Long, read: () -> List<T>): List<T> {
+        val deadline = System.currentTimeMillis() + timeoutMillis
         while (read().size < count && System.currentTimeMillis() < deadline) Thread.sleep(20)
         return read()
     }
@@ -363,5 +412,8 @@ class AlarmPluginBinderTest {
         const val IMPORTS = 10
         const val BINDS = 10
         const val DESCRIPTOR_SLACK = 3
+        const val LEAD_SECONDS = 15
+        const val BEFORE_RING_WAIT_MILLIS = 30_000L
+        const val RING_WAIT_MILLIS = 15_000L
     }
 }

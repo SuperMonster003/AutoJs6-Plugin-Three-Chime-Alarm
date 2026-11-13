@@ -110,6 +110,11 @@ data class AlarmRecord(
  * - [ringingAt]: the scheduled instant of the round that is sounding or waiting in the ring queue (roadmap P2.4), null
  *   while snoozed or idle; a value left after the process died marks an interrupted round.
  * - [dateImplicit]: `date` was filled in by the plugin (roadmap T48) rather than given by the caller.
+ * - [beforeRingFor]: the planned ring whose `beforeRing` went out (roadmap P8.4); [beforeRingSkip] is the reason of the
+ *   first `skip` decision ("" without one), [beforeRingOverrides] the `ring` overrides merged in arrival order. They are
+ *   dropped once that instance is handled or is no longer the next ring.
+ * - [ringOverrides]: the overrides the instance that is sounding or snoozed rings with (its later rounds and a round
+ *   picked up after the process died keep them), null once the instance ends.
  *
  * Unknown or mistyped fields read as their defaults: the state can always be recomputed.
  *
@@ -118,7 +123,10 @@ data class AlarmRecord(
  * [holidaySkipAt] 为 [nextTrigger] 之前被节假日过滤拿掉的下一次 (路线图 P8.3, T181), 到时唤醒插件发原因为 `holiday` 的 `skip` 事件; [handledThrough] 为最近一次已响, 已跳过或已错过的时刻, 下一次在其之后计算;
  * [occurrence] 为本轮响铃的 id (附录 A 第 5.1 节, T31), 至多 128 个字符; [snoozeUntil] / [snoozeCount] 为本轮正在进行的贪睡;
  * [ringSince] 为该次响铃首次开始的时刻 (贪睡期间保留, 即 `ringing()` 的 `since`), 结束后为 null; [ringingAt] 为正在发声或在响铃队列中等待的那一轮的
- * 计划时刻 (路线图 P2.4), 贪睡或空闲时为 null, 进程死亡后留下的值表示被中断的一轮; [dateImplicit] 表示 `date` 由插件补上 (路线图 T48) 而非调用方给出. 未知或类型不符的字段读为默认值, 状态总能重新计算.
+ * 计划时刻 (路线图 P2.4), 贪睡或空闲时为 null, 进程死亡后留下的值表示被中断的一轮; [dateImplicit] 表示 `date` 由插件补上 (路线图 T48) 而非调用方给出;
+ * [beforeRingFor] 为已发出 `beforeRing` 的那次计划响铃 (路线图 P8.4), [beforeRingSkip] 为第一个 `skip` 决定的原因 (没有原因时为 ""), [beforeRingOverrides]
+ * 为按到达顺序合并的 `ring` 覆盖, 那一次处理完或不再是下一次响铃后清除; [ringOverrides] 为正在响或贪睡中的那一次所用的覆盖 (其后续轮次与进程死亡后接续的
+ * 一轮沿用), 该次结束后为 null. 未知或类型不符的字段读为默认值, 状态总能重新计算.
  */
 data class AlarmRuntimeState(
     val nextTrigger: Long? = null,
@@ -131,6 +139,10 @@ data class AlarmRuntimeState(
     val ringingAt: Long? = null,
     val dateImplicit: Boolean = false,
     val holidaySkipAt: Long? = null,
+    val beforeRingFor: Long? = null,
+    val beforeRingSkip: String? = null,
+    val beforeRingOverrides: Map<String, Any?>? = null,
+    val ringOverrides: Map<String, Any?>? = null,
 ) {
 
     val skipping: Boolean get() = skipAt != null
@@ -159,6 +171,10 @@ data class AlarmRuntimeState(
         putIfPresent(KEY_RINGING_AT, ringingAt)
         if (dateImplicit) put(KEY_DATE_IMPLICIT, true)
         putIfPresent(KEY_HOLIDAY_SKIP_AT, holidaySkipAt)
+        putIfPresent(KEY_BEFORE_RING_FOR, beforeRingFor)
+        putIfPresent(KEY_BEFORE_RING_SKIP, beforeRingSkip)
+        putIfPresent(KEY_BEFORE_RING_OVERRIDES, beforeRingOverrides)
+        putIfPresent(KEY_RING_OVERRIDES, ringOverrides)
     }
 
     companion object {
@@ -173,6 +189,10 @@ data class AlarmRuntimeState(
         const val KEY_RINGING_AT = "ringingAt"
         const val KEY_DATE_IMPLICIT = "dateImplicit"
         const val KEY_HOLIDAY_SKIP_AT = "holidaySkipAt"
+        const val KEY_BEFORE_RING_FOR = "beforeRingFor"
+        const val KEY_BEFORE_RING_SKIP = "beforeRingSkip"
+        const val KEY_BEFORE_RING_OVERRIDES = "beforeRingOverrides"
+        const val KEY_RING_OVERRIDES = "ringOverrides"
 
         fun fromValues(values: Map<String, Any?>) = AlarmRuntimeState(
             nextTrigger = AlarmValues.long(values, KEY_NEXT_TRIGGER)?.takeIf { it >= 0 },
@@ -185,6 +205,10 @@ data class AlarmRuntimeState(
             ringingAt = AlarmValues.long(values, KEY_RINGING_AT)?.takeIf { it >= 0 },
             dateImplicit = AlarmValues.boolean(values, KEY_DATE_IMPLICIT) ?: false,
             holidaySkipAt = AlarmValues.long(values, KEY_HOLIDAY_SKIP_AT)?.takeIf { it >= 0 },
+            beforeRingFor = AlarmValues.long(values, KEY_BEFORE_RING_FOR)?.takeIf { it >= 0 },
+            beforeRingSkip = AlarmValues.string(values, KEY_BEFORE_RING_SKIP),
+            beforeRingOverrides = AlarmValues.map(values, KEY_BEFORE_RING_OVERRIDES),
+            ringOverrides = AlarmValues.map(values, KEY_RING_OVERRIDES),
         )
     }
 }

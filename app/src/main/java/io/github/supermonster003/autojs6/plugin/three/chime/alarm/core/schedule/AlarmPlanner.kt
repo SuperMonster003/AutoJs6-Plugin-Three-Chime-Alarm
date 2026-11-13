@@ -31,6 +31,10 @@ import java.time.ZoneId
  * event with reason `holiday` when its time comes (T181); a one-shot alarm whose only instance is such a holiday then
  * retires.
  *
+ * A planned ring whose `beforeRing` went out (roadmap P8.4, [AlarmRuntimeState.beforeRingFor]) follows the decisions:
+ * a `skip` gives a `skip` event with reason `script` instead of the ring (also when the ring would be late), `ring`
+ * overrides go with the [RingRequest] and stay with the rounds of that instance ([AlarmRuntimeState.ringOverrides]).
+ *
  * zh-CN: 路线图 P2.3 的排程决策 (T3, T8, T16, T55 - T58), 不依赖 Android, 由 JVM 测试覆盖. 启用的闹钟只计划下一次响铃
  * ([AlarmRuntimeState.nextTrigger]); 正在进行的贪睡另存于 [AlarmRuntimeState.snoozeUntil], 唤醒时刻取两者中较早者 ([AlarmRuntimeState.wakeAt]).
  * 下一次响铃取现在与 [AlarmRuntimeState.handledThrough] (最近一次已响, 已跳过或已错过的响铃) 中较晚者之后的第一次, 因此时钟往回调时同一次不会响两遍;
@@ -38,7 +42,8 @@ import java.time.ZoneId
  * 迟到不超过 [AlarmLimits.MISSED_RING_WINDOW_MILLIS] (5 分钟) 时照常补响, 超过则不响, 发 `miss` 事件 (开机后为 `off`, 其他为 `late`) 并留一条通知 (T16);
  * `skipNext` 跳过的那次到时发 `skip` 事件. 还没到的计划响铃重新计算, 新的时区或时钟立即生效. 响铃按传入的 [HolidayJudge] 所见的闹钟节假日过滤计算
  * (路线图 P8.3); 下一次响铃之前第一个被节假日拿掉的那一次存于 [AlarmRuntimeState.holidaySkipAt], 到时发原因为 `holiday` 的 `skip` 事件 (T181);
- * 唯一一次就是这种节假日的一次性闹钟随后退役.
+ * 唯一一次就是这种节假日的一次性闹钟随后退役. 已发出 `beforeRing` 的计划响铃 (路线图 P8.4, [AlarmRuntimeState.beforeRingFor]) 按决定处理: `skip` 以原因为
+ * `script` 的 `skip` 事件代替响铃 (响铃迟到时也是), `ring` 的覆盖随 [RingRequest] 交出, 并在该次的各轮中保留 ([AlarmRuntimeState.ringOverrides]).
  */
 object AlarmPlanner {
 
@@ -77,8 +82,10 @@ object AlarmPlanner {
 
     /**
      * A ring the ring service starts (roadmap P2.4): [scheduledAt] is the planned instant (the end of the snooze for a
-     * ring after a snooze), [snoozeCount] the snoozes before this round.
-     * zh-CN: 交给响铃服务的一次响铃 (路线图 P2.4): [scheduledAt] 为计划时刻 (贪睡后再响为贪睡结束时刻), [snoozeCount] 为本轮之前的贪睡次数.
+     * ring after a snooze), [snoozeCount] the snoozes before this round, [overrides] the `beforeRing` overrides of the
+     * instance (roadmap P8.4, [BeforeRingOverrides]).
+     * zh-CN: 交给响铃服务的一次响铃 (路线图 P2.4): [scheduledAt] 为计划时刻 (贪睡后再响为贪睡结束时刻), [snoozeCount] 为本轮之前的贪睡次数,
+     * [overrides] 为该次的 `beforeRing` 覆盖 (路线图 P8.4, [BeforeRingOverrides]).
      */
     data class RingRequest(
         val alarmId: String,
@@ -86,6 +93,7 @@ object AlarmPlanner {
         val firedAt: Long,
         val occurrence: String,
         val snoozeCount: Int,
+        val overrides: Map<String, Any?>? = null,
     )
 
     /**
@@ -130,8 +138,34 @@ object AlarmPlanner {
         val from = maxOf(now, handled ?: now)
         val next = NextOccurrence.next(record.spec, from, zone, skipAt, judge)?.at
         val holidaySkipAt = NextOccurrence.nextHolidaySkip(record.spec, from, next, zone, judge)
-        return state.copy(nextTrigger = next, skipAt = skipAt, holidaySkipAt = holidaySkipAt, handledThrough = handled)
+        return beforeRingKept(state.copy(nextTrigger = next, skipAt = skipAt, holidaySkipAt = holidaySkipAt, handledThrough = handled))
     }
+
+    /**
+     * When the `beforeRing` wake-up of [record] is due (roadmap P8.4): [leadSeconds] before its planned ring, null when
+     * nobody listens ([leadSeconds] null), the alarm is disabled or has no planned ring, the `beforeRing` of that ring went
+     * out already, or [now] is past its deadline. An instant already passed means "as soon as possible".
+     * zh-CN: [record] 的 `beforeRing` 唤醒时刻 (路线图 P8.4): 计划响铃之前 [leadSeconds] 秒; 无人监听 ([leadSeconds] 为 null), 闹钟已禁用或没有计划响铃,
+     * 该次的 `beforeRing` 已经发出, 或 [now] 已过截止时刻时为 null. 已经过去的时刻表示 "尽快".
+     */
+    fun beforeRingAt(record: AlarmRecord, leadSeconds: Int?, now: Long): Long? {
+        if (!record.enabled || leadSeconds == null) return null
+        val scheduledAt = record.state.nextTrigger ?: return null
+        if (record.state.beforeRingFor == scheduledAt) return null
+        if (now >= deadlineOf(scheduledAt)) return null
+        return scheduledAt - leadSeconds * 1000L
+    }
+
+    /** The decision deadline of the planned ring at [scheduledAt]. zh-CN: [scheduledAt] 的计划响铃的决定截止时刻. */
+    fun deadlineOf(scheduledAt: Long): Long = scheduledAt - AlarmLimits.BEFORE_RING_DEADLINE_MARGIN_MILLIS
+
+    /**
+     * The `beforeRing` event of the planned ring at [scheduledAt] (roadmap P8.4): the `occurrence` of that instance and
+     * its `deadline`.
+     * zh-CN: [scheduledAt] 的计划响铃的 `beforeRing` 事件 (路线图 P8.4): 带该次的 `occurrence` 与 `deadline`.
+     */
+    fun beforeRingEvent(record: AlarmRecord, scheduledAt: Long, now: Long): AlarmEvent =
+        event(record, AlarmContract.EVENT_BEFORE_RING, scheduledAt, now).copy(deadline = deadlineOf(scheduledAt))
 
     /**
      * The instance `skipNext` skips: the first planned ring from now, the snooze not counted; null when the alarm is
@@ -171,7 +205,7 @@ object AlarmPlanner {
             if (now - end <= window) {
                 val base = state.occurrence?.substringBefore(SNOOZE_SEPARATOR) ?: occurrenceOf(record.id, end)
                 val value = "$base$SNOOZE_SEPARATOR$snoozeCount".take(AlarmLimits.MAX_OCCURRENCE_CHARS)
-                ring = RingRequest(record.id, end, now, value, snoozeCount)
+                ring = RingRequest(record.id, end, now, value, snoozeCount, state.ringOverrides)
                 occurrence = value
             } else {
                 snoozeCount = 0
@@ -198,12 +232,21 @@ object AlarmPlanner {
         if (skipped != null) skipAt = null
 
         val planned = state.nextTrigger
+        var ringOverrides = state.ringOverrides
         if (planned != null && planned <= due && (handled == null || planned > handled)) {
             handled = planned
-            if (now - planned <= window) {
+            val decided = state.beforeRingFor == planned
+            val scriptSkip = state.beforeRingSkip?.takeIf { decided }
+            if (scriptSkip != null) {
+                // A skip decision of beforeRing wins (roadmap P8.4), late or not. zh-CN: beforeRing 的跳过决定优先 (路线图 P8.4), 迟到与否都是.
+                events += event(record, AlarmContract.EVENT_SKIP, planned, now).copy(reason = AlarmContract.SKIP_REASON_SCRIPT, detail = scriptSkip.ifEmpty { null })
+                ended = true
+            } else if (now - planned <= window) {
                 // A planned ring supersedes a snooze of the round before. zh-CN: 计划响铃取代上一轮的贪睡.
                 val value = occurrenceOf(record.id, planned)
-                ring = RingRequest(record.id, planned, now, value, 0)
+                val overrides = state.beforeRingOverrides?.takeIf { decided }
+                ring = RingRequest(record.id, planned, now, value, 0, overrides)
+                ringOverrides = overrides
                 occurrence = value
                 snoozeUntil = null
                 snoozeCount = 0
@@ -237,7 +280,7 @@ object AlarmPlanner {
             else -> null
         }
         val retire = ended && !HolidayFilter.repeats(record.spec) && next == null && holidaySkipAt == null && ring == null && snoozeUntil == null && ringingAt == null
-        val result = state.copy(
+        val result = beforeRingKept(state.copy(
             nextTrigger = next,
             skipAt = skipAt,
             holidaySkipAt = holidaySkipAt,
@@ -247,7 +290,8 @@ object AlarmPlanner {
             snoozeCount = snoozeCount,
             ringSince = ringSince,
             ringingAt = ringingAt,
-        )
+            ringOverrides = ringOverrides.takeIf { ringSince != null },
+        ))
         return Outcome(result, retire, ring, events)
     }
 
@@ -271,8 +315,18 @@ object AlarmPlanner {
      * The state of a disabled alarm (T50): no planned ring, skip, snooze or ring round.
      * zh-CN: 禁用闹钟的状态 (T50): 没有计划响铃, 跳过, 贪睡与响铃轮次.
      */
-    fun idle(state: AlarmRuntimeState): AlarmRuntimeState =
-        state.copy(nextTrigger = null, skipAt = null, holidaySkipAt = null, snoozeUntil = null, snoozeCount = 0, ringSince = null, ringingAt = null)
+    fun idle(state: AlarmRuntimeState): AlarmRuntimeState = state.copy(
+        nextTrigger = null, skipAt = null, holidaySkipAt = null, snoozeUntil = null, snoozeCount = 0, ringSince = null, ringingAt = null,
+        beforeRingFor = null, beforeRingSkip = null, beforeRingOverrides = null, ringOverrides = null,
+    )
+
+    /**
+     * [state] with the `beforeRing` decisions kept only while their instance is still the next planned ring (roadmap P8.4).
+     * zh-CN: 只在 `beforeRing` 决定所属的那一次仍是下一次计划响铃时保留这些决定 (路线图 P8.4).
+     */
+    private fun beforeRingKept(state: AlarmRuntimeState): AlarmRuntimeState =
+        if (state.beforeRingFor == null || state.beforeRingFor == state.nextTrigger) state
+        else state.copy(beforeRingFor = null, beforeRingSkip = null, beforeRingOverrides = null)
 
     /** [handled] unless it is more than [REPLAY_GUARD_MILLIS] ahead of [now]. zh-CN: 超前 [now] 超过 [REPLAY_GUARD_MILLIS] 时为 null. */
     private fun guarded(handled: Long?, now: Long): Long? = handled?.takeIf { it - now <= REPLAY_GUARD_MILLIS }

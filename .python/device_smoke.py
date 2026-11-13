@@ -12,7 +12,7 @@
 4. activation and getInfo: an AutoJs6 script (RunIntentActivity, as in 3-Macaw Speech) starts the Wake activity (it
    needs org.autojs.permission.PLUGIN, which the shell lacks), binds the INFO service explicitly and calls getInfo(),
    then binds the ALARM service, checks the IAlarmPlugin descriptor and, on a host with the alarm contract, reads the
-   capabilities (alarmFeatures [alarms, timers, stopwatch] since 1.1.0, holidays since 1.2.0, the permission states) and calls listAlarms once
+   capabilities (alarmFeatures [alarms, timers, stopwatch] since 1.1.0, holidays and beforeRing since 1.2.0, the permission states) and calls listAlarms once
    (roadmap P2.5, P7.3). The
    Wake start is confirmed from the ActivityManager log lines after a marker.
 5. --screenshot <dir>: the script opens AutoJs6's Plugin Center and the screen is saved as
@@ -49,8 +49,8 @@ DISCOVERY = (
 )
 CAPABILITY_DESCRIPTOR = "org.autojs.plugin.alarm.api.IAlarmPlugin"
 # T25: the features the plugin declares, alarms since 1.0.0, timers and stopwatch since 1.1.0 (roadmap P7.3), holidays
-# since 1.2.0 (roadmap P8.3).
-FEATURES = "alarms,timers,stopwatch,holidays"
+# and beforeRing since 1.2.0 (roadmap P8.3, P8.4).
+FEATURES = "alarms,timers,stopwatch,holidays,beforeRing"
 PLUGIN_CENTER = "org.autojs.autojs.core.plugin.center.PluginCenterActivity"
 
 SCRIPT = """

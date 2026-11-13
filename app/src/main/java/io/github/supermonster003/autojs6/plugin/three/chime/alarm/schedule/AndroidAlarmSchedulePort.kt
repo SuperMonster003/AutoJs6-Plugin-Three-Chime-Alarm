@@ -25,12 +25,13 @@ import org.autojs.plugin.alarm.api.AlarmEvent
  * The Android side of the scheduler (roadmap P2.3, T3): one `setAlarmClock` per enabled alarm at its next wake-up, its
  * show intent opening the alarm list, so Doze does not defer it and the status bar, the lock screen and
  * `getNextAlarmClock()` show it. The skipped instance of `skipNext` gets a plain exact wake-up (not shown as the next
- * alarm) that sends the `skip` event. Each alarm has its own pending intents (the data uri carries the id), and the
- * trigger receiver decides from the stored state, so a stale wake-up rings nothing.
+ * alarm) that sends the `skip` event, and so does the `beforeRing` wake-up (roadmap P8.4). Each alarm has its own pending
+ * intents (the data uri carries the id), and the trigger receiver decides from the stored state, so a stale wake-up
+ * rings nothing.
  *
  * zh-CN: 调度器的 Android 部分 (路线图 P2.3, T3): 每个启用的闹钟在下一次唤醒时刻设一个 `setAlarmClock`, 展示 Intent 打开闹钟列表, 因此不受 Doze 推迟,
- * 状态栏, 锁屏与 `getNextAlarmClock()` 都能看到. `skipNext` 跳过的那次另设普通精确唤醒 (不显示为下一个闹钟), 用于发送 `skip` 事件. 每个闹钟有自己的
- * PendingIntent (data uri 带 id), 触发接收器按已存状态决定, 过期的唤醒不会响铃.
+ * 状态栏, 锁屏与 `getNextAlarmClock()` 都能看到. `skipNext` 跳过的那次另设普通精确唤醒 (不显示为下一个闹钟), 用于发送 `skip` 事件; `beforeRing` 唤醒
+ * (路线图 P8.4) 同样如此. 每个闹钟有自己的 PendingIntent (data uri 带 id), 触发接收器按已存状态决定, 过期的唤醒不会响铃.
  */
 class AndroidAlarmSchedulePort(
     private val context: Context,
@@ -58,9 +59,18 @@ class AndroidAlarmSchedulePort(
         }
     }
 
+    override fun scheduleBeforeRing(alarmId: String, at: Long?) {
+        if (at == null || !canScheduleExact()) {
+            cancel(alarmId, ACTION_BEFORE_RING)
+        } else {
+            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending(alarmId, ACTION_BEFORE_RING, at))
+        }
+    }
+
     override fun cancel(alarmId: String) {
         cancel(alarmId, ACTION_RING)
         cancel(alarmId, ACTION_SKIP)
+        cancel(alarmId, ACTION_BEFORE_RING)
     }
 
     override fun ring(record: AlarmRecord, request: AlarmPlanner.RingRequest) {
@@ -124,6 +134,7 @@ class AndroidAlarmSchedulePort(
 
         const val ACTION_RING = "io.github.supermonster003.autojs6.plugin.three.chime.alarm.action.RING"
         const val ACTION_SKIP = "io.github.supermonster003.autojs6.plugin.three.chime.alarm.action.SKIP"
+        const val ACTION_BEFORE_RING = "io.github.supermonster003.autojs6.plugin.three.chime.alarm.action.BEFORE_RING"
 
         /** The wake-up instant the intent was set for (diagnostics). zh-CN: 唤醒设定的时刻 (诊断用). */
         const val EXTRA_AT = "at"

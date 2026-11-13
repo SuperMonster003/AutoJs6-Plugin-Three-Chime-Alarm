@@ -12,13 +12,23 @@ import java.util.TimeZone
 
 /**
  * Receives the wake-ups of [AndroidAlarmSchedulePort] (roadmap P2.3, T7: direct boot aware, not exported) and
- * reconciles that alarm: rings it, sends `skip` or `miss`, and plans the next ring.
+ * reconciles that alarm: rings it, sends `skip` or `miss`, and plans the next ring. The `beforeRing` wake-up sends that
+ * event instead (roadmap P8.4).
  * zh-CN: 接收 [AndroidAlarmSchedulePort] 的唤醒 (路线图 P2.3, T7: 支持直接启动, 不导出), 对该闹钟对账: 响铃, 发送 `skip` 或 `miss`, 并计划下一次响铃.
+ * `beforeRing` 唤醒改为发送该事件 (路线图 P8.4).
  */
 class AlarmTriggerReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         val alarmId = AndroidAlarmSchedulePort.alarmIdOf(intent) ?: return
+        if (intent.action == AndroidAlarmSchedulePort.ACTION_BEFORE_RING) {
+            AlarmRuntime.get(context).run(goAsync(), "beforeRing $alarmId") {
+                val event = schedule.beforeRing(alarmId)
+                Log.i(AndroidAlarmSchedulePort.TAG, "beforeRing $alarmId: ${event?.let { "sent, deadline=${it.deadline}" } ?: "nothing to send"}")
+                emptyList()
+            }
+            return
+        }
         AlarmRuntime.get(context).run(goAsync(), "trigger $alarmId") {
             schedule.reconcile(AlarmPlanner.Cause.TRIGGER, listOf(alarmId)).values
         }

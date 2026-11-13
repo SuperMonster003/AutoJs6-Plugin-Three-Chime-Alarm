@@ -32,6 +32,15 @@ class BindingHints(private val file: File) {
     private var tables: LinkedHashMap<String, List<BindingHint>>? = null
 
     /**
+     * Called outside the lock with the alarm ids whose `beforeRing` lead ([beforeRingLead]) changed through [replace] or
+     * [forget], so the scheduler sets or cancels their `beforeRing` wake-ups (roadmap P8.4).
+     * zh-CN: [replace] 或 [forget] 改变了 `beforeRing` 提前量 ([beforeRingLead]) 时, 在锁外以这些闹钟 id 调用, 由调度器设置或取消其 `beforeRing`
+     * 唤醒 (路线图 P8.4).
+     */
+    @Volatile
+    var onBeforeRingChange: ((Set<String>) -> Unit)? = null
+
+    /**
      * Replaces the table of [owner] with the `hints` of [values] (`setBindingHints`) and answers the `unknownIds`: rows
      * whose alarm or timer [known] does not report are left out of the table (an existing timer id is kept since 1.1.0,
      * T124; 1.0.x reported every timer id). A malformed row refuses the
@@ -49,14 +58,25 @@ class BindingHints(private val file: File) {
         for (row in rows) {
             if (isValidId(row.alarmId) && known(row.alarmId)) kept += row else unknown += row.alarmId
         }
-        synchronized(lock) {
-            val next = LinkedHashMap(loaded())
+        val changed = synchronized(lock) {
+            val before = loaded()
+            val next = LinkedHashMap(before)
             if (kept.isEmpty()) next.remove(owner) else next[owner] = kept
             save(next)
             tables = next
+            changedLeads(before, next)
         }
+        if (changed.isNotEmpty()) onBeforeRingChange?.invoke(changed)
         return unknown
     }
+
+    /**
+     * The `beforeRing` lead of [alarmId] in seconds (roadmap P8.4): the smallest among the rows of every host whose events
+     * contain `beforeRing` (a row without `leadSeconds` counts as the default 60), null when no row has the event.
+     * zh-CN: [alarmId] 的 `beforeRing` 提前秒数 (路线图 P8.4): 各宿主事件含 `beforeRing` 的行中最小的那个 (没有 `leadSeconds` 的行按默认 60 计),
+     * 没有任何行含该事件时为 null.
+     */
+    fun beforeRingLead(alarmId: String): Int? = synchronized(lock) { leadsOf(loaded())[alarmId] }
 
     /**
      * The host packages that get the trigger broadcast of [event]: a row of the alarm or timer whose events contain the
@@ -99,21 +119,27 @@ class BindingHints(private val file: File) {
      * zh-CN: 从所有提示表删除已删除闹钟的行 (在其 `remove` 广播发出之后), 或只从 [only] 的提示表删除 (应答了 `unbind` 的宿主, 路线图 D20);
      * 保存失败时只在内存中生效并返回 false, 宿主下一次发送时纠正文件.
      */
-    fun forget(alarmId: String, only: String? = null): Boolean = synchronized(lock) {
-        val current = loaded()
-        if (current.filterKeys { only == null || it == only }.values.none { rows -> rows.any { it.alarmId == alarmId } }) return true
-        val next = LinkedHashMap<String, List<BindingHint>>()
-        for ((owner, rows) in current) {
-            val left = if (only == null || owner == only) rows.filter { it.alarmId != alarmId } else rows
-            if (left.isNotEmpty()) next[owner] = left
+    fun forget(alarmId: String, only: String? = null): Boolean {
+        var changed = emptySet<String>()
+        val saved = synchronized(lock) {
+            val current = loaded()
+            if (current.filterKeys { only == null || it == only }.values.none { rows -> rows.any { it.alarmId == alarmId } }) return true
+            val next = LinkedHashMap<String, List<BindingHint>>()
+            for ((owner, rows) in current) {
+                val left = if (only == null || owner == only) rows.filter { it.alarmId != alarmId } else rows
+                if (left.isNotEmpty()) next[owner] = left
+            }
+            tables = next
+            changed = changedLeads(current, next)
+            try {
+                save(next)
+                true
+            } catch (_: AlarmException) {
+                false
+            }
         }
-        tables = next
-        try {
-            save(next)
-            true
-        } catch (_: AlarmException) {
-            false
-        }
+        if (changed.isNotEmpty()) onBeforeRingChange?.invoke(changed)
+        return saved
     }
 
     // ------------------------------------------------------------------ internals
@@ -150,6 +176,24 @@ class BindingHints(private val file: File) {
             if (!seen.add(alarmId)) throw AlarmException.invalidOptions("$name: alarm '$alarmId' appears twice")
             BindingHint(alarmId, AlarmContract.EVENTS.filterTo(LinkedHashSet()) { it in events }, lead)
         }
+    }
+
+    private fun changedLeads(before: Map<String, List<BindingHint>>, after: Map<String, List<BindingHint>>): Set<String> {
+        val old = leadsOf(before)
+        val new = leadsOf(after)
+        return (old.keys + new.keys).filterTo(LinkedHashSet()) { old[it] != new[it] }
+    }
+
+    private fun leadsOf(tables: Map<String, List<BindingHint>>): Map<String, Int> {
+        val leads = HashMap<String, Int>()
+        for (rows in tables.values) {
+            for (row in rows) {
+                if (AlarmContract.EVENT_BEFORE_RING !in row.events) continue
+                val lead = row.leadSeconds ?: AlarmLimits.DEFAULT_LEAD_SECONDS
+                leads[row.alarmId] = leads[row.alarmId]?.let { minOf(it, lead) } ?: lead
+            }
+        }
+        return leads
     }
 
     private fun loaded(): LinkedHashMap<String, List<BindingHint>> {
