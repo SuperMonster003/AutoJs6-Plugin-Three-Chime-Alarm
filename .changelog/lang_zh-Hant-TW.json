@@ -5,6 +5,21 @@
   "changelog_label_improvement": "優化",
   "changelog_label_dependency": "相依性",
   "$data": {
+    "v1.2.0": {
+      "released_date": "2026/11/13",
+      "hint": [
+        "指令碼中的 alarms.holidays, 鬧鐘的 holidays 選項與 beforeRing 事件需要 AutoJs6 {{ required_host_version_name }} (內部版本號 {{ required_host_version_code }}) 或更新版本, 並需要本外掛 1.2.0 或更新版本; 外掛仍為 1.1.x 或更早時呼叫會發生錯誤並提示更新外掛",
+        "節假日與補班日是否準確完全取決於上游資料 (開放原始碼專案 python-holidays); 尚未公布的年份依規則推算並標為 \"推算\", 公布後隨資料更新修正"
+      ],
+      "feature": [
+        "節假日: 鬧鐘新增 \"節假日不響\", \"只在節假日響\" 與 \"只在工作日響\" 三種選項 (只在工作日響即每個工作日都響, 包括補班日, 週末與節假日不響); 內建 250 個國家和地區 (包括 600 多個下級地區) 2020 - 2035 年的節假日資料, 中國大陸與臺灣包括補班日",
+        "設定頁可以選擇預設節假日地區 (首次依系統地區推斷), 每個鬧鐘也可以個別指定地區; 鬧鐘清單顯示下一次響鈴略過了幾個節假日; 推算的年份標為 \"推算\", 提示可能有調整放假或補班",
+        "節假日資料每週自動檢查更新 (可在設定頁關閉, 預設不在計量網路上下載), 也可以在設定頁手動檢查; 下載的資料經簽章驗證, 未通過時繼續使用原有資料; 某年沒有資料時鬧鐘只依重複規則響, 不會因此不響",
+        "響鈴前由指令碼決定 (beforeRing): 登記的指令碼在響鈴前 (預設 60 秒, 可設 15 秒至 5 分鐘) 被喚起, 可以略過這一次, 或照常響鈴並臨時改用其他標籤, 鈴聲, 朗讀文字或震動; 指令碼沒有及時決定, 發生錯誤或 AutoJs6 無法使用時照常響鈴",
+        "AutoJs6 指令碼模組新增 alarms.holidays (查詢地區, 判斷節假日與工作日, 列出全年節假日, 檢視與更新資料), 鬧鐘的 holidays 選項與 beforeRing 事件的 skip / ring, alarms.capabilities() 新增 warnings 提示缺少資料或推算年份 (需要 AutoJs6 {{ required_host_version_name }}; 參閱 [AutoJs6 文件](https://docs.autojs6.com/#/alarms))",
+        "外掛工具新增 holiday_check, 可經 MCP Server 外掛或 plugins.tools.call 查詢某天在某地區是否為節假日或工作日及節假日名稱; alarm_add 與 alarm_update 支援 holidays 選項"
+      ]
+    },
     "v1.1.0": {
       "released_date": "2026/11/12",
       "hint": [

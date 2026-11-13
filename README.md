@@ -8,7 +8,7 @@
     </picture>
   </p>
 
-  <p>闹钟, 计时器与秒表, 支持日历重复规则, 朗读响铃与响铃时联动脚本</p>
+  <p>闹钟, 计时器与秒表, 支持日历重复规则与节假日, 朗读响铃与响铃时联动脚本</p>
 
   <p>
     <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/releases"><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm?label=Release"/></a>
@@ -42,11 +42,11 @@
 
 ******
 
-3-Chime Alarm 是 AutoJs6 的闹钟插件, 也是不装 AutoJs6 也能单独使用的闹钟应用. 闹钟按 RFC 5545 日历规则重复 (例如每月最后一个星期五, 或从某天起每隔 3 天), 响铃时可以朗读文字, 也可以启动脚本或通知正在运行的脚本. 1.1.0 起还提供多个同时运行的计时器与一个秒表. 节假日跳过与关闭挑战将在后续版本加入.
+3-Chime Alarm 是 AutoJs6 的闹钟插件, 也是不装 AutoJs6 也能单独使用的闹钟应用. 闹钟按 RFC 5545 日历规则重复 (例如每月最后一个星期五, 或从某天起每隔 3 天), 响铃时可以朗读文字, 也可以启动脚本或通知正在运行的脚本. 1.1.0 起还提供多个同时运行的计时器与一个秒表. 1.2.0 起闹钟可以在节假日不响, 只在节假日响, 或在每个工作日 (含调休补班日) 响, 脚本也可以在响铃前决定这一次响不响. 关闭挑战将在后续版本加入.
 
 插件使用 Android 精确闹钟自行调度并响铃, 因此 AutoJs6 没有运行时闹钟也会准时响. AutoJs6 脚本通过全局模块 `alarms` 查询, 新建, 修改与监听插件中的闹钟, 通过 `alarms.timers` 与 `alarms.stopwatch` 使用计时器与秒表; 子命名空间 `alarms.system` 直接调用系统时钟应用, 未安装插件时也能使用. 插件也可以接收其他应用发出的设置闹钟与计时器请求.
 
-> 1.1.0 提供闹钟, 计时器与秒表, 插件界面, 插件工具与 `alarms` 脚本模块. 在插件中心启用本插件, 使用插件工具与 `alarms` 模块需要 AutoJs6 6.8.1 (内部版本号 6641) 或更高版本; 在更早的 AutoJs6 上 (包括 6.8.0), 插件只能作为独立的闹钟应用使用. 节假日与关闭挑战的进度见开发路线图.
+> 1.2.0 提供闹钟 (含节假日规则与响铃前由脚本决定), 计时器与秒表, 插件界面, 插件工具与 `alarms` 脚本模块. 在插件中心启用本插件, 使用插件工具与 `alarms` 模块需要 AutoJs6 6.8.1 (内部版本号 6641) 或更高版本; 在更早的 AutoJs6 上 (包括 6.8.0), 插件只能作为独立的闹钟应用使用. 关闭挑战的进度见开发路线图.
 
 ******
 
@@ -58,11 +58,12 @@
 - 响铃: 系统铃声或导入的本地音频, 朗读文字, 独立音量与渐强, 自定义振动, 贪睡与自动停止, 锁屏时显示全屏响铃界面; 多个闹钟同时到期时依次响铃.
 - 准时可靠: 设备重启, 修改时间或时区, 插件升级后自动重新排程, 开机后未解锁也会响铃; 关机错过的闹钟在 5 分钟内补响, 超过则留下一条通知.
 - 脚本联动: 闹钟与计时器可以登记脚本文件, 响铃, 贪睡, 关闭等事件发生时由 AutoJs6 启动, 脚本不必常驻; 正在运行的脚本也可以实时监听这些事件.
-- 插件工具: 经 MCP Server 插件或 `plugins.tools.call` 新建, 查询, 修改与删除闹钟, 处理正在响的闹钟, 开始, 查看与控制计时器 (9 个 `alarm_*` 工具与 3 个 `timer_*` 工具).
+- 插件工具: 经 MCP Server 插件或 `plugins.tools.call` 新建, 查询, 修改与删除闹钟, 处理正在响的闹钟, 开始, 查看与控制计时器, 查询节假日 (9 个 `alarm_*` 工具, 3 个 `timer_*` 工具与 `holiday_check`).
 - 系统时钟对接: 可以处理其他应用发出的设置, 显示, 关闭与贪睡闹钟请求, 以及设置, 显示与关闭计时器请求.
 - 界面: 语言, 夜间模式与主题色默认跟随 AutoJs6, 也可以单独设置; 可以切换启动器图标; 设置页可以设定铃声, 振动, 贪睡与自动停止的默认值.
 - 计时器与秒表: 最多 20 个计时器同时运行, 可以暂停, 继续, 加时与重置; 运行中的计时器在通知栏显示倒计时, 可以直接暂停, 加 1 分钟或取消; 重启后继续计时, 到点与闹钟一样响铃. 秒表支持计次 (最多 100 圈), 标出最快与最慢的一圈. 底部导航在闹钟, 计时器与秒表之间切换.
-- 节假日 (1.2.0 规划): 内置多地区开源节假日数据, 法定节假日跳过响铃, 调休补班日照常响铃; 也可以用 `beforeRing` 脚本钩子决定是否响铃.
+- 节假日: 闹钟可以选 "节假日不响", "只在节假日响" 或 "只在工作日响" (每个工作日都响, 包括调休补班日, 周末与节假日不响). 内置 250 个国家和地区 (含 600 多个下级地区) 2020 - 2035 年的数据, 由开源项目 python-holidays 生成; 每周自动检查更新, 下载的数据经签名校验. 尚未公布的年份按规则推算并标为 "推算", 某年没有数据时只按重复规则响.
+- 响铃前由脚本决定: 登记的脚本在响铃前 (默认 60 秒, 可设 15 秒至 5 分钟) 由 AutoJs6 启动, 可以跳过这一次, 或照常响铃并临时改用别的标签, 铃声, 朗读文字或振动; 脚本没有及时决定, 出错或 AutoJs6 不可用时照常响铃.
 - 关闭挑战 (1.3.0 规划): 算术题, 摇一摇, 照打一句话或脚本条件, 都带安全阀, 确保闹钟总能被关闭.
 
 ******
@@ -110,6 +111,9 @@ a.bind("./after-wake.js", { events: ["dismiss"] });
 alarms.add({ time: "18:00", repeat: "FREQ=MONTHLY;BYDAY=-1FR", label: "Monthly report" });
 alarms.add({ time: "06:10", date: "2026-11-04", repeat: { freq: "daily", interval: 3 }, tag: "shift" });
 
+let w = alarms.add({ time: "07:30", holidays: { region: "CN", mode: "workdays" }, label: "Work" });
+w.bind("./weather-check.js", { events: ["beforeRing"], leadSeconds: 120 });
+
 alarms.on("ring", (e) => toast(e.label));
 
 alarms.timers.start("25m", { label: "Tea" });
@@ -122,6 +126,8 @@ alarms.system.setAlarm({ hour: 6, minute: 50, label: "Flight" });
 - `alarms.bind(id, script, options)` (或闹钟快照的 `bind`) 登记脚本, 事件发生时由 AutoJs6 启动, 事件数据可通过 `alarms.currentEvent()` 读取; `alarms.on('ring', listener)` 在脚本运行期间实时监听.
 - `alarms.ringing`, `dismiss` 与 `snooze` 处理正在响的闹钟; `alarms.ringtones.list()` 列出可用的铃声.
 - `alarms.timers.start(duration, options)` 开始计时器 (时长为毫秒数或 `"25m"`, `"1h 30m"` 这样的字符串, 1 秒至 100 小时), 返回带 `pause`, `resume`, `addTime`, `reset`, `cancel` 与 `bind` 方法的计时器快照; `alarms.stopwatch` 提供秒表的开始, 暂停, 继续, 计圈与重置. 两者都需要插件 1.1.0 或更高版本.
+- `alarms.holidays` 查询节假日数据 (`regions`, `isHoliday`, `isWorkday`, `list`, `info`, `refresh`); 闹钟的 `holidays` 选项 (例如 `{ region: 'CN', mode: 'workdays' }`) 设定节假日规则, `alarms.capabilities()` 的 `warnings` 提示缺少数据或推算年份. 需要插件 1.2.0 或更高版本.
+- `alarms.bind(id, script, { events: ['beforeRing'], leadSeconds: 120 })` 登记在响铃前启动的脚本, 脚本中 `alarms.currentEvent()` 的 `skip(reason)` 跳过这一次, `ring(overrides)` 照常响铃并临时改用别的标签, 铃声, 朗读或振动; `alarms.on('beforeRing', listener)` 实时监听, 事件对象同样有这两个方法. 需要插件 1.2.0 或更高版本.
 - `alarms.system` 直接调用系统时钟应用 (`setAlarm`, `setTimer`, `showAlarms`, `dismissAlarm`, `next` 等), 不需要安装插件.
 
 ******
@@ -149,7 +155,7 @@ alarms.system.setAlarm({ hour: 6, minute: 50, label: "Flight" });
 
 插件支持 Android 7.0 (API 24) 及以上. 在插件中心启用本插件, 使用插件工具与 `alarms` 模块需要 AutoJs6 6.8.1 (内部版本号 6641) 或更高版本. 在更早的 AutoJs6 上 (例如内部版本号为 6640 的 6.8.0), 插件中心提示需要更高版本的 AutoJs6 且不能启用本插件, 插件工具与 `alarms` 模块不可用, 但插件仍可作为独立的闹钟应用使用, 也照常处理系统时钟请求. `alarms` 模块只支持 Rhino 引擎, 其中的 `alarms.system` 不需要安装插件.
 
-1.0.0 发布前在以下设备上完成验证 (数据见开发路线图附录 D); 1.1.0 的计时器与秒表另在 Sony XQ-AT72 与 Sony G8441 上验证, 包括重启后继续计时 (见开发路线图 P7):
+1.0.0 发布前在以下设备上完成验证 (数据见开发路线图附录 D); 1.1.0 的计时器与秒表另在 Sony XQ-AT72 与 Sony G8441 上验证, 包括重启后继续计时 (见开发路线图 P7); 1.2.0 的节假日与响铃前由脚本决定在 Sony XQ-AT72 上与 AutoJs6 联调验证 (见开发路线图 P8):
 
 | 设备 | Android | 结果 |
 | --- | --- | --- |
@@ -207,6 +213,14 @@ ColorOS 新装应用的 "横幅" 通知默认关闭, 系统因此不显示全屏
 
 计时器按关机前的到点时刻继续计时, 关机期间也计入. 关机期间已到点的计时器, 开机时过点不到 5 分钟的会补响, 超过 5 分钟的留下一条错过的通知. 开机后系统校准时间时, 到点时刻可能随之移动几秒. 秒表重启后转为暂停, 读数算到本次开机为止, 因此会多计关机的那段时间 (重启通常不到 1 分钟).
 
+#### 节假日数据准吗? 调休补班日会响吗?
+
+节假日与补班日是否准确完全取决于上游数据 (开源项目 python-holidays). 选 "只在工作日响" 时补班日会响; 选 "节假日不响" 时只按重复规则判断 (例如周一至周五的闹钟在周六的补班日不响). 尚未公布的年份按规则推算, 设置页与编辑页会标出 "推算", 公布后随数据更新修正; 数据每周自动检查一次, 也可以在设置页手动检查.
+
+#### `beforeRing` 脚本来不及决定会怎样?
+
+照常响铃. 决定的截止时刻默认为响铃前 5 秒; 到时仍没有决定, 脚本出错, AutoJs6 不可用 (例如被强行停止) 或重启后还没解锁时, 闹钟都照常响铃. 已被节假日规则跳过的那一次不会启动 `beforeRing` 脚本.
+
 ******
 
 ### 权限与安全
@@ -223,13 +237,13 @@ ColorOS 新装应用的 "横幅" 通知默认关闭, 系统因此不显示全屏
 - 前台服务 (`FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SYSTEM_EXEMPTED`): 响铃期间保持发声; 设置页的 "保持后台运行" 开启时也用它常驻 (默认关闭).
 - 振动, 唤醒锁与音频设置 (`VIBRATE`, `WAKE_LOCK`, `MODIFY_AUDIO_SETTINGS`): 振动, 响铃时保持设备唤醒, 以及独立的闹钟音量在响铃后还原.
 - 对正在运行的应用重新排序 (`REORDER_TASKS`, 仅 Android 7.0 - 8.1): 其他应用或脚本几乎同时发来多个闹钟请求时, 把系统没有启动的请求调到前台处理, 使每个请求都得到处理. 安装即授予.
-- 网络 (`INTERNET`, `ACCESS_NETWORK_STATE`): 只用于设置页的更新检查 (1.2.0 起也用于刷新节假日数据). 只在打开闹钟列表时按设定的频率检查, 计量网络默认不检查; 排程, 响铃与 AutoJs6 联动从不联网.
+- 网络 (`INTERNET`, `ACCESS_NETWORK_STATE`): 只用于更新检查与节假日数据刷新. 更新检查在打开闹钟列表时按设定的频率进行, 节假日数据每周检查一次, 两者在计量网络上默认都不检查; 排程, 响铃与 AutoJs6 联动从不联网.
 - AutoJs6 插件权限 (`org.autojs.permission.PLUGIN`): 与 AutoJs6 通信.
 
 插件在设计上尽量收窄权限面:
 
 - 受保护的入口: 能力服务与激活入口受 AutoJs6 插件权限 (`org.autojs.permission.PLUGIN`) 保护, 其他应用无法直接调用; 接收系统时钟请求的入口要求调用方持有 `com.android.alarm.permission.SET_ALARM`.
-- 网络: 只用于检查插件更新 (连接 GitHub, 可在设置页关闭自动检查), 不上传闹钟或任何个人数据.
+- 网络: 只用于检查插件更新与节假日数据 (连接 GitHub, 两者的自动检查都可在设置页关闭), 下载的节假日数据经签名校验, 不上传闹钟或任何个人数据.
 - 存储: 闹钟保存在插件私有目录, 不参与云备份; 本地铃声通过系统文件选择器导入, 不申请存储权限.
 - 脚本权限: 脚本可以通过 `alarms` 模块读写插件中的全部闹钟与计时器, 包括在插件界面建的闹钟与计时器; 登记的脚本保存在 AutoJs6 中, 插件界面只标记闹钟有脚本绑定并可以解除.
 
@@ -269,6 +283,19 @@ native libraries: libandroidx.graphics.path.so only (Compose graphics-path, 4 AB
 
 ******
 
+#### v1.2.0
+
+_2026/11/13_
+
+- `提示` 脚本中的 alarms.holidays, 闹钟的 holidays 选项与 beforeRing 事件需要 AutoJs6 6.8.1 (内部版本号 6641) 或更高版本, 并需要本插件 1.2.0 或更高版本; 插件仍为 1.1.x 或更早时调用会报错并提示升级插件
+- `提示` 节假日与调休补班日是否准确完全取决于上游数据 (开源项目 python-holidays); 尚未公布的年份按规则推算并标为 "推算", 公布后随数据更新修正
+- `新增` 节假日: 闹钟新增 "节假日不响", "只在节假日响" 与 "只在工作日响" 三种选项 (只在工作日响即每个工作日都响, 包括调休补班日, 周末与节假日不响); 内置 250 个国家和地区 (含 600 多个下级地区) 2020 - 2035 年的节假日数据, 中国大陆与台湾含调休补班日
+- `新增` 设置页可以选择默认节假日地区 (首次按系统地区推断), 每个闹钟也可以单独指定地区; 闹钟列表显示下一次响铃跳过了几个节假日; 推算的年份标为 "推算", 提示可能有调休或补班
+- `新增` 节假日数据每周自动检查更新 (可在设置页关闭, 默认不用计量网络下载), 也可以在设置页手动检查; 下载的数据经签名校验, 不通过时继续用原有数据; 某年没有数据时闹钟只按重复规则响, 不会因此不响
+- `新增` 响铃前由脚本决定 (beforeRing): 登记的脚本在响铃前 (默认 60 秒, 可设 15 秒至 5 分钟) 被唤起, 可以跳过这一次, 或照常响铃并临时改用别的标签, 铃声, 朗读文字或振动; 脚本没有及时决定, 出错或 AutoJs6 不可用时照常响铃
+- `新增` AutoJs6 脚本模块新增 alarms.holidays (查询地区, 判断节假日与工作日, 列出全年节假日, 查看与刷新数据), 闹钟的 holidays 选项与 beforeRing 事件的 skip / ring, alarms.capabilities() 新增 warnings 提示缺少数据或推算年份 (需要 AutoJs6 6.8.1; 参阅 [AutoJs6 文档](https://docs.autojs6.com/#/alarms))
+- `新增` 插件工具新增 holiday_check, 可经 MCP Server 插件或 plugins.tools.call 查询某天在某地区是否节假日或工作日及节假日名称; alarm_add 与 alarm_update 支持 holidays 选项
+
 #### v1.1.0
 
 _2026/11/12_
@@ -287,30 +314,6 @@ _2026/11/12_
 _2026/11/08_
 
 - `修复` 其他应用或 AutoJs6 脚本很快地连续发来两个同类的闹钟请求 (例如连续两次新建闹钟, 或连续调用 alarms.system.setAlarm 并指定本插件) 时, 如果插件当时没有打开的界面, 第二个请求会被忽略, 闹钟没有建成, 也没有任何提示; 现在每个请求都会处理; 在 Android 7.0 - 8.1 上, 为此需要 "对正在运行的应用重新排序" 权限 (安装时自动授予)
-
-#### v1.0.0
-
-_2026/11/07_
-
-- `提示` 插件中心启用, 插件工具与 alarms 脚本模块需要 AutoJs6 6.8.1 (内部版本号 6641) 或更高版本; 在更早的 AutoJs6 上 (例如 6.8.0) 插件只能作为独立的闹钟应用使用
-- `提示` ColorOS (OPPO, 一加, realme) 上请在应用详情与 设置 > 应用 > 自动启动 两处为插件打开自启动, 否则插件进程被清理后闹钟不会响 (参阅 README > 常见问题)
-- `新增` 闹钟: 单次或重复闹钟, 重复规则按 RFC 5545 日历规则 (工作日, 每月第几个星期几, 月末, 间隔天数, 截止日期与次数), 可以排除日期或只跳过下一次
-- `新增` 响铃: 系统铃声或导入的本地音频, 朗读文字, 独立音量与渐强, 自定义振动, 贪睡与自动停止, 锁屏全屏响铃界面, 多个闹钟同时到期时依次响铃
-- `新增` 排程: 重启, 修改时间或时区与插件升级后自动重新排程, 首次解锁前也能响铃, 错过的闹钟 5 分钟内补响, 超过则留下一条通知
-- `新增` 插件界面: 闹钟列表, 编辑页, 响铃界面, 权限页与设置页; 语言, 夜间模式与主题色默认跟随 AutoJs6, 可以切换启动器图标
-- `新增` 设置页: 铃声, 振动, 贪睡与自动停止的默认值, 时间格式, 自动检查更新, 以及可选的 "保持后台运行" (常驻一条静默通知, 减少插件被系统清理)
-- `新增` 权限页逐项检查通知, 精确闹钟, 全屏提醒, 电池优化, 后台限制与厂商自启动, 在 ColorOS 上另有自动启动列表与横幅通知的引导
-- `新增` AutoJs6 脚本模块 alarms / $alarms (需要 AutoJs6 6.8.1, 仅 Rhino): 闹钟的新建, 查询, 修改与删除, 事件监听, 登记由 AutoJs6 在事件发生时启动的脚本, 铃声列表 (参阅 [AutoJs6 文档](https://docs.autojs6.com/#/alarms))
-- `新增` 插件工具 alarm_add, alarm_list, alarm_update, alarm_remove, alarm_set_enabled, alarm_skip_next, alarm_upcoming, alarm_dismiss 与 alarm_snooze, 可经 MCP Server 插件或 plugins.tools.call 调用
-- `新增` 系统时钟对接: 处理其他应用发出的设置, 显示, 关闭与贪睡闹钟请求
-- `新增` 只有一个适用于全部设备的 APK, 支持 16 KB 内存页的设备
-- `依赖` 附加 AndroidX Core KTX 版本 1.15.0
-- `依赖` 附加 AndroidX Activity Compose 版本 1.12.2
-- `依赖` 附加 Jetpack Compose BOM 版本 2026.09.00 (插件界面)
-- `依赖` 附加 Kotlin Coroutines Android 版本 1.11.0
-- `依赖` 附加 Material Color Utilities 版本 4.1.1 (主题色)
-- `依赖` 附加 lib-recur 版本 0.17.1 (计算闹钟的重复规则)
-- `依赖` 附加 Desugar JDK Libs 版本 2.1.5 (让 Android 7.x 也能使用日期与时区运算)
 
 ##### 更多发行历史可参阅
 
@@ -338,7 +341,7 @@ py .python\check_repository.py
 
 ******
 
-项目代码使用 [Mozilla Public License 2.0](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/LICENSE). 第三方组件与数据的许可见第三方声明.
+项目代码使用 [Mozilla Public License 2.0](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/LICENSE). 第三方组件与数据的许可见第三方声明. 节假日数据由开源项目 python-holidays (MIT 许可) 生成, 许可全文与贡献者名单随数据一同发布.
 
 - [第三方声明 (THIRD_PARTY_NOTICES.md)](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/THIRD_PARTY_NOTICES.md)
 

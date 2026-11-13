@@ -8,7 +8,7 @@
     </picture>
   </p>
 
-  <p>Réveil, minuteurs et chronomètre avec règles de répétition de calendrier, sonnerie parlée et scripts déclenchés à la sonnerie</p>
+  <p>Réveil, minuteurs et chronomètre avec règles de répétition de calendrier, jours fériés, sonnerie parlée et scripts déclenchés à la sonnerie</p>
 
   <p>
     <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/releases"><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm?label=Release"/></a>
@@ -42,11 +42,11 @@ Le README.md actuel prend en charge les langues suivantes:
 
 ******
 
-3-Chime Alarm est le plugin de réveil d'AutoJs6 et aussi une application de réveil qui fonctionne seule, sans AutoJs6. Les alarmes se répètent selon les règles de calendrier RFC 5545 (par exemple le dernier vendredi de chaque mois, ou tous les 3 jours à partir d'une date); une alarme qui sonne peut lire un texte à voix haute, lancer un script ou prévenir un script en cours d'exécution. Depuis la version 1.1.0, il propose aussi plusieurs minuteurs simultanés et un chronomètre. Le saut des jours fériés et les défis d'arrêt arriveront dans des versions ultérieures.
+3-Chime Alarm est le plugin de réveil d'AutoJs6 et aussi une application de réveil qui fonctionne seule, sans AutoJs6. Les alarmes se répètent selon les règles de calendrier RFC 5545 (par exemple le dernier vendredi de chaque mois, ou tous les 3 jours à partir d'une date); une alarme qui sonne peut lire un texte à voix haute, lancer un script ou prévenir un script en cours d'exécution. Depuis la version 1.1.0, il propose aussi plusieurs minuteurs simultanés et un chronomètre. Depuis la version 1.2.0, une alarme peut sauter les jours fériés, ne sonner que les jours fériés ou sonner chaque jour ouvré (jours ouvrés de récupération compris), et un script peut décider avant la sonnerie si elle a lieu cette fois. Les défis d'arrêt arriveront dans une version ultérieure.
 
 Le plugin programme et fait sonner les alarmes lui-même grâce aux alarmes exactes d'Android, si bien que les alarmes sonnent à l'heure même quand AutoJs6 n'est pas lancé. Les scripts AutoJs6 consultent, créent, modifient et écoutent les alarmes du plugin via le module global `alarms`, et utilisent les minuteurs et le chronomètre via `alarms.timers` et `alarms.stopwatch`; le sous-espace de noms `alarms.system` s'adresse directement à l'application d'horloge du système et fonctionne sans le plugin. Le plugin accepte aussi les demandes de réglage d'alarme et de minuteur envoyées par d'autres applications.
 
-> La version 1.1.0 fournit les alarmes, les minuteurs et le chronomètre, les écrans du plugin, les outils du plugin et le module de script `alarms`. L'activation dans le centre des plugins, les outils du plugin et le module `alarms` demandent AutoJs6 6.8.1 (version interne 6641) ou ultérieure; avec une version plus ancienne d'AutoJs6 (y compris 6.8.0), le plugin ne s'utilise que comme application de réveil autonome. L'avancement des jours fériés et des défis d'arrêt figure dans la feuille de route.
+> La version 1.2.0 fournit les alarmes (avec les règles de jours fériés et la décision d'un script avant la sonnerie), les minuteurs et le chronomètre, les écrans du plugin, les outils du plugin et le module de script `alarms`. L'activation dans le centre des plugins, les outils du plugin et le module `alarms` demandent AutoJs6 6.8.1 (version interne 6641) ou ultérieure; avec une version plus ancienne d'AutoJs6 (y compris 6.8.0), le plugin ne s'utilise que comme application de réveil autonome. L'avancement des défis d'arrêt figure dans la feuille de route.
 
 ******
 
@@ -58,11 +58,12 @@ Le plugin programme et fait sonner les alarmes lui-même grâce aux alarmes exac
 - Sonnerie: sonnerie du système ou audio local importé, texte lu à voix haute, volume indépendant avec montée progressive, vibration personnalisée, répétition et arrêt automatique, écran de sonnerie plein écran sur l'écran de verrouillage; les alarmes dues en même temps sonnent l'une après l'autre.
 - À l'heure: les alarmes sont replanifiées automatiquement après un redémarrage, un changement d'heure ou de fuseau horaire et une mise à jour du plugin, et sonnent même avant le premier déverrouillage; une alarme manquée appareil éteint sonne dans les 5 minutes, au-delà elle laisse seulement une notification.
 - Scripts liés: une alarme ou un minuteur peut enregistrer des fichiers de script qu'AutoJs6 lance lors de la sonnerie, de la répétition, de l'arrêt et d'autres événements, sans qu'ils restent en mémoire; un script en cours d'exécution peut aussi écouter ces événements en direct.
-- Outils du plugin: créer, consulter, modifier et supprimer des alarmes, gérer une alarme qui sonne, et démarrer, lister et contrôler des minuteurs via le plugin MCP Server ou `plugins.tools.call` (neuf outils `alarm_*` et trois outils `timer_*`).
+- Outils du plugin: créer, consulter, modifier et supprimer des alarmes, gérer une alarme qui sonne, démarrer, lister et contrôler des minuteurs, et consulter les jours fériés via le plugin MCP Server ou `plugins.tools.call` (neuf outils `alarm_*`, trois outils `timer_*` et `holiday_check`).
 - Horloge du système: le plugin peut traiter les demandes de réglage, d'affichage, d'arrêt et de répétition d'alarme, ainsi que de réglage, d'affichage et d'arrêt de minuteur, envoyées par d'autres applications.
 - Écrans: la langue, le mode nuit et la couleur du thème suivent AutoJs6 par défaut et peuvent être réglés séparément; l'icône du lanceur est interchangeable; l'écran des paramètres fixe la sonnerie, la vibration, la répétition et l'arrêt automatique par défaut.
 - Minuteurs et chronomètre: jusqu'à 20 minuteurs simultanés avec pause, reprise, temps supplémentaire et réinitialisation; un minuteur en cours affiche son compte à rebours dans le volet des notifications, d'où il peut être mis en pause, prolongé d'une minute ou annulé; les minuteurs continuent après un redémarrage et sonnent comme les alarmes. Le chronomètre enregistre des tours (jusqu'à 100) et signale le plus rapide et le plus lent. La barre de navigation du bas passe des alarmes aux minuteurs et au chronomètre.
-- Jours fériés (prévus en 1.2.0): données ouvertes de jours fériés pour de nombreuses régions; les alarmes sautent les jours fériés et sonnent les jours ouvrés de récupération; un crochet de script `beforeRing` peut aussi décider de sonner ou non.
+- Jours fériés: chaque alarme peut être réglée sur "Sauter les jours fériés", "Seulement les jours fériés" ou "Seulement les jours ouvrés" (sonne chaque jour ouvré, jours ouvrés de récupération compris, jamais le week-end ni les jours fériés). Les données de 250 pays et régions (dont plus de 600 subdivisions) de 2020 à 2035 sont intégrées, générées à partir du projet open source python-holidays; les mises à jour sont recherchées chaque semaine et la signature des données téléchargées est vérifiée. Les années pas encore annoncées sont estimées d'après les règles et marquées "estimé"; une année sans données, l'alarme suit seulement sa règle de répétition.
+- Décision d'un script avant la sonnerie: un script enregistré est lancé par AutoJs6 avant la sonnerie (60 secondes par défaut, de 15 secondes à 5 minutes) et peut sauter cette sonnerie, ou la laisser sonner avec un autre libellé, son, texte lu ou vibreur pour cette fois; si le script ne décide pas à temps, échoue ou si AutoJs6 n'est pas disponible, l'alarme sonne comme prévu.
 - Défis d'arrêt (prévus en 1.3.0): calcul, secousse, recopie d'une phrase ou condition de script, chacun avec une soupape de sécurité pour que l'alarme puisse toujours être arrêtée.
 
 ******
@@ -110,6 +111,9 @@ a.bind("./after-wake.js", { events: ["dismiss"] });
 alarms.add({ time: "18:00", repeat: "FREQ=MONTHLY;BYDAY=-1FR", label: "Monthly report" });
 alarms.add({ time: "06:10", date: "2026-11-04", repeat: { freq: "daily", interval: 3 }, tag: "shift" });
 
+let w = alarms.add({ time: "07:30", holidays: { region: "CN", mode: "workdays" }, label: "Work" });
+w.bind("./weather-check.js", { events: ["beforeRing"], leadSeconds: 120 });
+
 alarms.on("ring", (e) => toast(e.label));
 
 alarms.timers.start("25m", { label: "Tea" });
@@ -122,6 +126,8 @@ alarms.system.setAlarm({ hour: 6, minute: 50, label: "Flight" });
 - `alarms.bind(id, script, options)` (ou `bind` d'un instantané d'alarme) enregistre un script qu'AutoJs6 lance quand un événement survient; le script lit l'événement avec `alarms.currentEvent()`. `alarms.on('ring', listener)` écoute en direct pendant l'exécution d'un script.
 - `alarms.ringing`, `dismiss` et `snooze` gèrent une alarme qui sonne; `alarms.ringtones.list()` liste les sonneries disponibles.
 - `alarms.timers.start(duration, options)` démarre un minuteur (en millisecondes ou avec une chaîne comme `"25m"` ou `"1h 30m"`, de 1 seconde à 100 heures) et renvoie un instantané de minuteur doté des méthodes `pause`, `resume`, `addTime`, `reset`, `cancel` et `bind`; `alarms.stopwatch` démarre, met en pause, reprend, enregistre les tours et réinitialise le chronomètre. Les deux demandent le plugin 1.1.0 ou ultérieur.
+- `alarms.holidays` lit les données des jours fériés (`regions`, `isHoliday`, `isWorkday`, `list`, `info`, `refresh`); l'option `holidays` d'une alarme (par exemple `{ region: 'CN', mode: 'workdays' }`) fixe sa règle de jours fériés, et les `warnings` de `alarms.capabilities()` signalent les données manquantes et les années estimées. Demande le plugin 1.2.0 ou ultérieur.
+- `alarms.bind(id, script, { events: ['beforeRing'], leadSeconds: 120 })` enregistre un script lancé avant la sonnerie; dans ce script, `skip(reason)` de `alarms.currentEvent()` saute cette sonnerie et `ring(overrides)` la fait sonner avec un autre libellé, son, texte lu ou vibreur pour cette fois; `alarms.on('beforeRing', listener)` écoute en direct, avec les deux mêmes méthodes sur l'événement. Demande le plugin 1.2.0 ou ultérieur.
 - `alarms.system` appelle directement l'application d'horloge du système (`setAlarm`, `setTimer`, `showAlarms`, `dismissAlarm`, `next`, etc.) et ne demande aucun plugin.
 
 ******
@@ -149,7 +155,7 @@ Le plugin peut servir d'application de réveil du système et traiter les demand
 
 Le plugin prend en charge Android 7.0 (API 24) et ultérieur. L'activation dans le centre des plugins, les outils du plugin et le module `alarms` demandent AutoJs6 6.8.1 (version interne 6641) ou ultérieure. Avec une version plus ancienne d'AutoJs6 (par exemple 6.8.0, version interne 6640), le centre des plugins indique qu'une version plus récente d'AutoJs6 est requise et ne peut pas activer le plugin, et les outils du plugin et le module `alarms` ne sont pas disponibles; le plugin reste utilisable comme application de réveil autonome et traite toujours les demandes de l'horloge du système. Le module `alarms` ne prend en charge que le moteur Rhino, et son `alarms.system` ne demande aucun plugin.
 
-Vérifié sur ces appareils avant la sortie de la version 1.0.0 (données dans l'annexe D de la feuille de route); les minuteurs et le chronomètre de la version 1.1.0 ont aussi été vérifiés sur un Sony XQ-AT72 et un Sony G8441, y compris les minuteurs qui continuent après un redémarrage (voir P7 de la feuille de route):
+Vérifié sur ces appareils avant la sortie de la version 1.0.0 (données dans l'annexe D de la feuille de route); les minuteurs et le chronomètre de la version 1.1.0 ont aussi été vérifiés sur un Sony XQ-AT72 et un Sony G8441, y compris les minuteurs qui continuent après un redémarrage (voir P7 de la feuille de route); les jours fériés et la décision d'un script avant la sonnerie de la version 1.2.0 ont été vérifiés sur un Sony XQ-AT72 avec AutoJs6 (voir P8 de la feuille de route):
 
 | Appareil | Android | Résultat |
 | --- | --- | --- |
@@ -207,6 +213,14 @@ Les alarmes sonnent, car le plugin fonctionne avant le premier déverrouillage. 
 
 Les minuteurs gardent leur heure de fin d'avant l'arrêt, si bien que le temps passé appareil éteint compte aussi. Un minuteur arrivé à échéance pendant l'arrêt sonne au démarrage s'il a moins de 5 minutes de retard, sinon il laisse une notification manquée. Quand le système corrige son horloge après le démarrage, l'heure de fin peut se décaler de quelques secondes avec elle. Le chronomètre est mis en pause après un redémarrage et compte jusqu'au démarrage, le temps passé appareil éteint est donc inclus (un redémarrage prend en général moins d'une minute).
 
+#### Les données des jours fériés sont-elles exactes? L'alarme sonne-t-elle les jours ouvrés de récupération?
+
+Les jours fériés et les jours ouvrés de récupération sont aussi exacts que les données en amont (le projet open source python-holidays). Avec "Seulement les jours ouvrés", l'alarme sonne les jours ouvrés de récupération; avec "Sauter les jours fériés", seule la règle de répétition compte (une alarme du lundi au vendredi ne sonne pas un samedi de récupération). Les années pas encore annoncées sont estimées d'après les règles, marquées "estimé" dans les écrans des paramètres et de modification, puis corrigées par une mise à jour des données après l'annonce; les mises à jour sont recherchées chaque semaine, et l'écran des paramètres peut en rechercher tout de suite.
+
+#### Que se passe-t-il si le script `beforeRing` ne décide pas à temps?
+
+L'alarme sonne comme elle est réglée. La limite est par défaut 5 secondes avant l'heure de sonnerie; sans décision à ce moment, si le script échoue, si AutoJs6 n'est pas disponible (par exemple arrêté de force) ou si l'appareil n'a pas été déverrouillé depuis un redémarrage, l'alarme sonne comme prévu. Une sonnerie déjà sautée par la règle des jours fériés ne lance aucun script `beforeRing`.
+
 ******
 
 ### Permissions Et Sécurité
@@ -223,13 +237,13 @@ Autorisations demandées par le plugin et leur usage:
 - Service de premier plan (`FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SYSTEM_EXEMPTED`): maintient le son pendant la sonnerie; sert aussi à rester actif quand "Rester actif en arrière-plan" est activé dans les paramètres (désactivé par défaut).
 - Vibration, verrou de réveil et réglages audio (`VIBRATE`, `WAKE_LOCK`, `MODIFY_AUDIO_SETTINGS`): vibrer, garder l'appareil éveillé pendant la sonnerie et rétablir le volume d'alarme indépendant ensuite.
 - Réorganiser les applications en cours d'exécution (`REORDER_TASKS`, Android 7.0 - 8.1 uniquement): quand d'autres applications ou scripts envoient plusieurs demandes d'alarme presque en même temps, ramène au premier plan une demande que le système n'a pas lancée, afin que chaque demande soit traitée. Accordée à l'installation.
-- Réseau (`INTERNET`, `ACCESS_NETWORK_STATE`): uniquement pour la recherche de mises à jour de l'écran des paramètres (à partir de 1.2.0, aussi pour actualiser les données des jours fériés). La recherche n'a lieu qu'à l'ouverture de la liste des alarmes, à la fréquence choisie, et évite par défaut les réseaux limités; la planification, la sonnerie et le lien avec AutoJs6 n'utilisent jamais le réseau.
+- Réseau (`INTERNET`, `ACCESS_NETWORK_STATE`): uniquement pour la recherche de mises à jour et l'actualisation des données des jours fériés. La recherche de mises à jour a lieu à l'ouverture de la liste des alarmes, à la fréquence choisie, et les données des jours fériés sont vérifiées une fois par semaine; les deux évitent par défaut les réseaux limités. La planification, la sonnerie et le lien avec AutoJs6 n'utilisent jamais le réseau.
 - Autorisation de plugin AutoJs6 (`org.autojs.permission.PLUGIN`): communiquer avec AutoJs6.
 
 Le plugin réduit autant que possible ses autorisations:
 
 - Entrées protégées: le service de capacité et l'entrée d'activation exigent l'autorisation de plugin d'AutoJs6 (`org.autojs.permission.PLUGIN`), les autres applications ne peuvent donc pas les appeler directement; l'entrée qui reçoit les demandes de l'horloge système exige que l'appelant détienne `com.android.alarm.permission.SET_ALARM`.
-- Réseau: utilisé uniquement pour rechercher les mises à jour du plugin (sur GitHub; la recherche automatique peut être désactivée dans les paramètres); les alarmes et les données personnelles ne sont jamais envoyées.
+- Réseau: utilisé uniquement pour rechercher les mises à jour du plugin et des données des jours fériés (sur GitHub; la recherche automatique des deux peut être désactivée dans les paramètres); la signature des données téléchargées est vérifiée, et les alarmes et les données personnelles ne sont jamais envoyées.
 - Stockage: les alarmes sont enregistrées dans le répertoire privé du plugin et exclues de la sauvegarde dans le cloud; les sonneries locales sont importées via le sélecteur de fichiers du système, sans autorisation de stockage.
 - Accès des scripts: via le module `alarms`, les scripts peuvent lire et modifier toutes les alarmes et tous les minuteurs du plugin, y compris ceux créés depuis ses écrans; les scripts enregistrés sont stockés dans AutoJs6, et les écrans du plugin se contentent d'indiquer qu'une alarme a un script lié et de permettre de supprimer ce lien.
 
@@ -269,6 +283,19 @@ Les plans, décisions de conception et l'avancement sont suivis sous forme de li
 
 ******
 
+#### v1.2.0
+
+_2026/11/13_
+
+- `Note` alarms.holidays, l'option holidays des alarmes et l'événement beforeRing dans les scripts demandent AutoJs6 6.8.1 (version interne 6641) ou ultérieure et ce plugin en version 1.2.0 ou ultérieure; avec le plugin 1.1.x ou antérieur, les appels échouent avec un message invitant à mettre à jour le plugin
+- `Note` Les jours fériés et les jours ouvrés de récupération sont aussi exacts que les données en amont (le projet open source python-holidays); les années pas encore annoncées sont estimées d'après les règles et marquées "estimé", puis corrigées par une mise à jour des données après l'annonce
+- `Fonctionnalité` Jours fériés: les alarmes gagnent les options "Sauter les jours fériés", "Seulement les jours fériés" et "Seulement les jours ouvrés" (sonne chaque jour ouvré, jours ouvrés de récupération compris, jamais le week-end ni les jours fériés); les données de 250 pays et régions (dont plus de 600 subdivisions) de 2020 à 2035 sont intégrées, avec les jours ouvrés de récupération de la Chine continentale et de Taïwan
+- `Fonctionnalité` L'écran des paramètres choisit la région de jours fériés par défaut (déduite d'abord de la région du système), et chaque alarme peut avoir sa propre région; la liste des alarmes indique combien de jours fériés la prochaine sonnerie saute; les années estimées sont marquées "estimé", car des jours de congé ou de récupération peuvent encore être déplacés
+- `Fonctionnalité` Les mises à jour des données des jours fériés sont recherchées chaque semaine (désactivable dans les paramètres; pas de téléchargement sur les réseaux limités par défaut) et peuvent être recherchées à la main dans les paramètres; la signature des données téléchargées est vérifiée et les données actuelles restent en service en cas d'échec; une année sans données, l'alarme sonne selon sa seule règle de répétition et ne se tait jamais pour cette raison
+- `Fonctionnalité` Décision d'un script avant la sonnerie (beforeRing): un script enregistré est lancé avant la sonnerie (60 secondes par défaut, de 15 secondes à 5 minutes) et peut sauter cette sonnerie, ou la laisser sonner avec un autre libellé, son, texte lu ou vibreur pour cette fois; si le script ne décide pas à temps, échoue ou si AutoJs6 n'est pas disponible, l'alarme sonne comme prévu
+- `Fonctionnalité` Nouveautés du module de script AutoJs6: alarms.holidays (lister les régions, savoir si un jour est férié ou ouvré, lister les jours fériés d'une année, consulter et actualiser les données), l'option holidays des alarmes, skip / ring de l'événement beforeRing, et les warnings de alarms.capabilities() sur les données manquantes et les années estimées (demande AutoJs6 6.8.1; voir la [documentation d'AutoJs6](https://docs.autojs6.com/#/alarms))
+- `Fonctionnalité` Nouvel outil du plugin holiday_check pour savoir, via le plugin MCP Server ou plugins.tools.call, si un jour est férié ou ouvré dans une région et le nom du jour férié; alarm_add et alarm_update acceptent l'option holidays
+
 #### v1.1.0
 
 _2026/11/12_
@@ -287,30 +314,6 @@ _2026/11/12_
 _2026/11/08_
 
 - `Correctif` Quand une autre application ou un script AutoJs6 envoyait coup sur coup deux demandes d'alarme du même type (par exemple deux nouvelles alarmes de suite, ou deux appels d'alarms.system.setAlarm visant ce plugin) alors qu'aucun écran du plugin n'était ouvert, la seconde demande était ignorée sans aucun message et son alarme n'était pas créée; chaque demande est désormais traitée; sous Android 7.0 - 8.1, cela nécessite l'autorisation "réorganiser les applications en cours d'exécution" (accordée à l'installation)
-
-#### v1.0.0
-
-_2026/11/07_
-
-- `Note` L'activation dans le centre des plugins, les outils du plugin et le module de script alarms demandent AutoJs6 6.8.1 (version interne 6641) ou ultérieure; avec une version plus ancienne d'AutoJs6 (par exemple 6.8.0), le plugin ne s'utilise que comme application de réveil autonome
-- `Note` Sur ColorOS (OPPO, OnePlus, realme), activez le démarrage automatique du plugin à la fois dans les infos de l'appli et dans Paramètres > Applis > Lancement automatique, sinon les alarmes ne sonnent plus une fois le processus du plugin nettoyé (voir README > FAQ)
-- `Fonctionnalité` Alarmes: alarmes uniques ou répétées selon les règles de calendrier RFC 5545 (jours ouvrés, n-ième jour de la semaine du mois, fin du mois, intervalles en jours, date de fin et nombre d'occurrences); on peut exclure des dates ou ne sauter que la prochaine sonnerie
-- `Fonctionnalité` Sonnerie: sonnerie du système ou audio local importé, texte lu à voix haute, volume indépendant avec montée progressive, vibration personnalisée, répétition et arrêt automatique, écran de sonnerie plein écran sur l'écran de verrouillage, et alarmes simultanées qui sonnent l'une après l'autre
-- `Fonctionnalité` Planification: les alarmes sont replanifiées après un redémarrage, un changement d'heure ou de fuseau horaire et une mise à jour du plugin, sonnent avant le premier déverrouillage, et une alarme manquée sonne dans les 5 minutes ou laisse sinon une notification
-- `Fonctionnalité` Écrans du plugin: liste des alarmes, écran de modification, écran de sonnerie, page des autorisations et paramètres; la langue, le mode nuit et la couleur du thème suivent AutoJs6 par défaut, et l'icône du lanceur est interchangeable
-- `Fonctionnalité` Paramètres: sonnerie, vibration, répétition et arrêt automatique par défaut, format de l'heure, recherche automatique des mises à jour, et l'option "Rester actif en arrière-plan" (une notification silencieuse qui rend le nettoyage par le système moins probable)
-- `Fonctionnalité` La page des autorisations vérifie une à une les notifications, les alarmes exactes, les alertes plein écran, l'optimisation de la batterie, les restrictions en arrière-plan et le démarrage automatique du fabricant, avec des lignes d'aide pour la liste du lancement automatique et les notifications en bannière sur ColorOS
-- `Fonctionnalité` Module de script AutoJs6 alarms / $alarms (demande AutoJs6 6.8.1, Rhino uniquement): création, consultation, modification et suppression des alarmes, écouteurs d'événements, scripts enregistrés qu'AutoJs6 lance quand un événement survient, et liste des sonneries (voir la [documentation d'AutoJs6](https://docs.autojs6.com/#/alarms))
-- `Fonctionnalité` Outils du plugin alarm_add, alarm_list, alarm_update, alarm_remove, alarm_set_enabled, alarm_skip_next, alarm_upcoming, alarm_dismiss et alarm_snooze, utilisables via le plugin MCP Server ou plugins.tools.call
-- `Fonctionnalité` Horloge du système: traite les demandes de réglage, d'affichage, d'arrêt et de répétition d'alarme d'autres applications
-- `Fonctionnalité` Un seul APK pour tous les appareils, y compris ceux à pages mémoire de 16 KB
-- `Dépendance` Ajout de AndroidX Core KTX 1.15.0
-- `Dépendance` Ajout de AndroidX Activity Compose 1.12.2
-- `Dépendance` Ajout de Jetpack Compose BOM 2026.09.00 (écrans du plugin)
-- `Dépendance` Ajout de Kotlin Coroutines Android 1.11.0
-- `Dépendance` Ajout de Material Color Utilities 4.1.1 (couleurs du thème)
-- `Dépendance` Ajout de lib-recur 0.17.1 (calcule les règles de répétition des alarmes)
-- `Dépendance` Ajout de Desugar JDK Libs 2.1.5 (calculs de date et de fuseau horaire sous Android 7.x)
 
 ##### Pour plus d'historique des versions
 
@@ -338,7 +341,7 @@ py .python\check_repository.py
 
 ******
 
-Le code du projet est distribué sous [Mozilla Public License 2.0](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/LICENSE). Les composants et données tiers sont répertoriés dans les mentions tierces.
+Le code du projet est distribué sous [Mozilla Public License 2.0](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/LICENSE). Les composants et données tiers sont répertoriés dans les mentions tierces. Les données des jours fériés sont générées à partir du projet open source python-holidays (licence MIT); le texte complet de la licence et la liste des contributeurs sont publiés avec les données.
 
 - [Mentions tierces (THIRD_PARTY_NOTICES.md)](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/THIRD_PARTY_NOTICES.md)
 

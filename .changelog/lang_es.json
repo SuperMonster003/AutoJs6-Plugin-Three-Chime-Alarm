@@ -5,6 +5,21 @@
   "changelog_label_improvement": "Mejora",
   "changelog_label_dependency": "Dependencia",
   "$data": {
+    "v1.2.0": {
+      "released_date": "2026/11/13",
+      "hint": [
+        "alarms.holidays, la opción holidays de las alarmas y el evento beforeRing en los scripts requieren AutoJs6 {{ required_host_version_name }} (compilación interna {{ required_host_version_code }}) o posterior y este complemento en la versión 1.2.0 o posterior; con el complemento 1.1.x o anterior las llamadas fallan con un mensaje que pide actualizar el complemento",
+        "Los festivos y los días laborables de recuperación son tan exactos como los datos de origen (el proyecto de código abierto python-holidays); los años aún no anunciados se estiman según las reglas, se marcan como \"estimado\" y se corrigen con una actualización de los datos tras el anuncio"
+      ],
+      "feature": [
+        "Festivos: las alarmas tienen las opciones \"Omitir festivos\", \"Solo en festivos\" y \"Solo en días laborables\" (suena todos los días laborables, incluidos los de recuperación, nunca en fines de semana ni festivos); incluye datos de festivos de 250 países y regiones (con más de 600 subdivisiones) de 2020 a 2035, con los días laborables de recuperación de China continental y Taiwán",
+        "En los ajustes se elige la región de festivos predeterminada (deducida al principio de la región del sistema), y cada alarma puede usar su propia región; la lista de alarmas muestra cuántos festivos omite el próximo sonido; los años estimados se marcan como \"estimado\", ya que aún pueden moverse días libres o de recuperación",
+        "Las actualizaciones de los datos de festivos se buscan cada semana (se puede desactivar en los ajustes; de forma predeterminada no se descarga en redes de uso medido) y también se pueden buscar a mano en los ajustes; se verifica la firma de los datos descargados y, si falla, se siguen usando los datos actuales; en un año sin datos la alarma suena solo según su regla de repetición y nunca deja de sonar por ello",
+        "Decisión de un script antes de sonar (beforeRing): un script registrado se inicia antes de sonar (60 segundos de forma predeterminada, de 15 segundos a 5 minutos) y puede omitir esta vez o dejarla sonar con otra etiqueta, otro sonido, otro texto leído u otra vibración solo esta vez; si el script no decide a tiempo, falla o AutoJs6 no está disponible, la alarma suena como siempre",
+        "Novedades del módulo de scripts de AutoJs6: alarms.holidays (listar regiones, saber si un día es festivo o laborable, listar los festivos de un año, consultar y actualizar los datos), la opción holidays de las alarmas, skip / ring del evento beforeRing y los warnings de alarms.capabilities() sobre datos que faltan y años estimados (requiere AutoJs6 {{ required_host_version_name }}; consulte la [documentación de AutoJs6](https://docs.autojs6.com/#/alarms))",
+        "Nueva herramienta del complemento holiday_check para saber, mediante el complemento MCP Server o plugins.tools.call, si un día es festivo o laborable en una región y el nombre del festivo; alarm_add y alarm_update aceptan la opción holidays"
+      ]
+    },
     "v1.1.0": {
       "released_date": "2026/11/12",
       "hint": [

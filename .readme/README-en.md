@@ -8,7 +8,7 @@
     </picture>
   </p>
 
-  <p>Alarm clock, timers and stopwatch with calendar recurrence rules, spoken ringing and script hooks when an alarm rings</p>
+  <p>Alarm clock, timers and stopwatch with calendar recurrence rules, holidays, spoken ringing and script hooks when an alarm rings</p>
 
   <p>
     <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/releases"><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm?label=Release"/></a>
@@ -42,11 +42,11 @@ The README.md file is currently available in the following languages:
 
 ******
 
-3-Chime Alarm is the alarm plugin of AutoJs6 and also an alarm clock app that works on its own without AutoJs6. Alarms repeat by RFC 5545 calendar rules (for example the last Friday of every month, or every 3 days from a given date); a ringing alarm can read text aloud, start a script or notify a running script. Since 1.1.0 it also offers several timers running at once and a stopwatch. Holiday skipping and dismiss challenges come in later versions.
+3-Chime Alarm is the alarm plugin of AutoJs6 and also an alarm clock app that works on its own without AutoJs6. Alarms repeat by RFC 5545 calendar rules (for example the last Friday of every month, or every 3 days from a given date); a ringing alarm can read text aloud, start a script or notify a running script. Since 1.1.0 it also offers several timers running at once and a stopwatch. Since 1.2.0 an alarm can skip holidays, ring only on holidays or ring on every workday (makeup workdays included), and a script can decide before the ring whether this one rings. Dismiss challenges come in a later version.
 
 The plugin schedules and rings alarms itself with Android exact alarms, so alarms ring on time even when AutoJs6 is not running. AutoJs6 scripts query, create, change and listen to the alarms of the plugin through the global module `alarms`, and use the timers and the stopwatch through `alarms.timers` and `alarms.stopwatch`; the sub-namespace `alarms.system` talks to the system clock app directly and works without the plugin. The plugin also accepts set-alarm and set-timer requests from other apps.
 
-> Version 1.1.0 provides alarms, timers and the stopwatch, the plugin screens, the plugin tools and the `alarms` script module. Enabling the plugin in the Plugin Center, the plugin tools and the `alarms` module need AutoJs6 6.8.1 (internal build 6641) or later; with older AutoJs6 versions (including 6.8.0) the plugin works only as a standalone alarm clock app. See the roadmap for the progress of holidays and dismiss challenges.
+> Version 1.2.0 provides alarms (with holiday rules and decisions by a script before the ring), timers and the stopwatch, the plugin screens, the plugin tools and the `alarms` script module. Enabling the plugin in the Plugin Center, the plugin tools and the `alarms` module need AutoJs6 6.8.1 (internal build 6641) or later; with older AutoJs6 versions (including 6.8.0) the plugin works only as a standalone alarm clock app. See the roadmap for the progress of dismiss challenges.
 
 ******
 
@@ -58,11 +58,12 @@ The plugin schedules and rings alarms itself with Android exact alarms, so alarm
 - Ringing: a system ringtone or imported local audio, spoken text, independent volume with a fade-in, custom vibration, snooze and auto silence, and a full screen ringing screen on the lock screen; alarms due at the same time ring one after another.
 - On time: alarms are rescheduled automatically after a reboot, a time or time zone change and a plugin update, and ring even before the first unlock after a reboot; an alarm missed while the device was off rings within 5 minutes, later it only leaves a notification.
 - Script hooks: an alarm or a timer can register script files that AutoJs6 starts on ring, snooze, dismiss and other events, so scripts need not keep running; a running script can also listen to these events live.
-- Plugin tools: add, query, change and remove alarms, handle a ringing alarm, and start, list and control timers through the MCP Server plugin or `plugins.tools.call` (nine `alarm_*` tools and three `timer_*` tools).
+- Plugin tools: add, query, change and remove alarms, handle a ringing alarm, start, list and control timers, and look up holidays through the MCP Server plugin or `plugins.tools.call` (nine `alarm_*` tools, three `timer_*` tools and `holiday_check`).
 - System clock: set, show, dismiss and snooze requests for alarms and set, show and dismiss requests for timers from other apps can be handled by the plugin.
 - Screens: language, night mode and theme color follow AutoJs6 by default and can be set separately; the launcher icon can be switched; the settings screen sets the default ringtone, vibration, snooze and auto silence.
 - Timers and stopwatch: up to 20 timers at once with pause, resume, extra time and reset; a running timer shows its countdown in the notification shade, where it can be paused, extended by 1 minute or cancelled; timers keep counting across a reboot and ring like alarms. The stopwatch records laps (up to 100) and marks the fastest and the slowest lap. The bottom navigation switches between alarms, timers and the stopwatch.
-- Holidays (planned for 1.2.0): built-in open holiday data for many regions; alarms skip public holidays and ring on make-up workdays; a `beforeRing` script hook can also decide whether to ring.
+- Holidays: an alarm can be set to "Skip holidays", "Only on holidays" or "Only on workdays" (rings on every workday, makeup workdays included, never on weekends or holidays). Data for 250 countries and regions (with more than 600 subdivisions) from 2020 to 2035 is built in, generated from the open source project python-holidays; updates are checked every week and downloaded data is signature checked. Years not yet announced are estimated by rule and marked "estimated"; in a year without data the alarm rings by its repeat rule alone.
+- Decided by a script before the ring: a registered script is started by AutoJs6 before the ring (60 seconds by default, 15 seconds to 5 minutes) and can skip this ring, or let it ring with a different label, sound, spoken text or vibration this time only; when the script does not decide in time, fails or AutoJs6 is unavailable, the alarm rings as usual.
 - Dismiss challenges (planned for 1.3.0): arithmetic, shaking, typing a sentence or a script condition, each with a safety valve so that the alarm can always be dismissed.
 
 ******
@@ -110,6 +111,9 @@ a.bind("./after-wake.js", { events: ["dismiss"] });
 alarms.add({ time: "18:00", repeat: "FREQ=MONTHLY;BYDAY=-1FR", label: "Monthly report" });
 alarms.add({ time: "06:10", date: "2026-11-04", repeat: { freq: "daily", interval: 3 }, tag: "shift" });
 
+let w = alarms.add({ time: "07:30", holidays: { region: "CN", mode: "workdays" }, label: "Work" });
+w.bind("./weather-check.js", { events: ["beforeRing"], leadSeconds: 120 });
+
 alarms.on("ring", (e) => toast(e.label));
 
 alarms.timers.start("25m", { label: "Tea" });
@@ -122,6 +126,8 @@ alarms.system.setAlarm({ hour: 6, minute: 50, label: "Flight" });
 - `alarms.bind(id, script, options)` (or `bind` of an alarm snapshot) registers a script that AutoJs6 starts when an event happens; the script reads the event through `alarms.currentEvent()`. `alarms.on('ring', listener)` listens live while a script runs.
 - `alarms.ringing`, `dismiss` and `snooze` handle a ringing alarm; `alarms.ringtones.list()` lists the available ringtones.
 - `alarms.timers.start(duration, options)` starts a timer (milliseconds or a string such as `"25m"` or `"1h 30m"`, from 1 second to 100 hours) and returns a timer snapshot with the methods `pause`, `resume`, `addTime`, `reset`, `cancel` and `bind`; `alarms.stopwatch` starts, pauses, resumes, records laps of and resets the stopwatch. Both need plugin 1.1.0 or later.
+- `alarms.holidays` reads the holiday data (`regions`, `isHoliday`, `isWorkday`, `list`, `info`, `refresh`); the `holidays` option of an alarm (for example `{ region: 'CN', mode: 'workdays' }`) sets its holiday rule, and the `warnings` of `alarms.capabilities()` point out missing data and estimated years. Needs plugin 1.2.0 or later.
+- `alarms.bind(id, script, { events: ['beforeRing'], leadSeconds: 120 })` registers a script started before the ring; in it, `skip(reason)` of `alarms.currentEvent()` skips this ring and `ring(overrides)` lets it ring with a different label, sound, spoken text or vibration this time; `alarms.on('beforeRing', listener)` listens live, with the same two methods on the event. Needs plugin 1.2.0 or later.
 - `alarms.system` calls the system clock app directly (`setAlarm`, `setTimer`, `showAlarms`, `dismissAlarm`, `next` and more) and needs no plugin.
 
 ******
@@ -149,7 +155,7 @@ The plugin can act as the alarm clock app of the system and handle the standard 
 
 The plugin supports Android 7.0 (API 24) and later. Enabling it in the Plugin Center, the plugin tools and the `alarms` module need AutoJs6 6.8.1 (internal build 6641) or later. With older AutoJs6 versions (for example 6.8.0, internal build 6640), the Plugin Center reports that a newer AutoJs6 is required and cannot enable the plugin, and the plugin tools and the `alarms` module are unavailable; the plugin still works as a standalone alarm clock app and still handles system clock requests. The `alarms` module supports the Rhino engine only, and its `alarms.system` needs no plugin.
 
-Verified on these devices before the 1.0.0 release (data in appendix D of the roadmap); the timers and the stopwatch of 1.1.0 were also verified on a Sony XQ-AT72 and a Sony G8441, including timers that keep counting across a reboot (see P7 of the roadmap):
+Verified on these devices before the 1.0.0 release (data in appendix D of the roadmap); the timers and the stopwatch of 1.1.0 were also verified on a Sony XQ-AT72 and a Sony G8441, including timers that keep counting across a reboot (see P7 of the roadmap); the holidays and the decisions by a script before the ring of 1.2.0 were verified on a Sony XQ-AT72 together with AutoJs6 (see P8 of the roadmap):
 
 | Device | Android | Result |
 | --- | --- | --- |
@@ -207,6 +213,14 @@ Alarms ring, because the plugin runs before the first unlock. Hooked scripts are
 
 Timers keep their end time from before the shutdown, so the time while the device is off counts too. A timer that ended while the device was off rings after the boot if it is less than 5 minutes overdue, otherwise it leaves a missed notification. When the system corrects its clock after the boot, the end time can move by a few seconds with it. The stopwatch is paused after a reboot and counts up to the boot, so the time the device was off is included (a reboot usually takes less than a minute).
 
+#### Is the holiday data accurate? Does the alarm ring on makeup workdays?
+
+Holidays and makeup workdays are only as accurate as the upstream data (the open source project python-holidays). With "Only on workdays" the alarm rings on makeup workdays; with "Skip holidays" only the repeat rule counts (a Monday to Friday alarm does not ring on a Saturday makeup workday). Years not yet announced are estimated by rule, marked "estimated" on the settings and edit screens, and corrected by a data update once announced; updates are checked every week, and the settings screen can check right away.
+
+#### What if the `beforeRing` script does not decide in time?
+
+The alarm rings as configured. The deadline is 5 seconds before the due time by default; when no decision has come by then, the script fails, AutoJs6 is unavailable (for example force-stopped) or the device has not been unlocked since a reboot, the alarm rings as usual. A ring the holiday rule already skips starts no `beforeRing` script.
+
 ******
 
 ### Permissions and security
@@ -223,13 +237,13 @@ Permissions requested by the plugin and what they are for:
 - Foreground service (`FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SYSTEM_EXEMPTED`): keeps the alarm sounding while it rings; also keeps the plugin running when "Keep running in background" is on in the settings (off by default).
 - Vibration, wake lock and audio settings (`VIBRATE`, `WAKE_LOCK`, `MODIFY_AUDIO_SETTINGS`): vibrate, keep the device awake while ringing, and restore the independent alarm volume after ringing.
 - Reorder running apps (`REORDER_TASKS`, Android 7.0 - 8.1 only): when other apps or scripts send several alarm requests at almost the same time, brings a request the system did not start to the front, so every request is handled. Granted at install.
-- Network (`INTERNET`, `ACCESS_NETWORK_STATE`): only for the update check of the settings screen (from 1.2.0 also for refreshing holiday data). Checks run only when the alarm list opens, at the chosen frequency, and skip metered networks by default; scheduling, ringing and the AutoJs6 link never use the network.
+- Network (`INTERNET`, `ACCESS_NETWORK_STATE`): only for the update check and the holiday data refresh. The update check runs when the alarm list opens, at the chosen frequency, and holiday data is checked once a week; both skip metered networks by default. Scheduling, ringing and the AutoJs6 link never use the network.
 - AutoJs6 plugin permission (`org.autojs.permission.PLUGIN`): communicates with AutoJs6.
 
 The plugin keeps its permission surface as small as possible:
 
 - Protected entry points: the capability service and the activation entry are protected by the AutoJs6 plugin permission (`org.autojs.permission.PLUGIN`), so other apps cannot call them directly; the entry that accepts system clock requests requires the caller to hold `com.android.alarm.permission.SET_ALARM`.
-- Network: used only to check for plugin updates (on GitHub; automatic checks can be turned off on the settings screen); alarms and personal data are never uploaded.
+- Network: used only to check for plugin updates and holiday data (on GitHub; automatic checks for both can be turned off on the settings screen); downloaded holiday data is signature checked, and alarms and personal data are never uploaded.
 - Storage: alarms are stored in the private directory of the plugin and are excluded from cloud backup; local ringtones are imported through the system file picker without a storage permission.
 - Script access: through the `alarms` module, scripts can read and change every alarm and timer of the plugin, including those created on its screens; registered scripts are stored in AutoJs6, and the plugin screens only mark an alarm as having a script binding and can remove it.
 
@@ -269,6 +283,19 @@ Plans, design decisions and progress are tracked as a checklist in ROADMAP.md. U
 
 ******
 
+#### v1.2.0
+
+_2026/11/13_
+
+- `Hint` alarms.holidays, the holidays option of alarms and the beforeRing event in scripts need AutoJs6 6.8.1 (internal build 6641) or later and this plugin 1.2.0 or later; with plugin 1.1.x or earlier, calls fail with a message asking to update the plugin
+- `Hint` Holidays and makeup workdays are only as accurate as the upstream data (the open source project python-holidays); years not yet announced are estimated by rule and marked "estimated", and are corrected by a data update once announced
+- `Feature` Holidays: alarms get the options "Skip holidays", "Only on holidays" and "Only on workdays" (rings on every workday, makeup workdays included, never on weekends or holidays); holiday data for 250 countries and regions (with more than 600 subdivisions) from 2020 to 2035 is built in, with the makeup workdays of mainland China and Taiwan
+- `Feature` The settings screen chooses the default holiday region (first taken from the system region), and each alarm can use its own region; the alarm list shows how many holidays the next ring skips; estimated years are marked "estimated", as days off and makeup workdays may still change
+- `Feature` Holiday data is checked for updates every week (can be turned off on the settings screen; metered networks are not used by default) and can be checked by hand on the settings screen; downloaded data is signature checked and the current data stays in use when the check fails; in a year without data an alarm rings by its repeat rule alone and is never silenced for that reason
+- `Feature` Decided by a script before the ring (beforeRing): a registered script is started before the ring (60 seconds by default, 15 seconds to 5 minutes) and can skip this ring, or let it ring with a different label, sound, spoken text or vibration this time only; when the script does not decide in time, fails or AutoJs6 is unavailable, the alarm rings as usual
+- `Feature` New in the AutoJs6 script module: alarms.holidays (list regions, tell holidays and workdays, list a year's holidays, show and refresh the data), the holidays option of alarms, skip / ring of the beforeRing event, and warnings in alarms.capabilities() about missing data and estimated years (needs AutoJs6 6.8.1; see the [AutoJs6 documentation](https://docs.autojs6.com/#/alarms))
+- `Feature` New plugin tool holiday_check tells through the MCP Server plugin or plugins.tools.call whether a day is a holiday or a workday in a region and the holiday's name; alarm_add and alarm_update accept the holidays option
+
 #### v1.1.0
 
 _2026/11/12_
@@ -287,30 +314,6 @@ _2026/11/12_
 _2026/11/08_
 
 - `Fix` When another app or an AutoJs6 script sent two alarm requests of the same kind in quick succession (for example two new alarms in a row, or two calls of alarms.system.setAlarm aimed at this plugin) while no plugin screen was open, the second request was ignored without any message and its alarm was never created; every request is now handled; on Android 7.0 - 8.1 this needs the "reorder running apps" permission (granted at install)
-
-#### v1.0.0
-
-_2026/11/07_
-
-- `Hint` Enabling the plugin in the Plugin Center, the plugin tools and the alarms script module need AutoJs6 6.8.1 (internal build 6641) or later; with older AutoJs6 versions (for example 6.8.0) the plugin works only as a standalone alarm clock app
-- `Hint` On ColorOS (OPPO, OnePlus, realme), turn on auto launch for the plugin in both the app details and Settings > Apps > Auto launch, otherwise alarms do not ring once the plugin process has been cleaned up (see README > FAQ)
-- `Feature` Alarms: one-time or repeating alarms with RFC 5545 calendar rules (weekdays, the nth weekday of a month, the end of a month, day intervals, end dates and counts); dates can be excluded, or only the next ring skipped
-- `Feature` Ringing: a system ringtone or imported local audio, spoken text, independent volume with a fade-in, custom vibration, snooze and auto silence, a full screen ringing screen on the lock screen, and alarms due at the same time ringing one after another
-- `Feature` Scheduling: alarms are rescheduled after a reboot, a time or time zone change and a plugin update, ring before the first unlock, and a missed alarm rings within 5 minutes or else leaves a notification
-- `Feature` Plugin screens: alarm list, edit screen, ringing screen, permissions page and settings; language, night mode and theme color follow AutoJs6 by default, and the launcher icon can be switched
-- `Feature` Settings: default ringtone, vibration, snooze and auto silence, time format, automatic update checks, and the optional "Keep running in background" (a silent notification that makes cleanup by the system less likely)
-- `Feature` The permissions page checks notifications, exact alarms, full screen alerts, battery optimization, background restrictions and the vendor's auto start one by one, with extra guide rows for the auto launch list and banner notifications on ColorOS
-- `Feature` AutoJs6 script module alarms / $alarms (needs AutoJs6 6.8.1, Rhino only): adding, querying, changing and removing alarms, event listeners, scripts registered for AutoJs6 to start when an event happens, and the ringtone list (see [AutoJs6 documentation](https://docs.autojs6.com/#/alarms))
-- `Feature` Plugin tools alarm_add, alarm_list, alarm_update, alarm_remove, alarm_set_enabled, alarm_skip_next, alarm_upcoming, alarm_dismiss and alarm_snooze, callable through the MCP Server plugin or plugins.tools.call
-- `Feature` System clock: handles the set, show, dismiss and snooze alarm requests of other apps
-- `Feature` A single APK for every device, including devices with 16 KB memory pages
-- `Dependency` Attach AndroidX Core KTX 1.15.0
-- `Dependency` Attach AndroidX Activity Compose 1.12.2
-- `Dependency` Attach Jetpack Compose BOM 2026.09.00 (plugin screens)
-- `Dependency` Attach Kotlin Coroutines Android 1.11.0
-- `Dependency` Attach Material Color Utilities 4.1.1 (theme colors)
-- `Dependency` Attach lib-recur 0.17.1 (calculates the repeat rules of alarms)
-- `Dependency` Attach Desugar JDK Libs 2.1.5 (date and time zone calculations on Android 7.x)
 
 ##### For more release history, refer to
 
@@ -338,7 +341,7 @@ py .python\check_repository.py
 
 ******
 
-The project code is licensed under the [Mozilla Public License 2.0](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/LICENSE). Third-party components and data are listed in the third-party notices.
+The project code is licensed under the [Mozilla Public License 2.0](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/LICENSE). Third-party components and data are listed in the third-party notices. The holiday data is generated from the open source project python-holidays (MIT License); its full license text and list of contributors are published together with the data.
 
 - [Third-party notices (THIRD_PARTY_NOTICES.md)](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/THIRD_PARTY_NOTICES.md)
 

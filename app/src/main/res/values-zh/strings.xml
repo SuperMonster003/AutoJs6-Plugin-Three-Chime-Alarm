@@ -233,7 +233,7 @@
     <string name="permissions_title">权限与后台运行</string>
     <string name="permissions_vendor_banner">横幅通知</string>
     <string name="permissions_vendor_banner_guide">系统不提供此项状态. 请在本插件的通知设置中勾选 \"横幅\", 否则锁屏时不会自动打开响铃界面 (允许悬浮窗时除外).</string>
-    <string name="plugin_description">闹钟, 计时器与秒表, 支持日历重复规则, 朗读响铃与响铃时联动脚本</string>
+    <string name="plugin_description">闹钟, 计时器与秒表, 支持日历重复规则与节假日, 朗读响铃与响铃时联动脚本</string>
     <string name="release_history_title">版本历史</string>
     <string name="release_history_unavailable">无法加载版本历史</string>
     <string name="ring_action_dismiss">关闭</string>

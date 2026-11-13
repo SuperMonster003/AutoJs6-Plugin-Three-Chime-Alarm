@@ -90,6 +90,9 @@ a.bind("./after-wake.js", { events: ["dismiss"] });
 alarms.add({ time: "18:00", repeat: "FREQ=MONTHLY;BYDAY=-1FR", label: "Monthly report" });
 alarms.add({ time: "06:10", date: "2026-11-04", repeat: { freq: "daily", interval: 3 }, tag: "shift" });
 
+let w = alarms.add({ time: "07:30", holidays: { region: "CN", mode: "workdays" }, label: "Work" });
+w.bind("./weather-check.js", { events: ["beforeRing"], leadSeconds: 120 });
+
 alarms.on("ring", (e) => toast(e.label));
 
 alarms.timers.start("25m", { label: "Tea" });

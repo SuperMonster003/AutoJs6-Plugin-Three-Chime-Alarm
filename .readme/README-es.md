@@ -8,7 +8,7 @@
     </picture>
   </p>
 
-  <p>Alarma, temporizadores y cronómetro con reglas de repetición de calendario, lectura en voz alta y scripts al sonar la alarma</p>
+  <p>Alarma, temporizadores y cronómetro con reglas de repetición de calendario, festivos, lectura en voz alta y scripts al sonar la alarma</p>
 
   <p>
     <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/releases"><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm?label=Release"/></a>
@@ -42,11 +42,11 @@ El README.md actual admite los siguientes idiomas:
 
 ******
 
-3-Chime Alarm es el complemento de alarmas de AutoJs6 y también una aplicación de alarmas que funciona por sí sola, sin AutoJs6. Las alarmas se repiten según las reglas de calendario RFC 5545 (por ejemplo, el último viernes de cada mes o cada 3 días a partir de una fecha); una alarma que suena puede leer un texto en voz alta, iniciar un script o avisar a un script en ejecución. Desde la versión 1.1.0 también ofrece varios temporizadores simultáneos y un cronómetro. La omisión de festivos y los retos para apagar llegarán en versiones posteriores.
+3-Chime Alarm es el complemento de alarmas de AutoJs6 y también una aplicación de alarmas que funciona por sí sola, sin AutoJs6. Las alarmas se repiten según las reglas de calendario RFC 5545 (por ejemplo, el último viernes de cada mes o cada 3 días a partir de una fecha); una alarma que suena puede leer un texto en voz alta, iniciar un script o avisar a un script en ejecución. Desde la versión 1.1.0 también ofrece varios temporizadores simultáneos y un cronómetro. Desde la versión 1.2.0 una alarma puede omitir los festivos, sonar solo en festivos o sonar todos los días laborables (incluidos los días laborables de recuperación), y un script puede decidir antes de sonar si esta vez suena. Los retos para apagar llegarán en una versión posterior.
 
 El complemento programa y hace sonar las alarmas por sí mismo con las alarmas exactas de Android, así que las alarmas suenan a tiempo aunque AutoJs6 no esté en ejecución. Los scripts de AutoJs6 consultan, crean, modifican y escuchan las alarmas del complemento mediante el módulo global `alarms`, y usan los temporizadores y el cronómetro mediante `alarms.timers` y `alarms.stopwatch`; el subespacio de nombres `alarms.system` se comunica directamente con la aplicación de reloj del sistema y funciona sin el complemento. El complemento también acepta solicitudes para configurar alarmas y temporizadores enviadas por otras aplicaciones.
 
-> La versión 1.1.0 ofrece las alarmas, los temporizadores y el cronómetro, las pantallas del complemento, las herramientas del complemento y el módulo de scripts `alarms`. Activar el complemento en el centro de complementos, las herramientas del complemento y el módulo `alarms` requieren AutoJs6 6.8.1 (compilación interna 6641) o posterior; con versiones anteriores de AutoJs6 (incluida 6.8.0), el complemento solo se puede usar como aplicación de alarmas independiente. El avance de los festivos y los retos para apagar se encuentra en la hoja de ruta.
+> La versión 1.2.0 ofrece las alarmas (con reglas de festivos y la decisión de un script antes de sonar), los temporizadores y el cronómetro, las pantallas del complemento, las herramientas del complemento y el módulo de scripts `alarms`. Activar el complemento en el centro de complementos, las herramientas del complemento y el módulo `alarms` requieren AutoJs6 6.8.1 (compilación interna 6641) o posterior; con versiones anteriores de AutoJs6 (incluida 6.8.0), el complemento solo se puede usar como aplicación de alarmas independiente. El avance de los retos para apagar se encuentra en la hoja de ruta.
 
 ******
 
@@ -58,11 +58,12 @@ El complemento programa y hace sonar las alarmas por sí mismo con las alarmas e
 - Sonido: tono del sistema o audio local importado, texto leído en voz alta, volumen independiente con aumento gradual, vibración personalizada, posponer y silencio automático, y pantalla de alarma a pantalla completa sobre la pantalla de bloqueo; las alarmas que coinciden suenan una tras otra.
 - Puntualidad: las alarmas se reprograman automáticamente tras un reinicio, un cambio de hora o de zona horaria y una actualización del complemento, y suenan incluso antes del primer desbloqueo; una alarma perdida con el dispositivo apagado suena en los 5 minutos siguientes, después solo deja una notificación.
 - Scripts vinculados: una alarma o un temporizador puede registrar archivos de script que AutoJs6 inicia al sonar, posponer, apagar y otros eventos, sin que tengan que seguir en ejecución; un script en ejecución también puede escuchar estos eventos en directo.
-- Herramientas del complemento: crear, consultar, modificar y eliminar alarmas, atender una alarma que suena, e iniciar, listar y controlar temporizadores mediante el complemento MCP Server o `plugins.tools.call` (nueve herramientas `alarm_*` y tres herramientas `timer_*`).
+- Herramientas del complemento: crear, consultar, modificar y eliminar alarmas, atender una alarma que suena, iniciar, listar y controlar temporizadores, y consultar festivos mediante el complemento MCP Server o `plugins.tools.call` (nueve herramientas `alarm_*`, tres herramientas `timer_*` y `holiday_check`).
 - Reloj del sistema: el complemento puede atender las solicitudes de configurar, mostrar, apagar y posponer alarmas, y de configurar, mostrar y apagar temporizadores, que envían otras aplicaciones.
 - Pantallas: el idioma, el modo nocturno y el color del tema siguen a AutoJs6 de forma predeterminada y se pueden ajustar por separado; el icono del lanzador se puede cambiar; la pantalla de ajustes fija el tono, la vibración, el aplazamiento y el silencio automático predeterminados.
 - Temporizadores y cronómetro: hasta 20 temporizadores a la vez con pausa, reanudación, tiempo extra y restablecimiento; un temporizador en marcha muestra su cuenta atrás en el panel de notificaciones, desde donde se puede pausar, alargar 1 minuto o cancelar; los temporizadores siguen contando tras un reinicio y suenan como las alarmas. El cronómetro marca vueltas (hasta 100) y señala la más rápida y la más lenta. La barra de navegación inferior cambia entre alarmas, temporizadores y cronómetro.
-- Festivos (previstos para 1.2.0): datos abiertos de festivos de muchas regiones; las alarmas omiten los festivos y suenan en los días laborables de recuperación; un gancho de script `beforeRing` también puede decidir si suena.
+- Festivos: cada alarma se puede ajustar a "Omitir festivos", "Solo en festivos" o "Solo en días laborables" (suena todos los días laborables, incluidos los de recuperación, nunca en fines de semana ni festivos). Incluye datos de 250 países y regiones (con más de 600 subdivisiones) de 2020 a 2035, generados a partir del proyecto de código abierto python-holidays; las actualizaciones se buscan cada semana y se verifica la firma de los datos descargados. Los años aún no anunciados se estiman según las reglas y se marcan como "estimado"; en un año sin datos la alarma suena solo según su regla de repetición.
+- Decisión de un script antes de sonar: AutoJs6 inicia un script registrado antes de sonar (60 segundos de forma predeterminada, de 15 segundos a 5 minutos), que puede omitir esta vez o dejarla sonar con otra etiqueta, otro sonido, otro texto leído u otra vibración solo esta vez; si el script no decide a tiempo, falla o AutoJs6 no está disponible, la alarma suena como siempre.
 - Retos para apagar (previstos para 1.3.0): aritmética, agitar, escribir una frase o una condición de script, todos con una válvula de seguridad para que la alarma siempre se pueda apagar.
 
 ******
@@ -110,6 +111,9 @@ a.bind("./after-wake.js", { events: ["dismiss"] });
 alarms.add({ time: "18:00", repeat: "FREQ=MONTHLY;BYDAY=-1FR", label: "Monthly report" });
 alarms.add({ time: "06:10", date: "2026-11-04", repeat: { freq: "daily", interval: 3 }, tag: "shift" });
 
+let w = alarms.add({ time: "07:30", holidays: { region: "CN", mode: "workdays" }, label: "Work" });
+w.bind("./weather-check.js", { events: ["beforeRing"], leadSeconds: 120 });
+
 alarms.on("ring", (e) => toast(e.label));
 
 alarms.timers.start("25m", { label: "Tea" });
@@ -122,6 +126,8 @@ alarms.system.setAlarm({ hour: 6, minute: 50, label: "Flight" });
 - `alarms.bind(id, script, options)` (o `bind` de una instantánea de alarma) registra un script que AutoJs6 inicia cuando ocurre un evento; el script lee el evento con `alarms.currentEvent()`. `alarms.on('ring', listener)` escucha en directo mientras se ejecuta un script.
 - `alarms.ringing`, `dismiss` y `snooze` atienden una alarma que suena; `alarms.ringtones.list()` enumera los tonos disponibles.
 - `alarms.timers.start(duration, options)` inicia un temporizador (en milisegundos o con una cadena como `"25m"` o `"1h 30m"`, de 1 segundo a 100 horas) y devuelve una instantánea del temporizador con los métodos `pause`, `resume`, `addTime`, `reset`, `cancel` y `bind`; `alarms.stopwatch` inicia, pausa, reanuda, marca vueltas y restablece el cronómetro. Ambos requieren el complemento 1.1.0 o posterior.
+- `alarms.holidays` consulta los datos de festivos (`regions`, `isHoliday`, `isWorkday`, `list`, `info`, `refresh`); la opción `holidays` de una alarma (por ejemplo `{ region: 'CN', mode: 'workdays' }`) fija su regla de festivos, y los `warnings` de `alarms.capabilities()` avisan de datos que faltan y de años estimados. Requiere el complemento 1.2.0 o posterior.
+- `alarms.bind(id, script, { events: ['beforeRing'], leadSeconds: 120 })` registra un script que se inicia antes de sonar; en él, `skip(reason)` de `alarms.currentEvent()` omite esta vez y `ring(overrides)` la hace sonar con otra etiqueta, otro sonido, otra lectura u otra vibración solo esta vez; `alarms.on('beforeRing', listener)` escucha en directo, con los mismos dos métodos en el evento. Requiere el complemento 1.2.0 o posterior.
 - `alarms.system` llama directamente a la aplicación de reloj del sistema (`setAlarm`, `setTimer`, `showAlarms`, `dismissAlarm`, `next` y más) y no necesita el complemento.
 
 ******
@@ -149,7 +155,7 @@ El complemento puede actuar como aplicación de alarmas del sistema y atender la
 
 El complemento es compatible con Android 7.0 (API 24) y posteriores. Activarlo en el centro de complementos, las herramientas del complemento y el módulo `alarms` requieren AutoJs6 6.8.1 (compilación interna 6641) o posterior. Con versiones anteriores de AutoJs6 (por ejemplo 6.8.0, compilación interna 6640), el centro de complementos indica que se necesita un AutoJs6 más reciente y no puede activar el complemento, y las herramientas del complemento y el módulo `alarms` no están disponibles; el complemento sigue funcionando como aplicación de alarmas independiente y sigue atendiendo las solicitudes del reloj del sistema. El módulo `alarms` solo es compatible con el motor Rhino, y su `alarms.system` no necesita el complemento.
 
-Verificado en estos dispositivos antes de publicar la versión 1.0.0 (datos en el apéndice D de la hoja de ruta); los temporizadores y el cronómetro de la versión 1.1.0 también se verificaron en un Sony XQ-AT72 y un Sony G8441, incluidos los temporizadores que siguen contando tras un reinicio (ver P7 de la hoja de ruta):
+Verificado en estos dispositivos antes de publicar la versión 1.0.0 (datos en el apéndice D de la hoja de ruta); los temporizadores y el cronómetro de la versión 1.1.0 también se verificaron en un Sony XQ-AT72 y un Sony G8441, incluidos los temporizadores que siguen contando tras un reinicio (ver P7 de la hoja de ruta); los festivos y la decisión de un script antes de sonar de la versión 1.2.0 se verificaron en un Sony XQ-AT72 junto con AutoJs6 (ver P8 de la hoja de ruta):
 
 | Dispositivo | Android | Resultado |
 | --- | --- | --- |
@@ -207,6 +213,14 @@ Las alarmas suenan, porque el complemento funciona antes del primer desbloqueo. 
 
 Los temporizadores conservan la hora de fin de antes del apagado, así que el tiempo con el dispositivo apagado también cuenta. Un temporizador que terminó con el dispositivo apagado suena al arrancar si lleva menos de 5 minutos de retraso; si no, deja una notificación de perdido. Cuando el sistema corrige su reloj tras el arranque, la hora de fin puede moverse unos segundos con él. El cronómetro queda en pausa tras un reinicio y cuenta hasta el arranque, por lo que incluye el tiempo apagado (un reinicio suele durar menos de un minuto).
 
+#### Son exactos los datos de festivos? Suena la alarma en los días laborables de recuperación?
+
+Los festivos y los días laborables de recuperación son tan exactos como los datos de origen (el proyecto de código abierto python-holidays). Con "Solo en días laborables" la alarma suena en los días de recuperación; con "Omitir festivos" solo cuenta la regla de repetición (una alarma de lunes a viernes no suena un sábado laborable de recuperación). Los años aún no anunciados se estiman según las reglas, se marcan como "estimado" en las pantallas de ajustes y de edición, y se corrigen con una actualización de los datos tras el anuncio; las actualizaciones se buscan cada semana y la pantalla de ajustes puede buscarlas en el momento.
+
+#### Qué pasa si el script `beforeRing` no decide a tiempo?
+
+La alarma suena como está configurada. El plazo es, de forma predeterminada, 5 segundos antes de la hora; si para entonces no hay decisión, el script falla, AutoJs6 no está disponible (por ejemplo, se forzó su detención) o el dispositivo no se ha desbloqueado desde un reinicio, la alarma suena como siempre. Si la regla de festivos ya omite esa vez, no se inicia ningún script `beforeRing`.
+
 ******
 
 ### Permisos Y Seguridad
@@ -223,13 +237,13 @@ Permisos que solicita el complemento y para qué sirven:
 - Servicio en primer plano (`FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SYSTEM_EXEMPTED`): mantiene el sonido mientras suena la alarma; también sirve para seguir activo cuando "Mantener en segundo plano" está activado en los ajustes (desactivado de forma predeterminada).
 - Vibración, bloqueo de activación y ajustes de audio (`VIBRATE`, `WAKE_LOCK`, `MODIFY_AUDIO_SETTINGS`): vibrar, mantener el dispositivo despierto mientras suena y restaurar después el volumen de alarma independiente.
 - Reordenar aplicaciones en ejecución (`REORDER_TASKS`, solo Android 7.0 - 8.1): cuando otras aplicaciones o scripts envían varias solicitudes de alarma casi al mismo tiempo, trae al frente una solicitud que el sistema no inició, para que se atienda cada solicitud. Se concede al instalar.
-- Red (`INTERNET`, `ACCESS_NETWORK_STATE`): solo para la búsqueda de actualizaciones de la pantalla de ajustes (desde 1.2.0, también para actualizar los datos de festivos). La búsqueda solo ocurre al abrir la lista de alarmas, con la frecuencia elegida, y evita las redes de uso medido de forma predeterminada; la programación, el sonido y el vínculo con AutoJs6 nunca usan la red.
+- Red (`INTERNET`, `ACCESS_NETWORK_STATE`): solo para la búsqueda de actualizaciones y la actualización de los datos de festivos. La búsqueda de actualizaciones ocurre al abrir la lista de alarmas, con la frecuencia elegida, y los datos de festivos se comprueban una vez por semana; ambas evitan las redes de uso medido de forma predeterminada. La programación, el sonido y el vínculo con AutoJs6 nunca usan la red.
 - Permiso de complemento de AutoJs6 (`org.autojs.permission.PLUGIN`): comunicarse con AutoJs6.
 
 El complemento reduce al máximo sus permisos:
 
 - Entradas protegidas: el servicio de capacidad y la entrada de activación exigen el permiso de complemento de AutoJs6 (`org.autojs.permission.PLUGIN`), así que otras aplicaciones no pueden llamarlos directamente; la entrada que recibe solicitudes del reloj del sistema exige que quien llama tenga `com.android.alarm.permission.SET_ALARM`.
-- Red: solo se usa para buscar actualizaciones del complemento (en GitHub; la búsqueda automática se puede desactivar en los ajustes); las alarmas y los datos personales nunca se envían.
+- Red: solo se usa para buscar actualizaciones del complemento y de los datos de festivos (en GitHub; la búsqueda automática de ambos se puede desactivar en los ajustes); se verifica la firma de los datos de festivos descargados, y las alarmas y los datos personales nunca se envían.
 - Almacenamiento: las alarmas se guardan en el directorio privado del complemento y se excluyen de la copia de seguridad en la nube; los tonos locales se importan con el selector de archivos del sistema, sin permiso de almacenamiento.
 - Acceso de scripts: mediante el módulo `alarms`, los scripts pueden leer y modificar todas las alarmas y todos los temporizadores del complemento, incluidos los creados en sus pantallas; los scripts registrados se guardan en AutoJs6, y las pantallas del complemento solo indican que una alarma tiene un script vinculado y permiten quitar ese vínculo.
 
@@ -269,6 +283,19 @@ Los planes, las decisiones de diseño y el progreso se registran como lista de v
 
 ******
 
+#### v1.2.0
+
+_2026/11/13_
+
+- `Aviso` alarms.holidays, la opción holidays de las alarmas y el evento beforeRing en los scripts requieren AutoJs6 6.8.1 (compilación interna 6641) o posterior y este complemento en la versión 1.2.0 o posterior; con el complemento 1.1.x o anterior las llamadas fallan con un mensaje que pide actualizar el complemento
+- `Aviso` Los festivos y los días laborables de recuperación son tan exactos como los datos de origen (el proyecto de código abierto python-holidays); los años aún no anunciados se estiman según las reglas, se marcan como "estimado" y se corrigen con una actualización de los datos tras el anuncio
+- `Función` Festivos: las alarmas tienen las opciones "Omitir festivos", "Solo en festivos" y "Solo en días laborables" (suena todos los días laborables, incluidos los de recuperación, nunca en fines de semana ni festivos); incluye datos de festivos de 250 países y regiones (con más de 600 subdivisiones) de 2020 a 2035, con los días laborables de recuperación de China continental y Taiwán
+- `Función` En los ajustes se elige la región de festivos predeterminada (deducida al principio de la región del sistema), y cada alarma puede usar su propia región; la lista de alarmas muestra cuántos festivos omite el próximo sonido; los años estimados se marcan como "estimado", ya que aún pueden moverse días libres o de recuperación
+- `Función` Las actualizaciones de los datos de festivos se buscan cada semana (se puede desactivar en los ajustes; de forma predeterminada no se descarga en redes de uso medido) y también se pueden buscar a mano en los ajustes; se verifica la firma de los datos descargados y, si falla, se siguen usando los datos actuales; en un año sin datos la alarma suena solo según su regla de repetición y nunca deja de sonar por ello
+- `Función` Decisión de un script antes de sonar (beforeRing): un script registrado se inicia antes de sonar (60 segundos de forma predeterminada, de 15 segundos a 5 minutos) y puede omitir esta vez o dejarla sonar con otra etiqueta, otro sonido, otro texto leído u otra vibración solo esta vez; si el script no decide a tiempo, falla o AutoJs6 no está disponible, la alarma suena como siempre
+- `Función` Novedades del módulo de scripts de AutoJs6: alarms.holidays (listar regiones, saber si un día es festivo o laborable, listar los festivos de un año, consultar y actualizar los datos), la opción holidays de las alarmas, skip / ring del evento beforeRing y los warnings de alarms.capabilities() sobre datos que faltan y años estimados (requiere AutoJs6 6.8.1; consulte la [documentación de AutoJs6](https://docs.autojs6.com/#/alarms))
+- `Función` Nueva herramienta del complemento holiday_check para saber, mediante el complemento MCP Server o plugins.tools.call, si un día es festivo o laborable en una región y el nombre del festivo; alarm_add y alarm_update aceptan la opción holidays
+
 #### v1.1.0
 
 _2026/11/12_
@@ -287,30 +314,6 @@ _2026/11/12_
 _2026/11/08_
 
 - `Corrección` Cuando otra aplicación o un script de AutoJs6 enviaba seguidas dos solicitudes de alarma del mismo tipo (por ejemplo, dos alarmas nuevas una tras otra, o dos llamadas a alarms.system.setAlarm dirigidas a este complemento) sin ninguna pantalla del complemento abierta, la segunda solicitud se ignoraba sin ningún aviso y su alarma no se creaba; ahora se atiende cada solicitud; en Android 7.0 - 8.1 esto requiere el permiso "reordenar aplicaciones en ejecución" (concedido al instalar)
-
-#### v1.0.0
-
-_2026/11/07_
-
-- `Aviso` Activar el complemento en el centro de complementos, las herramientas del complemento y el módulo de scripts alarms requieren AutoJs6 6.8.1 (compilación interna 6641) o posterior; con versiones anteriores de AutoJs6 (por ejemplo 6.8.0), el complemento solo funciona como aplicación de alarmas independiente
-- `Aviso` En ColorOS (OPPO, OnePlus, realme), active el inicio automático del complemento tanto en la información de la app como en Ajustes > Aplicaciones > Inicio automático; si no, las alarmas no suenan cuando se limpia el proceso del complemento (consulte README > Preguntas frecuentes)
-- `Función` Alarmas: alarmas únicas o repetidas con reglas de calendario RFC 5545 (días laborables, n-ésimo día de la semana del mes, fin de mes, intervalos de días, fecha de fin y número de repeticiones); se pueden excluir fechas o saltar solo la próxima
-- `Función` Sonido: tono del sistema o audio local importado, texto leído en voz alta, volumen independiente con aumento gradual, vibración personalizada, posponer y silencio automático, pantalla de alarma a pantalla completa sobre la pantalla de bloqueo, y alarmas coincidentes que suenan una tras otra
-- `Función` Programación: las alarmas se reprograman tras un reinicio, un cambio de hora o de zona horaria y una actualización del complemento, suenan antes del primer desbloqueo, y una alarma perdida suena en los 5 minutos siguientes o, si no, deja una notificación
-- `Función` Pantallas del complemento: lista de alarmas, pantalla de edición, pantalla de alarma, página de permisos y ajustes; el idioma, el modo nocturno y el color del tema siguen a AutoJs6 de forma predeterminada, y el icono del lanzador se puede cambiar
-- `Función` Ajustes: tono, vibración, aplazamiento y silencio automático predeterminados, formato de hora, búsqueda automática de actualizaciones, y la opción "Mantener en segundo plano" (una notificación silenciosa que hace menos probable que el sistema limpie el complemento)
-- `Función` La página de permisos comprueba una a una las notificaciones, las alarmas exactas, las alertas a pantalla completa, la optimización de batería, las restricciones en segundo plano y el inicio automático del fabricante, con filas de ayuda para la lista de inicio automático y las notificaciones de banner en ColorOS
-- `Función` Módulo de scripts de AutoJs6 alarms / $alarms (requiere AutoJs6 6.8.1, solo Rhino): crear, consultar, modificar y eliminar alarmas, escuchas de eventos, scripts registrados que AutoJs6 inicia cuando ocurre un evento, y la lista de tonos (consulte la [documentación de AutoJs6](https://docs.autojs6.com/#/alarms))
-- `Función` Herramientas del complemento alarm_add, alarm_list, alarm_update, alarm_remove, alarm_set_enabled, alarm_skip_next, alarm_upcoming, alarm_dismiss y alarm_snooze, que se pueden llamar mediante el complemento MCP Server o plugins.tools.call
-- `Función` Reloj del sistema: atiende las solicitudes de configurar, mostrar, apagar y posponer alarmas de otras aplicaciones
-- `Función` Un único APK para todos los dispositivos, incluidos los que usan páginas de memoria de 16 KB
-- `Dependencia` Se agrega AndroidX Core KTX 1.15.0
-- `Dependencia` Se agrega AndroidX Activity Compose 1.12.2
-- `Dependencia` Se agrega Jetpack Compose BOM 2026.09.00 (pantallas del complemento)
-- `Dependencia` Se agrega Kotlin Coroutines Android 1.11.0
-- `Dependencia` Se agrega Material Color Utilities 4.1.1 (colores del tema)
-- `Dependencia` Se agrega lib-recur 0.17.1 (calcula las reglas de repetición de las alarmas)
-- `Dependencia` Se agrega Desugar JDK Libs 2.1.5 (cálculos de fecha y zona horaria en Android 7.x)
 
 ##### Para más historial de versiones
 
@@ -338,7 +341,7 @@ py .python\check_repository.py
 
 ******
 
-El código del proyecto se distribuye bajo la [Mozilla Public License 2.0](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/LICENSE). Los componentes y datos de terceros se enumeran en los avisos de terceros.
+El código del proyecto se distribuye bajo la [Mozilla Public License 2.0](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/LICENSE). Los componentes y datos de terceros se enumeran en los avisos de terceros. Los datos de festivos se generan a partir del proyecto de código abierto python-holidays (licencia MIT); el texto completo de la licencia y la lista de colaboradores se publican junto con los datos.
 
 - [Avisos de terceros (THIRD_PARTY_NOTICES.md)](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/blob/master/THIRD_PARTY_NOTICES.md)
 

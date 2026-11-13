@@ -684,7 +684,7 @@ P0 (插件骨架, 含 P0.2 评估)          P1.1 - P1.3 (宿主契约, 桥接, �
 
 ### P8.8 文档与 1.2.0 发布
 
-- [ ] (文档) 节假日与 `beforeRing` 章节 (写明补班日准确性完全取决于上游数据, D17), d.ts, Ace, Offline Docs; (插件) README / changelog; (发布) R1 - R5. 证据: 提交 hash, E5.
+- [ ] (文档) 节假日与 `beforeRing` 章节 (写明补班日准确性完全取决于上游数据, D17), d.ts, Ace, Offline Docs; (插件) README / changelog; (发布) R1 - R5. 证据: 提交 hash, E5. 进度 (2026-11-13, chime-p8-release, 文档部分完成, 均只在本地): 文档站逐项核对后只缺 Q50 (a) (`only` / `workdays` 模式中本来就不响的日子不发 `skip`), 补在 `api/alarms.md` 的 `HolidayFilter` 一节 `c450944`, 生成提交 `b39629f` (文档 versionCode 215); d.ts `cc839d0` (`HolidayFilter` 的 Q50, 多个绑定的 `leadSeconds` 取最小, `holidayDataVersion` 即 `info().version`, `warnings` 三种; `npm test` 的 `verify-runtime-declarations` 停在兄弟仓库 Bun runtime 他人在途的 `pdf.control`, 与本改动无关); Ace `e0e590c` (复制 alarms d.ts, VERSION_BUILD 409, `generate-editor-assets` 与 `:app:verifyAutoJs6LspRuntime` 通过); Offline Docs `533cff6` (VERSION_BUILD 291). 插件 README 源 10 语言 (简介, 状态说明, 功能: 插件工具含 `holiday_check`, 节假日, 响铃前由脚本决定; `alarms.holidays` 与 `beforeRing` 两条 API 说明与脚本示例, 两条 FAQ, 网络权限与安全说明, 兼容性说明, 许可里的 python-holidays (MIT)), changelog v1.2.0 (两条提示, 六条新增) 10 语言, `plugin_description` 11 个 values 目录随新简介, VERSION_NAME 1.2.0, 提交见 docs(readme) 1.2.0 一笔.
 
 ---
 

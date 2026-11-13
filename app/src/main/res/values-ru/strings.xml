@@ -233,7 +233,7 @@
     <string name="permissions_title">Разрешения и фоновая работа</string>
     <string name="permissions_vendor_banner">Баннерные уведомления</string>
     <string name="permissions_vendor_banner_guide">Система не сообщает это состояние. Включите \"Баннер\" в настройках уведомлений этого плагина, иначе экран звонка не будет открываться сам на экране блокировки, если не разрешён показ поверх других приложений.</string>
-    <string name="plugin_description">Будильник, таймеры и секундомер с календарными правилами повтора, озвучиванием и запуском скриптов при звонке</string>
+    <string name="plugin_description">Будильник, таймеры и секундомер с календарными правилами повтора, праздниками, озвучиванием и запуском скриптов при звонке</string>
     <string name="release_history_title">История версий</string>
     <string name="release_history_unavailable">Не удалось загрузить историю версий</string>
     <string name="ring_action_dismiss">Выключить</string>

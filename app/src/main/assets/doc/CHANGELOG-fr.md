@@ -4,6 +4,19 @@
 
 ******
 
+# v1.2.0
+
+###### 2026/11/13
+
+* `Note` alarms.holidays, l'option holidays des alarmes et l'événement beforeRing dans les scripts demandent AutoJs6 6.8.1 (version interne 6641) ou ultérieure et ce plugin en version 1.2.0 ou ultérieure; avec le plugin 1.1.x ou antérieur, les appels échouent avec un message invitant à mettre à jour le plugin
+* `Note` Les jours fériés et les jours ouvrés de récupération sont aussi exacts que les données en amont (le projet open source python-holidays); les années pas encore annoncées sont estimées d'après les règles et marquées "estimé", puis corrigées par une mise à jour des données après l'annonce
+* `Fonctionnalité` Jours fériés: les alarmes gagnent les options "Sauter les jours fériés", "Seulement les jours fériés" et "Seulement les jours ouvrés" (sonne chaque jour ouvré, jours ouvrés de récupération compris, jamais le week-end ni les jours fériés); les données de 250 pays et régions (dont plus de 600 subdivisions) de 2020 à 2035 sont intégrées, avec les jours ouvrés de récupération de la Chine continentale et de Taïwan
+* `Fonctionnalité` L'écran des paramètres choisit la région de jours fériés par défaut (déduite d'abord de la région du système), et chaque alarme peut avoir sa propre région; la liste des alarmes indique combien de jours fériés la prochaine sonnerie saute; les années estimées sont marquées "estimé", car des jours de congé ou de récupération peuvent encore être déplacés
+* `Fonctionnalité` Les mises à jour des données des jours fériés sont recherchées chaque semaine (désactivable dans les paramètres; pas de téléchargement sur les réseaux limités par défaut) et peuvent être recherchées à la main dans les paramètres; la signature des données téléchargées est vérifiée et les données actuelles restent en service en cas d'échec; une année sans données, l'alarme sonne selon sa seule règle de répétition et ne se tait jamais pour cette raison
+* `Fonctionnalité` Décision d'un script avant la sonnerie (beforeRing): un script enregistré est lancé avant la sonnerie (60 secondes par défaut, de 15 secondes à 5 minutes) et peut sauter cette sonnerie, ou la laisser sonner avec un autre libellé, son, texte lu ou vibreur pour cette fois; si le script ne décide pas à temps, échoue ou si AutoJs6 n'est pas disponible, l'alarme sonne comme prévu
+* `Fonctionnalité` Nouveautés du module de script AutoJs6: alarms.holidays (lister les régions, savoir si un jour est férié ou ouvré, lister les jours fériés d'une année, consulter et actualiser les données), l'option holidays des alarmes, skip / ring de l'événement beforeRing, et les warnings de alarms.capabilities() sur les données manquantes et les années estimées (demande AutoJs6 6.8.1; voir la [documentation d'AutoJs6](https://docs.autojs6.com/#/alarms))
+* `Fonctionnalité` Nouvel outil du plugin holiday_check pour savoir, via le plugin MCP Server ou plugins.tools.call, si un jour est férié ou ouvré dans une région et le nom du jour férié; alarm_add et alarm_update acceptent l'option holidays
+
 # v1.1.0
 
 ###### 2026/11/12

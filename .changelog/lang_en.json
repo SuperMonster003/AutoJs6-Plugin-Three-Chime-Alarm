@@ -5,6 +5,21 @@
   "changelog_label_improvement": "Improvement",
   "changelog_label_dependency": "Dependency",
   "$data": {
+    "v1.2.0": {
+      "released_date": "2026/11/13",
+      "hint": [
+        "alarms.holidays, the holidays option of alarms and the beforeRing event in scripts need AutoJs6 {{ required_host_version_name }} (internal build {{ required_host_version_code }}) or later and this plugin 1.2.0 or later; with plugin 1.1.x or earlier, calls fail with a message asking to update the plugin",
+        "Holidays and makeup workdays are only as accurate as the upstream data (the open source project python-holidays); years not yet announced are estimated by rule and marked \"estimated\", and are corrected by a data update once announced"
+      ],
+      "feature": [
+        "Holidays: alarms get the options \"Skip holidays\", \"Only on holidays\" and \"Only on workdays\" (rings on every workday, makeup workdays included, never on weekends or holidays); holiday data for 250 countries and regions (with more than 600 subdivisions) from 2020 to 2035 is built in, with the makeup workdays of mainland China and Taiwan",
+        "The settings screen chooses the default holiday region (first taken from the system region), and each alarm can use its own region; the alarm list shows how many holidays the next ring skips; estimated years are marked \"estimated\", as days off and makeup workdays may still change",
+        "Holiday data is checked for updates every week (can be turned off on the settings screen; metered networks are not used by default) and can be checked by hand on the settings screen; downloaded data is signature checked and the current data stays in use when the check fails; in a year without data an alarm rings by its repeat rule alone and is never silenced for that reason",
+        "Decided by a script before the ring (beforeRing): a registered script is started before the ring (60 seconds by default, 15 seconds to 5 minutes) and can skip this ring, or let it ring with a different label, sound, spoken text or vibration this time only; when the script does not decide in time, fails or AutoJs6 is unavailable, the alarm rings as usual",
+        "New in the AutoJs6 script module: alarms.holidays (list regions, tell holidays and workdays, list a year's holidays, show and refresh the data), the holidays option of alarms, skip / ring of the beforeRing event, and warnings in alarms.capabilities() about missing data and estimated years (needs AutoJs6 {{ required_host_version_name }}; see the [AutoJs6 documentation](https://docs.autojs6.com/#/alarms))",
+        "New plugin tool holiday_check tells through the MCP Server plugin or plugins.tools.call whether a day is a holiday or a workday in a region and the holiday's name; alarm_add and alarm_update accept the holidays option"
+      ]
+    },
     "v1.1.0": {
       "released_date": "2026/11/12",
       "hint": [
