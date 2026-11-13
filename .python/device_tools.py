@@ -1,22 +1,26 @@
-"""The plugin tools of 3-Chime Alarm on one device (roadmap P4.1, since 1.1.0 also P7.6).
+"""The plugin tools of 3-Chime Alarm on one device (roadmap P4.1, since 1.1.0 also P7.6, since 1.2.0 also P8.7).
 
     py .python/device_tools.py <serial> [--modes provider,host] [--apk <debug apk>] [--no-install]
 
 - provider: installs the debug APK over the installed one (`adb install -r`, never uninstalled) and the androidTest APK,
   runs ChimeToolServiceTest (the provider through its Binder interface, every call through Parcels: discovery and the
   capability, the catalog, the nine alarm tools on test alarms 30 days ahead, the three timer tools on a 25-minute timer,
-  refusals and tool errors), then uninstalls the androidTest APK.
+  `holiday_check` and the `holidays` option on a disabled alarm, refusals and tool errors), then uninstalls the
+  androidTest APK.
 - host: needs a host with the alarm contract (versionCode 6641 or later, roadmap Q12): pushes one script to
   /sdcard/Download/autojs6-chime-tools and runs it through RunIntentActivity. It checks `plugins.tools.list()` (the nine
-  `chime_alarm_*` and the three `chime_timer_*` tools, their risks, no stopwatch tool) and `plugins.tools.providers()` (the
-  plugin as an available official provider), then
+  `chime_alarm_*`, the three `chime_timer_*` tools and `chime_holiday_check`, their risks, no stopwatch tool) and
+  `plugins.tools.providers()` (the plugin as an available official provider), then
   calls every tool through `plugins.tools.call` on alarms tagged p41-host (add -> list -> update -> set_enabled ->
   skip_next -> upcoming -> remove), checks that `alarms.get` sees the source `tool`, and that the host refuses an unknown
   argument and an out-of-range count before the plugin while the plugin refuses a local ringtone path and an hourly rule.
   The timer tools run on a 25-minute timer labelled p76-host (start -> list -> pause -> add -> resume -> reset -> cancel);
   the host refuses a duration below 1 s and the plugin refuses text without a unit and add without duration. Without the
-  exact alarm permission only NOT_READY is checked. Every alarm and timer the script made is removed; nothing rings (the
-  alarms lie 30 days ahead, the timer is cancelled long before it ends, dismiss / snooze name an unknown id).
+  exact alarm permission only NOT_READY is checked. `chime_holiday_check` answers CN 2026-10-01 (a holiday with a name),
+  CN 2026-10-10 (a makeup workday) and today, and refuses CN 2019 with HOLIDAY_DATA_MISSING; `chime_alarm_add` takes a
+  `holidays` filter (region canonical), `chime_alarm_update` replaces it whole and clears it, and the plugin refuses
+  `workdays` with `at`. Every alarm and timer the script made is removed; nothing rings (the alarms lie 30 days ahead or
+  stay disabled, the timer is cancelled long before it ends, dismiss / snooze name an unknown id).
 
 Output: one PASS / FAIL / SKIP line per check with counts and codes only; never tokens, labels of other alarms or full
 tool lists. Nothing here taps the screen or answers a dialog.
@@ -42,7 +46,7 @@ REMOTE = "/sdcard/Download/autojs6-chime-tools"
 MIN_HOST = 6641
 TOOLS = [
     "alarm_add", "alarm_list", "alarm_update", "alarm_remove", "alarm_set_enabled", "alarm_skip_next", "alarm_upcoming", "alarm_dismiss", "alarm_snooze",
-    "timer_start", "timer_list", "timer_control",
+    "timer_start", "timer_list", "timer_control", "holiday_check",
 ]
 
 SCRIPT = """
@@ -92,8 +96,9 @@ check('chime tools listed', function () {
     mine.forEach(function (t) { risks[t.tool] = t.risk; });
     assert(risks.alarm_list === 'readonly' && risks.alarm_upcoming === 'readonly' && risks.alarm_add === 'write' && risks.alarm_remove === 'destructive', JSON.stringify(risks));
     assert(risks.timer_start === 'write' && risks.timer_list === 'readonly' && risks.timer_control === 'write', JSON.stringify(risks));
+    assert(risks.holiday_check === 'readonly', 'holiday_check ' + risks.holiday_check);
     assert(names.filter(function (n) { return n.indexOf('stopwatch') >= 0; }).length === 0, 'a stopwatch tool');
-    return names.length + ' tools, list/upcoming/timer_list readonly, remove destructive, no stopwatch';
+    return names.length + ' tools, list/upcoming/timer_list/holiday_check readonly, remove destructive, no stopwatch';
 });
 check('provider available and official', function () {
     var mine = plain(plugins.tools.providers()).filter(function (p) { return p.packageName === '@PKG@'; });
@@ -205,6 +210,31 @@ if (exact) {
 } else {
     check('timer_start NOT_READY without exact alarms', function () { return refused('timer_start', { duration: '25m', label: TIMER }, 'PERMISSION_REQUIRED'); });
 }
+check('holiday_check holiday / makeup workday / today', function () {
+    var national = call('holiday_check', { date: '2026-10-01', region: 'cn' });
+    var r = national.result;
+    assert(r.region === 'CN' && r.isHoliday === true && r.isWorkday === false && typeof r.name === 'string' && r.name.length > 0, JSON.stringify(r).slice(0, 160));
+    var makeup = call('holiday_check', { date: '2026-10-10', region: 'CN' }).result;
+    assert(makeup.isWorkday === true && makeup.isHoliday === false && makeup.name === undefined, JSON.stringify(makeup).slice(0, 160));
+    var today = call('holiday_check', {}).result;
+    assert(today.date === day(0) && typeof today.region === 'string', JSON.stringify(today).slice(0, 160));
+    return 'CN 10-01 holiday, 10-10 makeup workday, today ' + today.region + ' estimated ' + r.estimated + ', ' + national.ms + ' ms';
+});
+check('plugin refuses a year outside the holiday data', function () { return refused('holiday_check', { date: '2019-01-01', region: 'CN' }, 'HOLIDAY_DATA_MISSING'); });
+check('holiday_check refuses a 9-character date', function () { return refused('holiday_check', { date: '2026-10-1' }, 'date'); });
+check('alarm_add / alarm_update holidays', function () {
+    var a = call('alarm_add', { time: '04:30', date: date, tag: TAG, enabled: false, holidays: { mode: 'workdays', region: 'cn' } }).result.alarm;
+    created.push(a.id);
+    assert(a.holidays && a.holidays.mode === 'workdays' && a.holidays.region === 'CN', JSON.stringify(a.holidays));
+    var u = call('alarm_update', { id: a.id, holidays: { mode: 'skip' } }).result.alarm;
+    assert(u.holidays.mode === 'skip' && u.holidays.region === undefined, 'replaced ' + JSON.stringify(u.holidays));
+    var c = call('alarm_update', { id: a.id, clear: ['holidays'] }).result.alarm;
+    assert(c.holidays === undefined, 'cleared ' + JSON.stringify(c.holidays));
+    assert(call('alarm_remove', { id: a.id }).result.removed === true, 'removed');
+    created = created.filter(function (x) { return x !== a.id; });
+    return 'canonical region, replaced whole, cleared';
+});
+check('plugin refuses workdays with at', function () { return refused('alarm_add', { at: date + 'T04:30:00', enabled: false, holidays: { mode: 'workdays' } }, 'INVALID_OPTIONS'); });
 created.forEach(function (x) { try { alarms.remove(x); } catch (e) { /* gone */ } });
 timers.forEach(function (x) { try { call('timer_control', { id: x, action: 'cancel' }); } catch (e) { /* gone */ } });
 files.write(DIR + '/result.json', JSON.stringify({ seconds: Math.round((Date.now() - started) / 1000), checks: checks }));

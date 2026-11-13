@@ -43,15 +43,16 @@ import java.util.concurrent.atomic.AtomicReference
  * Roadmap P4.1 (E2): the plugin tool provider through its Binder interface as AutoJs6 calls it for `plugins.tools.call`
  * (every call goes through Parcels, [MarshallingBinder]): discovery and the capability, the catalog, then each 1.0.0
  * tool on alarms tagged [TAG] (add -> list -> update -> set_enabled -> skip_next -> upcoming -> remove), the 1.1.0 timer
- * tools on a 25-minute timer labelled [TAG] (start -> list -> pause -> add -> resume -> reset -> cancel, roadmap P7.6), the
- * refusals of the base class and the tool errors. Rings are never started: the alarms lie 30 days ahead, the timer is
+ * tools on a 25-minute timer labelled [TAG] (start -> list -> pause -> add -> resume -> reset -> cancel, roadmap P7.6),
+ * the 1.2.0 `holiday_check` and `holidays` option on the holiday data of the device (roadmap P8.7), the refusals of the
+ * base class and the tool errors. Rings are never started: the alarms lie 30 days ahead or stay disabled, the timer is
  * cancelled long before it ends, and dismiss / snooze name an unknown id. Every alarm and timer the test made is removed.
  * Results are `ChimeDeviceRun` log lines with counts only.
  * zh-CN: 路线图 P4.1 (E2): 像 AutoJs6 为 `plugins.tools.call` 调用那样经 Binder 接口测试插件工具提供方 (每次调用都经 Parcel, [MarshallingBinder]): 发现与能力,
  * 目录, 然后在标签为 [TAG] 的闹钟上测试每个 1.0.0 工具 (add -> list -> update -> set_enabled -> skip_next -> upcoming -> remove), 在名称为 [TAG] 的
- * 25 分钟计时器上测试 1.1.0 的计时器工具 (start -> list -> pause -> add -> resume -> reset -> cancel, 路线图 P7.6), 基类的拒绝与工具错误.
- * 从不开始响铃: 闹钟都在 30 天后, 计时器远在到点前取消, dismiss / snooze 使用不存在的 id. 测试建的闹钟与计时器全部删除. 结果为只含数量的
- * `ChimeDeviceRun` 日志行.
+ * 25 分钟计时器上测试 1.1.0 的计时器工具 (start -> list -> pause -> add -> resume -> reset -> cancel, 路线图 P7.6), 在设备的节假日数据上测试 1.2.0 的
+ * `holiday_check` 与 `holidays` 选项 (路线图 P8.7), 基类的拒绝与工具错误. 从不开始响铃: 闹钟都在 30 天后或保持停用, 计时器远在到点前取消,
+ * dismiss / snooze 使用不存在的 id. 测试建的闹钟与计时器全部删除. 结果为只含数量的 `ChimeDeviceRun` 日志行.
  */
 @RunWith(AndroidJUnit4::class)
 class ChimeToolServiceTest {
@@ -184,6 +185,41 @@ class ChimeToolServiceTest {
         assertFalse(call(provider, ChimeToolCatalog.TOOL_TIMER_CONTROL, JSONObject().put("id", id).put("action", "cancel")).result().getBoolean("removed"))
         timers.clear()
         log("timers exact=true tools=3 refusals=3")
+    }
+
+    @Test
+    fun holidayToolsRoundTrip() = withProvider { provider ->
+        val national = call(provider, ChimeToolCatalog.TOOL_HOLIDAY_CHECK, JSONObject().put("date", "2026-10-01").put("region", "cn")).result()
+        assertEquals("CN", national.getString("region"))
+        assertTrue(national.getBoolean("isHoliday"))
+        assertFalse(national.getBoolean("isWorkday"))
+        assertTrue("a holiday has a name", national.optString("name").isNotEmpty())
+        val makeup = call(provider, ChimeToolCatalog.TOOL_HOLIDAY_CHECK, JSONObject().put("date", "2026-10-10").put("region", "CN")).result()
+        assertTrue("CN 2026-10-10 is a makeup workday", makeup.getBoolean("isWorkday"))
+        assertFalse(makeup.has("name"))
+        val today = call(provider, ChimeToolCatalog.TOOL_HOLIDAY_CHECK, JSONObject()).result()
+        assertEquals(LocalDate.now().toString(), today.getString("date"))
+        val missing = call(provider, ChimeToolCatalog.TOOL_HOLIDAY_CHECK, JSONObject().put("date", "2019-01-01").put("region", "CN"))
+        assertEquals(PluginToolErrorCodes.INVALID_ARGUMENTS, missing.code)
+        assertTrue(missing.message!!.startsWith("HOLIDAY_DATA_MISSING: "))
+
+        val day = LocalDate.now().plusDays(30).toString()
+        val added = call(provider, ChimeToolCatalog.TOOL_ADD, JSONObject().put("time", "04:30").put("date", day).put("tag", TAG).put("enabled", false)
+            .put("holidays", JSONObject().put("mode", "workdays").put("region", "cn"))).result().getJSONObject("alarm")
+        val id = added.getString("id").also(created::add)
+        assertEquals("workdays", added.getJSONObject("holidays").getString("mode"))
+        assertEquals("CN", added.getJSONObject("holidays").getString("region"))
+        val replaced = call(provider, ChimeToolCatalog.TOOL_UPDATE, JSONObject().put("id", id).put("holidays", JSONObject().put("mode", "skip")))
+            .result().getJSONObject("alarm").getJSONObject("holidays")
+        assertEquals("skip", replaced.getString("mode"))
+        assertFalse("the whole filter is replaced", replaced.has("region"))
+        assertFalse(call(provider, ChimeToolCatalog.TOOL_UPDATE, JSONObject().put("id", id).put("clear", JSONArray(listOf("holidays")))).result().getJSONObject("alarm").has("holidays"))
+        val workdaysAt = call(provider, ChimeToolCatalog.TOOL_ADD, JSONObject().put("at", "${day}T04:30:00").put("enabled", false).put("holidays", JSONObject().put("mode", "workdays")))
+        assertEquals(PluginToolErrorCodes.INVALID_ARGUMENTS, workdaysAt.code)
+        assertTrue(workdaysAt.message!!.startsWith("INVALID_OPTIONS: "))
+        assertTrue(call(provider, ChimeToolCatalog.TOOL_REMOVE, JSONObject().put("id", id)).result().getBoolean("removed"))
+        created.clear()
+        log("holidays check=4 option=4")
     }
 
     @Test

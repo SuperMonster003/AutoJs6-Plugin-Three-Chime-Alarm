@@ -1,5 +1,6 @@
 package io.github.supermonster003.autojs6.plugin.three.chime.alarm.tool
 
+import org.autojs.plugin.alarm.api.AlarmContract
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -11,10 +12,11 @@ import org.junit.Test
  * catalog (host `docs/dev/plugin-tool-protocol-v1.md`, "Catalog" and "Schema subset"), so no tool is dropped on a
  * device: names and lengths, risks, time limits and concurrency, closed objects, the keywords of each node type,
  * `oneOf` and array items, enums and defaults that match their node. It also pins the tool set, the AlarmOptions
- * parameters without local files and later features, and English ASCII descriptions.
+ * parameters without local files and with the `holidays` option of 1.2.0 (roadmap P8.7, T192, T193) but without later
+ * features, `holiday_check`, and English ASCII descriptions.
  * zh-CN: 路线图 P4.1 (附录 A 第 10 节, T17, T89 - T93): 目录遵守宿主加载目录时的规则 (宿主协议文档 "Catalog" 与 "Schema subset"), 设备上不会有工具
- * 被丢弃: 名称与长度, 风险, 时限与并发, 封闭对象, 各类节点的关键字, `oneOf` 与数组元素, 与节点相符的枚举和默认值. 同时固定工具集合, 不含本地文件与
- * 之后功能的 AlarmOptions 参数, 以及英文 ASCII 说明.
+ * 被丢弃: 名称与长度, 风险, 时限与并发, 封闭对象, 各类节点的关键字, `oneOf` 与数组元素, 与节点相符的枚举和默认值. 同时固定工具集合, 不含本地文件,
+ * 含 1.2.0 的 `holidays` 选项 (路线图 P8.7, T192, T193) 但不含之后功能的 AlarmOptions 参数, `holiday_check`, 以及英文 ASCII 说明.
  */
 class ChimeToolCatalogTest {
 
@@ -30,11 +32,11 @@ class ChimeToolCatalogTest {
         (tool(name)["inputSchema"] as Map<String, Any?>)["properties"] as Map<String, Map<String, Any?>>
 
     @Test
-    fun `the catalog names the twelve tools under the short name chime`() {
+    fun `the catalog names the thirteen tools under the short name chime`() {
         assertEquals("chime", catalog["shortName"])
         assertTrue(Regex("^[a-z][a-z0-9]{1,15}$").matches(ChimeToolCatalog.SHORT_NAME))
         assertEquals(ChimeToolCatalog.TOOLS, tools.map { it["name"] })
-        assertEquals(12, tools.size)
+        assertEquals(13, tools.size)
         assertTrue("at most 256 KiB", ChimeToolCatalog.JSON.toByteArray().size <= 256 * 1024)
         tools.forEach { tool ->
             val name = tool["name"] as String
@@ -61,6 +63,7 @@ class ChimeToolCatalogTest {
                 "alarm_add" to "write", "alarm_list" to "readonly", "alarm_update" to "write", "alarm_remove" to "destructive",
                 "alarm_set_enabled" to "write", "alarm_skip_next" to "write", "alarm_upcoming" to "readonly", "alarm_dismiss" to "write",
                 "alarm_snooze" to "write", "timer_start" to "write", "timer_list" to "readonly", "timer_control" to "write",
+                "holiday_check" to "readonly",
             ),
             risks,
         )
@@ -72,7 +75,7 @@ class ChimeToolCatalogTest {
         assertEquals(setOf("id") + ChimeToolArguments.OPTION_KEYS + "clear", properties("alarm_update").keys)
         val text = ChimeToolCatalog.JSON
         assertFalse("no special file parameters (T91)", text.contains("x-autojs6-type"))
-        listOf("holidays", "dismiss", "challenge", "beforeRing", "bind", "script\"").forEach { assertFalse("$it is not offered (T17)", properties("alarm_add").containsKey(it)) }
+        listOf("dismiss", "challenge", "beforeRing", "bind", "script\"").forEach { assertFalse("$it is not offered (T17)", properties("alarm_add").containsKey(it)) }
         assertFalse(text.contains("\"beforeRing\""))
         assertEquals(setOf("source", "tag", "enabled", "label", "limit"), properties("alarm_list").keys)
         assertEquals(setOf("count", "source", "tag", "enabled", "label"), properties("alarm_upcoming").keys)
@@ -85,6 +88,27 @@ class ChimeToolCatalogTest {
         val clear = (properties("alarm_update").getValue("clear")["items"] as Map<String, Any?>)["enum"]
         assertEquals(ChimeToolCatalog.CLEARABLE, clear)
         assertNotNull(properties("alarm_upcoming").getValue("count")["default"])
+    }
+
+    @Test
+    fun `the holidays option and holiday_check follow the holiday contract (T192, T193)`() {
+        val holidays = properties("alarm_add").getValue("holidays")
+        assertEquals(properties("alarm_add").getValue("holidays"), properties("alarm_update").getValue("holidays"))
+        assertEquals(listOf("mode"), holidays["required"])
+        assertEquals(false, holidays["additionalProperties"])
+        @Suppress("UNCHECKED_CAST")
+        val members = holidays["properties"] as Map<String, Map<String, Any?>>
+        assertEquals(setOf("mode", "region"), members.keys)
+        assertEquals(AlarmContract.HOLIDAY_MODES.toList(), members.getValue("mode")["enum"])
+        assertTrue("holidays can be cleared", "holidays" in ChimeToolCatalog.CLEARABLE)
+
+        assertEquals(setOf("date", "region"), properties("holiday_check").keys)
+        @Suppress("UNCHECKED_CAST")
+        val check = tool("holiday_check")["inputSchema"] as Map<String, Any?>
+        assertFalse("every argument has a default", check.containsKey("required"))
+        assertEquals(members.getValue("region") - "description", properties("holiday_check").getValue("region") - "description")
+        val description = tool("holiday_check")["description"] as String
+        listOf("isHoliday", "isWorkday", "estimated", "HOLIDAY_DATA_MISSING", "INVALID_ARGUMENTS").forEach { assertTrue(it, description.contains(it)) }
     }
 
     @Test

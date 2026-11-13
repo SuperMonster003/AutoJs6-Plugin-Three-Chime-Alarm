@@ -1,5 +1,6 @@
 package io.github.supermonster003.autojs6.plugin.three.chime.alarm.tool
 
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.RepositoryFiles
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmException
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmOptionsValidator
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmRecord
@@ -7,9 +8,15 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.Ala
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmStore
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.api.AlarmApi
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.api.BindingHints
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.api.HolidayApi
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.api.TimerApi
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.event.AlarmEventBus
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.event.ChangeEvents
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.holiday.CatalogSignatureVerifier
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.holiday.DirectorySource
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.holiday.HolidayData
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.holiday.HolidayJudge
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.holiday.HolidayStore
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.ring.RingCoordinator
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.ring.RingtoneLibrary
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.schedule.AlarmPlanner
@@ -24,6 +31,7 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.timer.Tim
 import org.autojs.plugin.alarm.api.AlarmContract
 import org.autojs.plugin.alarm.api.AlarmErrorCodes
 import org.autojs.plugin.alarm.api.AlarmEvent
+import org.autojs.plugin.alarm.api.AlarmFeatures
 import org.autojs.plugin.tool.api.PluginToolErrorCodes
 import org.autojs.plugin.tool.api.PluginToolException
 import org.junit.Assert.assertEquals
@@ -41,12 +49,13 @@ import java.time.ZoneId
 import java.util.Locale
 
 /**
- * Roadmap P4.1 (T18, T89 - T95) and P7.6 (T126 - T129): every tool on the real repository, scheduler, timer engine and
- * ring state through the JSON a provider receives and answers: the `AlarmOptions` shapes, the source `tool`, filters
- * and limits, the update merge and `clear`, rings handled by `tool`, the timer durations and actions, and the alarm
- * errors as tool errors.
- * zh-CN: 路线图 P4.1 (T18, T89 - T95) 与 P7.6 (T126 - T129): 在真实仓库, 调度器, 计时器引擎与响铃状态上, 经提供方收发的 JSON 测试每个工具:
- * `AlarmOptions` 的各种写法, 来源 `tool`, 筛选与上限, 修改的合并与 `clear`, 以 `tool` 处理响铃, 计时器的时长与动作, 以及闹钟错误到工具错误的转换.
+ * Roadmap P4.1 (T18, T89 - T95), P7.6 (T126 - T129) and P8.7 (T192 - T195): every tool on the real repository,
+ * scheduler, timer engine, ring state and bundled holiday data through the JSON a provider receives and answers: the
+ * `AlarmOptions` shapes, the source `tool`, filters and limits, the update merge and `clear`, rings handled by `tool`,
+ * the timer durations and actions, `holiday_check` and the `holidays` option, and the alarm errors as tool errors.
+ * zh-CN: 路线图 P4.1 (T18, T89 - T95), P7.6 (T126 - T129) 与 P8.7 (T192 - T195): 在真实仓库, 调度器, 计时器引擎, 响铃状态与内置节假日数据上,
+ * 经提供方收发的 JSON 测试每个工具: `AlarmOptions` 的各种写法, 来源 `tool`, 筛选与上限, 修改的合并与 `clear`, 以 `tool` 处理响铃, 计时器的时长与动作,
+ * `holiday_check` 与 `holidays` 选项, 以及闹钟错误到工具错误的转换.
  */
 class ChimeToolsTest {
 
@@ -65,30 +74,41 @@ class ChimeToolsTest {
 
     @Before
     fun setUp() {
+        val set = HolidayStore(
+            temp.newFolder("holidays"), DirectorySource(RepositoryFiles.path("app/src/main/assets/holiday-calendars").toFile()),
+            CatalogSignatureVerifier.official(),
+        ).load()
+        val data = HolidayData(set) { "CN" }
+        val judge = HolidayJudge { date, region -> data.day(date, region) }
+        val region: (String) -> String = { set.region(it).code }
+        val validator = AlarmOptionsValidator(features = setOf(AlarmFeatures.ALARMS, AlarmFeatures.HOLIDAYS))
         lateinit var created: AlarmSchedule
         val repository = AlarmRepository(
             store = AlarmStore(File(temp.root, "alarms"), clock = { now }),
+            validator = validator,
             clock = { now },
             deviceZone = { SHANGHAI },
             planner = { created.plan(it) },
             schedulingAllowed = { exactAllowed },
+            holidayJudge = judge,
+            holidayRegion = region,
         )
         val bus = AlarmEventBus().also { it.addListener(events::add) }
-        created = AlarmSchedule(repository, Port(), bus, clock = { now }, deviceZone = { SHANGHAI })
+        created = AlarmSchedule(repository, Port(), bus, clock = { now }, deviceZone = { SHANGHAI }, judge = judge)
         schedule = created
-        val validator = AlarmOptionsValidator()
         timers = TimerEngine(TimerStore(File(temp.root, TimerStore.FILE_NAME)) { validator.timerOptions(it) }, Timers(), clock = { now }, elapsed = { up }, boot = { 1 })
         rings = RingCoordinator(repository, schedule, bus, clock = { now }, timers = timers)
         repository.addListener { bus.emit(ChangeEvents.of(it, now)) }
         val hints = BindingHints(File(temp.root, BindingHints.FILE_NAME))
         val library = RingtoneLibrary(temp.root, { "audio/mpeg" }, { now })
         val api = AlarmApi(
-            repository, rings, hints, library, { emptyList() }, clock = { now }, deviceZone = { SHANGHAI }, locale = { Locale.ENGLISH },
-            source = AlarmContract.SOURCE_TOOL, by = AlarmContract.BY_TOOL,
+            repository, rings, hints, library, { emptyList() }, validator = validator, clock = { now }, deviceZone = { SHANGHAI },
+            locale = { Locale.ENGLISH }, source = AlarmContract.SOURCE_TOOL, by = AlarmContract.BY_TOOL, judge = judge, holidayRegion = region,
         )
         val stopwatch = Stopwatch(JsonDocumentFile(File(temp.root, Stopwatch.FILE_NAME), Stopwatch.FORMAT, Stopwatch.VERSION), { now }, { up }, { 1 })
         val timerApi = TimerApi(timers, stopwatch, rings, validator, clock = { now }, source = AlarmContract.SOURCE_TOOL, by = AlarmContract.BY_TOOL)
-        tools = ChimeTools(api, timerApi) { SHANGHAI }
+        val holidayApi = HolidayApi(data, clock = { now }, deviceZone = { SHANGHAI }, locale = { Locale.ENGLISH })
+        tools = ChimeTools(api, timerApi, holidayApi) { SHANGHAI }
     }
 
     /** Calls [tool] with [json] arguments as the provider does and answers the decoded result. zh-CN: 像提供方那样调用. */
@@ -202,7 +222,7 @@ class ChimeToolsTest {
         failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "hour must be in 0 - 23") { call(ChimeToolCatalog.TOOL_ADD, """{"time": "24:00"}""") }
         failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "INVALID_RULE: ") { call(ChimeToolCatalog.TOOL_ADD, """{"time": "07:00", "repeat": "FREQ=HOURLY"}""") }
         failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "INVALID_RULE: ") { call(ChimeToolCatalog.TOOL_ADD, """{"time": "07:00", "repeat": [7]}""") }
-        failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "unknown argument holidays") { call(ChimeToolCatalog.TOOL_ADD, """{"time": "07:00", "holidays": {"mode": "skip"}}""") }
+        failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "unknown argument dismiss") { call(ChimeToolCatalog.TOOL_ADD, """{"time": "07:00", "dismiss": {"challenge": "math"}}""") }
         failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "at must be an ISO 8601") { call(ChimeToolCatalog.TOOL_ADD, """{"at": "tomorrow morning"}""") }
         failure(PluginToolErrorCodes.LIMIT_EXCEEDED, "LIMIT_EXCEEDED: label has 101 characters") { call(ChimeToolCatalog.TOOL_ADD, """{"time": "07:00", "label": "${"x".repeat(101)}"}""") }
         assertTrue("nothing was added", events.isEmpty())
@@ -329,12 +349,91 @@ class ChimeToolsTest {
     }
 
     @Test
+    fun `holiday_check answers holidays, makeup workdays and its defaults (T192)`() {
+        val national = call(ChimeToolCatalog.TOOL_HOLIDAY_CHECK, """{"date": "2026-10-01", "region": "cn"}""")
+        assertEquals("2026-10-01", national["date"])
+        assertEquals("the region is the canonical code", "CN", national["region"])
+        assertEquals(true, national["isHoliday"])
+        assertEquals(false, national["isWorkday"])
+        assertTrue("name in the phone's language: ${national["name"]}", (national["name"] as String).contains("National Day"))
+        assertEquals(false, national["estimated"])
+
+        val makeup = call(ChimeToolCatalog.TOOL_HOLIDAY_CHECK, """{"date": "2026-10-10", "region": "CN"}""")
+        assertEquals("Saturday 10-10 is a makeup workday", true, makeup["isWorkday"])
+        assertEquals(false, makeup["isHoliday"])
+        assertFalse("a makeup workday has no name", makeup.containsKey("name"))
+
+        val today = call(ChimeToolCatalog.TOOL_HOLIDAY_CHECK)
+        assertEquals("today in the phone's zone", "2026-11-05", today["date"])
+        assertEquals("the settings default region", "CN", today["region"])
+        assertEquals(true, today["isWorkday"])
+        assertEquals(false, today["isHoliday"])
+
+        val moment = call(ChimeToolCatalog.TOOL_HOLIDAY_CHECK, """{"date": ${at("2026-10-02T23:30")}}""")
+        assertEquals("a timestamp counts by its day in the phone's zone", "2026-10-02", moment["date"])
+        assertEquals(true, moment["isHoliday"])
+
+        val estimated = call(ChimeToolCatalog.TOOL_HOLIDAY_CHECK, """{"date": "2027-10-01"}""")
+        assertEquals(true, estimated["isHoliday"])
+        assertEquals("CN 2027 is computed from the usual rules", true, estimated["estimated"])
+
+        val subdivision = call(ChimeToolCatalog.TOOL_HOLIDAY_CHECK, """{"date": "2026-07-04", "region": "us-ca"}""")
+        assertEquals("US-CA", subdivision["region"])
+        assertEquals(true, subdivision["isHoliday"])
+        assertEquals("a Saturday holiday is no workday", false, subdivision["isWorkday"])
+    }
+
+    @Test
+    fun `holiday_check refuses years outside the data, unknown regions and bad arguments (T194)`() {
+        val missing = failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "HOLIDAY_DATA_MISSING: ") {
+            call(ChimeToolCatalog.TOOL_HOLIDAY_CHECK, """{"date": "2027-01-01", "region": "LK"}""")
+        }
+        assertTrue("the message gives the years covered: ${missing.message}", missing.message.contains("2026"))
+        failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "HOLIDAY_DATA_MISSING: ") { call(ChimeToolCatalog.TOOL_HOLIDAY_CHECK, """{"region": "ZZ"}""") }
+        failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "INVALID_OPTIONS: ") { call(ChimeToolCatalog.TOOL_HOLIDAY_CHECK, """{"region": "C1"}""") }
+        failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "date") { call(ChimeToolCatalog.TOOL_HOLIDAY_CHECK, """{"date": "2026-13-01"}""") }
+        failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "region must be a string") { call(ChimeToolCatalog.TOOL_HOLIDAY_CHECK, """{"region": 86}""") }
+        failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "unknown argument mode") { call(ChimeToolCatalog.TOOL_HOLIDAY_CHECK, """{"mode": "skip"}""") }
+    }
+
+    @Test
+    fun `the holidays option is taken, replaced whole and cleared (T193)`() {
+        now = at("2026-09-30T08:00")
+        val thursdays = add("""{"time": "07:00", "repeat": [4], "holidays": {"mode": "skip", "region": "cn"}}""")
+        val id = thursdays["id"] as String
+        assertEquals("an explicit region is canonical", mapOf("mode" to "skip", "region" to "CN"), thursdays["holidays"])
+        assertEquals("National Day 10-01 is left out", at("2026-10-08T07:00"), thursdays["nextTrigger"])
+
+        val implicit = alarm(call(ChimeToolCatalog.TOOL_UPDATE, """{"id": "$id", "holidays": {"mode": "only"}}"""))
+        assertEquals("the whole filter is replaced, the region follows the default again", mapOf("mode" to "only"), implicit["holidays"])
+        assertEquals(at("2026-10-01T07:00"), implicit["nextTrigger"])
+
+        val cleared = alarm(call(ChimeToolCatalog.TOOL_UPDATE, """{"id": "$id", "clear": ["holidays"]}"""))
+        assertFalse("no holiday filter", cleared.containsKey("holidays"))
+        assertEquals(at("2026-10-01T07:00"), cleared["nextTrigger"])
+
+        val workdays = add("""{"time": "07:00", "holidays": {"mode": "workdays"}}""")
+        assertEquals("10-08 is the first workday after National Day", at("2026-10-08T07:00"), workdays["nextTrigger"])
+
+        failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "holidays.mode is required") { call(ChimeToolCatalog.TOOL_ADD, """{"time": "07:00", "holidays": {"region": "CN"}}""") }
+        failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "unknown argument holidays.date") {
+            call(ChimeToolCatalog.TOOL_ADD, """{"time": "07:00", "holidays": {"mode": "skip", "date": "2026-10-01"}}""")
+        }
+        failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "INVALID_OPTIONS: ") { call(ChimeToolCatalog.TOOL_ADD, """{"time": "07:00", "holidays": {"mode": "never"}}""") }
+        failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "INVALID_OPTIONS: ") {
+            call(ChimeToolCatalog.TOOL_ADD, """{"at": "2026-10-09T07:00", "holidays": {"mode": "workdays"}}""")
+        }
+        failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "HOLIDAY_DATA_MISSING: ") { call(ChimeToolCatalog.TOOL_ADD, """{"time": "07:00", "holidays": {"mode": "skip", "region": "ZZ"}}""") }
+    }
+
+    @Test
     fun `alarm codes map onto tool codes and unknown tools are refused`() {
         val expected = mapOf(
             AlarmErrorCodes.INVALID_OPTIONS to PluginToolErrorCodes.INVALID_ARGUMENTS,
             AlarmErrorCodes.INVALID_RULE to PluginToolErrorCodes.INVALID_ARGUMENTS,
             AlarmErrorCodes.NOT_FOUND to PluginToolErrorCodes.INVALID_ARGUMENTS,
             AlarmErrorCodes.UNSUPPORTED to PluginToolErrorCodes.INVALID_ARGUMENTS,
+            AlarmErrorCodes.HOLIDAY_DATA_MISSING to PluginToolErrorCodes.INVALID_ARGUMENTS,
             AlarmErrorCodes.LIMIT_EXCEEDED to PluginToolErrorCodes.LIMIT_EXCEEDED,
             AlarmErrorCodes.PERMISSION_REQUIRED to PluginToolErrorCodes.NOT_READY,
             AlarmErrorCodes.IO_FAILED to PluginToolErrorCodes.FAILED,

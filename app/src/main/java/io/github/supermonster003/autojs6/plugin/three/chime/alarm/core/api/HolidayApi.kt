@@ -53,6 +53,16 @@ class HolidayApi(
         return out
     }
 
+    /**
+     * The canonical code of [region], or of the default region of the settings when null (T170); the tool `holiday_check`
+     * names the region it answered for (roadmap P8.7, T192).
+     * zh-CN: [region] 的规范代码, 为 null 时是设置中默认地区的规范代码 (T170); 工具 `holiday_check` 用它写明应答所针对的地区 (路线图 P8.7, T192).
+     */
+    fun regionCode(region: String?): String = data.resolve(region).code
+
+    /** Today in the phone's zone, the day `holiday_check` checks without `date` (T192). zh-CN: 手机时区的今天, `holiday_check` 不带 `date` 时查询的日子 (T192). */
+    fun today(): LocalDate = Instant.ofEpochMilli(clock()).atZone(deviceZone()).toLocalDate()
+
     fun listHolidays(values: Map<String, Any?>): Map<String, Any?> {
         val request = AlarmRequest.of(values, LIST_KEYS)
         val year = request.int(AlarmOptionKeys.YEAR) ?: throw AlarmException.invalidOptions("missing option '${AlarmOptionKeys.YEAR}'")

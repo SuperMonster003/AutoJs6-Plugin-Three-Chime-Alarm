@@ -2,6 +2,7 @@ package io.github.supermonster003.autojs6.plugin.three.chime.alarm.tool
 
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmException
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.api.AlarmApi
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.api.HolidayApi
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.api.TimerApi
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.timer.TimerDurations
 import org.autojs.plugin.alarm.api.AlarmContract
@@ -25,17 +26,20 @@ import java.time.format.DateTimeFormatter
  * in the `AlarmOptions` shape (T95): `time` as `HH:mm` (`HH:mm:ss` with seconds), `vibrate` as a boolean or the pattern,
  * `snooze` as false or its members, members never set left out, and the moments `nextTrigger` / `at` also as ISO 8601 text
  * in the alarm's zone. Since 1.1.0 the timer tools run on a [TimerApi] that records the source `tool` and cancels
- * ringing timers `by` `tool` (roadmap P7.6, T126 - T129). Pure Kotlin: the JVM tests run every tool on the real
- * repository and timer engine.
+ * ringing timers `by` `tool` (roadmap P7.6, T126 - T129). Since 1.2.0 `holiday_check` answers from a [HolidayApi] and
+ * the alarm tools take and return the `holidays` option (roadmap P8.7, T192 - T195). Pure Kotlin: the JVM tests run
+ * every tool on the real repository, timer engine and bundled holiday data.
  * zh-CN: 路线图 P4.1 的九个 1.0.0 工具, 基于记来源 `tool` 与关闭者 `tool` 的 [AlarmApi] (T18, T78): [call] 接收去掉短名的工具名与已校验的参数,
  * 返回结果对象. 闹钟错误转为工具错误 ([error], T94), 消息前保留闹钟错误码. 结果以 `AlarmOptions` 的形式描述闹钟 (T95): `time` 为 `HH:mm`
  * (有秒时为 `HH:mm:ss`), `vibrate` 为布尔或节奏, `snooze` 为 false 或其成员, 未设置的成员略去, 时刻 `nextTrigger` / `at` 另给出闹钟时区的
- * ISO 8601 文本. 1.1.0 起计时器工具基于记来源 `tool`, 以 `tool` 关闭响铃中计时器的 [TimerApi] (路线图 P7.6, T126 - T129). 纯 Kotlin: JVM 测试在
- * 真实仓库与计时器引擎上运行每个工具.
+ * ISO 8601 文本. 1.1.0 起计时器工具基于记来源 `tool`, 以 `tool` 关闭响铃中计时器的 [TimerApi] (路线图 P7.6, T126 - T129). 1.2.0 起
+ * `holiday_check` 由 [HolidayApi] 应答, 闹钟工具接受并返回 `holidays` 选项 (路线图 P8.7, T192 - T195). 纯 Kotlin: JVM 测试在真实仓库, 计时器引擎与
+ * 内置节假日数据上运行每个工具.
  */
 internal class ChimeTools(
     private val api: AlarmApi,
     private val timers: TimerApi,
+    private val holidays: HolidayApi,
     private val deviceZone: () -> ZoneId = ZoneId::systemDefault,
 ) {
 
@@ -76,6 +80,7 @@ internal class ChimeTools(
                 mapOf("timers" to maps(timers.listTimers(emptyMap())[AlarmResultKeys.TIMERS]).map { timer(TimerSnapshot.fromValues(it)) })
             }
             ChimeToolCatalog.TOOL_TIMER_CONTROL -> control(args)
+            ChimeToolCatalog.TOOL_HOLIDAY_CHECK -> holidayCheck(args)
             else -> throw PluginToolException(PluginToolErrorCodes.UNKNOWN_TOOL, "3-Chime Alarm has no tool $tool")
         }
     } catch (e: AlarmException) {
@@ -103,6 +108,30 @@ internal class ChimeTools(
         val answer = timers.controlTimer(request)
         if (wire == AlarmContract.TIMER_ACTION_CANCEL) return linkedMapOf("id" to id, "removed" to (answer[AlarmResultKeys.REMOVED] == true))
         return timerResult(answer)
+    }
+
+    /**
+     * T192: `holiday_check`: whether a day is a holiday or a workday in a region, with the holiday's name. The day defaults
+     * to today in the phone's zone and the region to the default region of the settings; the answer names both.
+     * zh-CN: T192: `holiday_check`: 某地区某日是否节假日 / 工作日, 以及节日名称. 日子缺省为手机时区的今天, 地区缺省为设置中的默认地区; 应答写明两者.
+     */
+    private fun holidayCheck(args: Map<String, Any?>): Map<String, Any?> {
+        only(args, "date", "region")
+        val date = arguments.day(args) ?: holidays.today().toString()
+        val region = args["region"]?.let { value ->
+            (value as? String)?.trim() ?: throw AlarmException.invalidOptions("region must be a string, got ${ChimeToolArguments.describe(value)}")
+        }
+        val request = linkedMapOf<String, Any?>(AlarmOptionKeys.DATE to date)
+        region?.let { request[AlarmOptionKeys.REGION] = it }
+        val answer = holidays.checkDate(request)
+        return LinkedHashMap<String, Any?>().apply {
+            put("date", date)
+            put("region", holidays.regionCode(region))
+            put("isHoliday", answer[AlarmResultKeys.IS_HOLIDAY] == true)
+            put("isWorkday", answer[AlarmResultKeys.IS_WORKDAY] == true)
+            answer[AlarmResultKeys.NAME]?.let { put("name", it) }
+            put("estimated", answer[HolidayApi.KEY_ESTIMATED] == true)
+        }
     }
 
     private fun timerResult(answer: Map<String, Any?>): Map<String, Any?> =
@@ -205,6 +234,12 @@ internal class ChimeTools(
             spec.repeat?.let { put("repeat", it) }
             snapshot.repeatText?.let { put("repeatText", it) }
             spec.exclude?.takeIf { it.isNotEmpty() }?.let { put("exclude", it) }
+            spec.holidays?.let { filter ->
+                put("holidays", LinkedHashMap<String, Any?>().apply {
+                    put("mode", filter.mode)
+                    filter.region?.let { put("region", it) }
+                })
+            }
             spec.timeZone?.let { put("timeZone", it) }
             put("enabled", spec.enabled != false)
             spec.tag?.let { put("tag", it) }
@@ -252,14 +287,17 @@ internal class ChimeTools(
         private val ISO: DateTimeFormatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME
 
         /**
-         * T94: the alarm error codes as tool error codes. An invalid option or rule, an unknown id and an option of a
-         * missing feature are `INVALID_ARGUMENTS`, a ceiling `LIMIT_EXCEEDED`, the missing exact alarm permission
-         * `NOT_READY` (with what to do), the rest `FAILED`; the message keeps the alarm code in front.
-         * zh-CN: T94: 把闹钟错误码换成工具错误码. 选项或规则不合法, 未知 id 与缺少功能的选项为 `INVALID_ARGUMENTS`, 上限为 `LIMIT_EXCEEDED`, 缺精确闹钟
-         * 权限为 `NOT_READY` (并说明怎么做), 其余为 `FAILED`; 消息前保留闹钟错误码.
+         * T94: the alarm error codes as tool error codes. An invalid option or rule, an unknown id, an option of a missing
+         * feature and a day outside the holiday data (`HOLIDAY_DATA_MISSING`, T194) are `INVALID_ARGUMENTS`, a ceiling
+         * `LIMIT_EXCEEDED`, the missing exact alarm permission `NOT_READY` (with what to do), the rest `FAILED`; the message
+         * keeps the alarm code in front.
+         * zh-CN: T94: 把闹钟错误码换成工具错误码. 选项或规则不合法, 未知 id, 缺少功能的选项与节假日数据范围以外的日子 (`HOLIDAY_DATA_MISSING`, T194) 为
+         * `INVALID_ARGUMENTS`, 上限为 `LIMIT_EXCEEDED`, 缺精确闹钟权限为 `NOT_READY` (并说明怎么做), 其余为 `FAILED`; 消息前保留闹钟错误码.
          */
         fun code(alarmCode: String): String = when (alarmCode) {
-            AlarmErrorCodes.INVALID_OPTIONS, AlarmErrorCodes.INVALID_RULE, AlarmErrorCodes.NOT_FOUND, AlarmErrorCodes.UNSUPPORTED -> PluginToolErrorCodes.INVALID_ARGUMENTS
+            AlarmErrorCodes.INVALID_OPTIONS, AlarmErrorCodes.INVALID_RULE, AlarmErrorCodes.NOT_FOUND, AlarmErrorCodes.UNSUPPORTED,
+            AlarmErrorCodes.HOLIDAY_DATA_MISSING,
+            -> PluginToolErrorCodes.INVALID_ARGUMENTS
             AlarmErrorCodes.LIMIT_EXCEEDED -> PluginToolErrorCodes.LIMIT_EXCEEDED
             AlarmErrorCodes.PERMISSION_REQUIRED -> PluginToolErrorCodes.NOT_READY
             else -> PluginToolErrorCodes.FAILED

@@ -22,7 +22,7 @@ import org.autojs.plugin.tool.api.PluginToolResult
  */
 class ChimeToolService : PluginToolProviderService() {
 
-    private val tools by lazy { AlarmRuntime.get(this).let { ChimeTools(it.toolApi, it.toolTimerApi) } }
+    private val tools by lazy { AlarmRuntime.get(this).let { ChimeTools(it.toolApi, it.toolTimerApi, it.holidayApi) } }
 
     override fun createPluginInfo(): PluginInfo = pluginRuntimeFields().toPluginInfo()
 

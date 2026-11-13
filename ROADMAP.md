@@ -231,6 +231,20 @@ T1 - T18 来自设计稿 (2026-11-03), T19 - T25 为立项时补充, T26 起由�
 | T189 | 决定的效果 (P8.4): `skip` 优先, 即使唤醒或响铃本身晚了也照样跳过 (发 `skip` 而不发 `miss`, 不留错过通知); `ring(overrides)` 按到达顺序合并, 只用于该次 (含它的贪睡轮次与进程重启后恢复的响铃), 该次结束时清除; 合并结果在响铃时再校验一次, 不合法时退回闹钟自身的设置 | 覆盖是 "本次" 的, 贪睡后再响仍属同一次; 已同意的覆盖不应因后来改了闹钟而让响铃失败 | 无 |
 | T190 | 决定的存储 (P8.4): 待决的那一次 (`beforeRingFor`), `skip` 标记与合并后的覆盖存在闹钟的运行状态里, 跨进程保留; 改动使下一次响铃时刻变化时丢弃这些决定, 按新时刻重排 `beforeRing`; 覆盖不改闹钟自身的设置 (`get` 仍返回原 `label`) | 进程被杀后仍按决定响; 改了时间的闹钟不沿用旧决定 | 无 |
 | T191 | 插件工具用的 API 实例 (`AlarmRuntime.toolApi`) 不提供 `decideBeforeRing` (`UNSUPPORTED`) | 同 T17, 远端 AI 助手不能替脚本作决定 | 无 |
+| T192 | 工具 `holiday_check` (P8.7): 参数 `date` (`YYYY-MM-DD`, 或毫秒时间戳按手机时区取日期; 省略为手机时区的今天) 与 `region` (省略为设置的默认地区), 两者都可省略, `risk` 为 `readonly`, 并发 4; 结果 `{date, region, isHoliday, isWorkday, name, estimated}`: `region` 是规范化后实际判定的地区代码, `name` 为手机语言的节日名称 (非节假日略去, 补班日也没有名称), `estimated` 同 T178; 由 `AlarmRuntime.holidayApi` 应答, 与 `holidays.checkDate` 同一份数据与判定 | 远端助手设节假日闹钟前能先确认某天怎么算; 默认值与脚本 API 一致, 回显实际地区免得助手猜默认地区 | P8.8 (文档写法) |
+| T193 | 闹钟工具的 `holidays` 选项 (P8.7): `alarm_add` / `alarm_update` 接受 `{mode, region?}` (`mode` 必填, 只允许这两个键); `alarm_update` 给出时整体替换已存的过滤, 不像 `sound` / `speak` / `snooze` 那样按成员合并, 省略 `region` 即改回跟随设置的默认地区 (T182); `clear` 可列 `holidays`; 结果的闹钟带 `holidays`, 只有显式地区时才有 `region` (规范化后的代码) | 只有两个键, 合并会让 "改回跟随默认地区" 无法表达; 回显与 T182 的存储一致 | P8.6 (界面与工具写法不同时) |
+| T194 | `HOLIDAY_DATA_MISSING` (年份不在数据范围, 未知地区, 没有默认地区) 对工具报 `INVALID_ARGUMENTS`, 信息照 T94 为 `HOLIDAY_DATA_MISSING: detail` (含数据覆盖的年份); `holiday_check` 与带 `holidays` 的 `alarm_add` / `alarm_update` 同样处理 | 换个日期或地区就能成功, 不是插件故障; 宿主工具错误码没有专门的数据缺失码, 闹钟错误码留在信息里供助手判断 | 宿主工具协议增加对应错误码时 |
+| T200 | 宿主 `alarms.holidays` 的地区参数 (P8.5): ISO 3166-1 两位字母 (不分大小写, 转为大写), 可带 `-` 与上游数据里的下级地区代码 (保持原样, 例如 `US-CA`, `AU-NSW Western`, `BE-Flemish`); 宿主只查形状 (下级代码 1 - 64 字符, 无控制字符, 前后无空格), 未知地区由插件应答 (`HOLIDAY_DATA_MISSING`); 省略或 null 用插件默认地区 | 上游下级代码含空格与小写, 宿主改写会对不上数据; 地区是否存在只有插件知道. 宿主 `3abe4f2f8f` 实施 (chime-p8-host) | 无 |
+| T201 | 宿主的日期参数 (P8.5): `"YYYY-MM-DD"` 按原样, `Date` 或时间戳取设备时区的本地日期, 省略或 null 为设备时区的今天; 格式错误或不存在的日期为 `INVALID_OPTIONS` | 与插件 `checkDate` 和工具 `holiday_check` (T192) 的日期规则一致. 宿主 `3abe4f2f8f` 实施 (chime-p8-host) | 无 |
+| T202 | `holidays.list(region, year)` 两个参数都必填, `region` 可为 null (默认地区), `year` 为 1 - 9999 的整数 | 附录 A 的签名; 年份不设默认, 免得跨年时拿错一年. 宿主 `3abe4f2f8f` 实施 (chime-p8-host) | 无 |
+| T203 | `holidays.regions()`: 插件的 `firstYear` / `lastYear` 合成 `years: [first, last]` (含推算年份), 其余键 (`code`, `name`, `hasMakeupWorkdays`, `estimatedFrom`, `subdivisions` 等) 透传 | 脚本面向附录 A 的 `HolidayRegion` 形状; 插件的扩展键 (T178) 不丢. 宿主 `3abe4f2f8f` 实施 (chime-p8-host) | 无 |
+| T204 | `holidays.isHoliday` / `isWorkday` 返回布尔 (插件应答中对应键 `=== true`) | 简单判断不必拆对象; 名称与推算标记用 `list` / `info` 取. 宿主 `3abe4f2f8f` 实施 (chime-p8-host) | 无 |
+| T205 | `holidays.info()`: 插件有数据时为对象 (`version`, `source`, `updatedAt`, 可选 `estimated`, 其余透传), 没有时为 null; 不联网 | 查询不应有网络副作用, 刷新只经 `refresh` / `refreshAsync`. 宿主 `3abe4f2f8f` 实施 (chime-p8-host) | 无 |
+| T206 | `holidays.refresh()` 阻塞至多 120 秒 (`TIMEOUT`), 插件进程结束为 `SESSION_CLOSED`; `refreshAsync()` 返回 Promise, 参数错误也以拒绝落定, 停止脚本即取消刷新 | 同步与异步两种写法的失败形态各自一致. 宿主 `3abe4f2f8f` 实施 (chime-p8-host) | 无 |
+| T207 | `beforeRing` 事件对象: 监听者参数与 `alarms.currentEvent()` 带不可枚举的 `skip` / `ring` 方法 (`length` 1); `engines.myEngine().execArgv.alarm` 仍是纯 JSON, 不带方法 | 序列化事件时不带出方法; 绑定脚本经 `currentEvent()` 作决定. 宿主 `3abe4f2f8f` 实施 (chime-p8-host) | 无 |
+| T208 | 宿主的决定规则: 先查参数 (`skip` 的 `reason` trim 后 1 - 100 字符, 空为无原因, 超出为 `LIMIT_EXCEEDED`; `ring` 的覆盖只收 `label` / `sound` / `speak` / `vibrate`, 规则同计时器选项, 其他键 `INVALID_OPTIONS`); 每个脚本对每个 `occurrence` 只发第一个决定 (返回 true), 之后的调用返回 false 不发送; 截止时刻 = `event.deadline`, 插件没给时为 `scheduledAt - 5 s`, 截止时刻及之后的调用返回 false; 单次调用超时 = min(15 s, 距截止时刻的剩余), 本地铃声导入计入; 撞上截止时刻的 `TIMEOUT` 返回 false 且占位保留; 其他失败抛 `AlarmError` 并释放占位 (可重试) | 与插件侧 T188 / T189 相容: 宿主先挡掉明显的错误, 迟到的决定在两侧都不算错. 宿主 `3abe4f2f8f` 实施 (chime-p8-host) | 无 |
+| T209 | 截止时刻到了宿主不停止脚本; 没有及时决定 (无脚本, 脚本出错, 超时, AutoJs6 未运行) 时插件照常响 | 决定只影响这一次响铃, 脚本的其他工作不应被打断; 照常响是 D 系列的安全默认. 宿主 `3abe4f2f8f` 实施 (chime-p8-host) | 无 |
+| T210 | Ace 与 Offline Docs 随 P8.5 同步; api-coverage 名称门不靠 `deferredNameGate` 过门 | 1.2.0 发布前脚本 API 的声明与文档已齐, 不留延期项. 宿主 `3abe4f2f8f` 实施 (chime-p8-host); 另见宿主 `604a733ee5`, d.ts `1b087b2`, 文档站 `32f3fe4` / `c5bd3c1`, Ace `669f718`, 离线文档 `30e3e76` | 无 |
 
 ---
 
@@ -648,11 +662,11 @@ P0 (插件骨架, 含 P0.2 评估)          P1.1 - P1.3 (宿主契约, 桥接, �
 
 ### P8.4 `beforeRing`
 
-- [ ] (插件) 在 `scheduledAt - leadSeconds` (15 - 300, 默认 60) 用第二个精确闹钟唤醒自己, 发 `beforeRing` 给宿主 (回调 + 有绑定时的广播), `deadline` 默认 `scheduledAt - 5 s`; 收到任何 `skip` 本次不响 (发 `skip`, `reason: 'script'`); `ring(overrides)` 只改本次 `label` / `sound` / `speak` / `vibrate`, 多个脚本按到达顺序合并; 到 `deadline` 无决定, 宿主不可用, 设备未解锁或脚本出错一律照常响. (宿主) `AlarmEvent.skip` / `ring` 方法, `BindOptions.leadSeconds`, 绑定脚本的启动与超时. 证据: 两侧提交 hash; 设备: XQ-AT72 上附录 A 第 5.4 节的 `weather-brief.js` 示例 (改为本地假数据) 两个分支各跑一次, 以及宿主被杀时照常响.
+- [ ] (插件) 在 `scheduledAt - leadSeconds` (15 - 300, 默认 60) 用第二个精确闹钟唤醒自己, 发 `beforeRing` 给宿主 (回调 + 有绑定时的广播), `deadline` 默认 `scheduledAt - 5 s`; 收到任何 `skip` 本次不响 (发 `skip`, `reason: 'script'`); `ring(overrides)` 只改本次 `label` / `sound` / `speak` / `vibrate`, 多个脚本按到达顺序合并; 到 `deadline` 无决定, 宿主不可用, 设备未解锁或脚本出错一律照常响. (宿主) `AlarmEvent.skip` / `ring` 方法, `BindOptions.leadSeconds`, 绑定脚本的启动与超时. 证据: 两侧提交 hash; 设备: XQ-AT72 上附录 A 第 5.4 节的 `weather-brief.js` 示例 (改为本地假数据) 两个分支各跑一次, 以及宿主被杀时照常响. 进度 (2026-11-13, chime-p8-plugin 回填): 插件侧提交 `b9b65ad` (T186 - T191, JVM `BeforeRingTest` 等全部通过); 宿主侧提交 `3abe4f2f8f` (chime-p8-host, T207 - T209); 剩 XQ-AT72 上 `weather-brief.js` 两个分支与宿主被杀照常响的真机联调, 完成后再勾选.
 
 ### P8.5 脚本 API 与能力
 
-- [ ] (宿主) `alarms.holidays.*`, `AlarmOptions.holidays`, `BindOptions.leadSeconds`, 事件 `beforeRing`; 插件 `alarmFeatures` 加 `holidays` / `beforeRing`; 文档与 d.ts. 证据: 提交 hash.
+- [x] (宿主) `alarms.holidays.*`, `AlarmOptions.holidays`, `BindOptions.leadSeconds`, 事件 `beforeRing`; 插件 `alarmFeatures` 加 `holidays` / `beforeRing`; 文档与 d.ts. 证据: 提交 hash. 证据 (E1, 2026-11-13, chime-p8-host 实施, chime-p8-plugin 回填): 宿主 `3abe4f2f8f` (`alarms.holidays` 7 个函数, `beforeRing` 的 `skip` / `ring`, 截止时刻与占位, 协议文档, changelog 10 语言, 设备检查脚本 `tools/alarms/device_alarms_holidays_check.py`; T200 - T209) 与 `604a733ee5` (api-coverage 名称门, T210); d.ts `1b087b2` (4.88.0), 文档站 `32f3fe4` / `c5bd3c1`, Ace `669f718` (2.50.0), 离线文档 `30e3e76`; 插件 `alarmFeatures` 的 `holidays` 由 `940db97` 加入, `beforeRing` 由 `b9b65ad` 加入; 宿主单测 94 例通过; XQ-AT72 (克隆 debug 宿主 6641) 设备检查 `--expect unavailable` 10 / 10 与装插件 1.1.0 release 后 `--expect incompatible` 10 / 10 PASS, 1.2.0 插件上的 `full` 模式与 `beforeRing` 实际回传留给联调卡片. 均只本地提交.
 
 ### P8.6 界面
 

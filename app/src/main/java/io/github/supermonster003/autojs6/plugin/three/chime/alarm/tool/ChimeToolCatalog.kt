@@ -5,18 +5,19 @@ import org.autojs.plugin.alarm.api.AlarmLimits
 /**
  * The catalog [ChimeToolService] returns from `IPluginToolProvider.getCatalog` (AutoJs6 plugin tool contract v1, roadmap
  * P4.1, appendix A section 10): the short name `chime`, the nine 1.0.0 tools, which AutoJs6 lists as `chime_alarm_add`
- * and so on, and since 1.1.0 the three timer tools `timer_start`, `timer_list` and `timer_control` (roadmap P7.6, T126 -
- * T128; the stopwatch is not offered, T17). The parameters follow `AlarmOptions` of appendix A section 4.2 within the host's schema subset (T90): no local
- * audio file path (T91) and none of the options of later features (`holidays` joins with 1.2.0, `dismiss` with 1.3.0
- * without `challenge: 'script'`); script bindings and `beforeRing` are never offered (T17). The document is static: the
+ * and so on, since 1.1.0 the three timer tools `timer_start`, `timer_list` and `timer_control` (roadmap P7.6, T126 -
+ * T128; the stopwatch is not offered, T17), and since 1.2.0 `holiday_check` (roadmap P8.7, T192). The parameters follow
+ * `AlarmOptions` of appendix A section 4.2 within the host's schema subset (T90): no local audio file path (T91), the
+ * `holidays` option since 1.2.0 (T193) and not yet the options of later features (`dismiss` joins with 1.3.0 without
+ * `challenge: 'script'`); script bindings and `beforeRing` decisions are never offered (T17, T191). The document is static: the
  * host caches it per version code, and a missing exact alarm permission is reported by the call (`NOT_READY`), not by
  * dropping tools. The descriptions reach the context of AI models as written, so they stay English and ASCII and name
  * the error codes; there is nothing to localize (T89).
  * zh-CN: [ChimeToolService] 从 `IPluginToolProvider.getCatalog` 返回的目录 (AutoJs6 插件工具契约 v1, 路线图 P4.1, 附录 A 第 10 节): 短名
  * `chime` 下九个 1.0.0 工具, AutoJs6 列为 `chime_alarm_add` 等, 1.1.0 起另有三个计时器工具 `timer_start`, `timer_list`, `timer_control` (路线图
- * P7.6, T126 - T128; 不开放秒表, T17). 参数在宿主的 schema 子集内沿用附录 A 第 4.2 节的 `AlarmOptions` (T90): 不含
- * 本地音频文件路径 (T91), 也不含之后功能的选项 (`holidays` 随 1.2.0 加入, `dismiss` 随 1.3.0 加入且不含 `challenge: 'script'`); 从不开放脚本绑定与
- * `beforeRing` (T17). 文档是静态的: 宿主按 versionCode 缓存, 缺少精确闹钟权限由调用报告 (`NOT_READY`), 不从目录里删工具. 说明原样进入 AI 模型的
+ * P7.6, T126 - T128; 不开放秒表, T17), 1.2.0 起另有 `holiday_check` (路线图 P8.7, T192). 参数在宿主的 schema 子集内沿用附录 A 第 4.2 节的
+ * `AlarmOptions` (T90): 不含本地音频文件路径 (T91), 1.2.0 起含 `holidays` 选项 (T193), 暂不含之后功能的选项 (`dismiss` 随 1.3.0 加入且不含
+ * `challenge: 'script'`); 从不开放脚本绑定与 `beforeRing` 决定 (T17, T191). 文档是静态的: 宿主按 versionCode 缓存, 缺少精确闹钟权限由调用报告 (`NOT_READY`), 不从目录里删工具. 说明原样进入 AI 模型的
  * 上下文, 因此保持英文与 ASCII 并写明错误码; 没有需要本地化的文案 (T89).
  */
 internal object ChimeToolCatalog {
@@ -34,9 +35,10 @@ internal object ChimeToolCatalog {
     const val TOOL_TIMER_START = "timer_start"
     const val TOOL_TIMER_LIST = "timer_list"
     const val TOOL_TIMER_CONTROL = "timer_control"
+    const val TOOL_HOLIDAY_CHECK = "holiday_check"
     val TOOLS = listOf(
         TOOL_ADD, TOOL_LIST, TOOL_UPDATE, TOOL_REMOVE, TOOL_SET_ENABLED, TOOL_SKIP_NEXT, TOOL_UPCOMING, TOOL_DISMISS, TOOL_SNOOZE,
-        TOOL_TIMER_START, TOOL_TIMER_LIST, TOOL_TIMER_CONTROL,
+        TOOL_TIMER_START, TOOL_TIMER_LIST, TOOL_TIMER_CONTROL, TOOL_HOLIDAY_CHECK,
     )
 
     /** Every call is a quick local store operation. zh-CN: 每个调用都是很快的本地存储操作. */
@@ -49,7 +51,7 @@ internal object ChimeToolCatalog {
     const val DEFAULT_UPCOMING_COUNT = 5
 
     /** T93: the option names `alarm_update` may clear. zh-CN: T93: `alarm_update` 可以清除的选项名. */
-    val CLEARABLE = listOf("repeat", "exclude", "timeZone", "label", "tag", "sound", "speak", "snooze", "autoSilenceMinutes")
+    val CLEARABLE = listOf("repeat", "exclude", "holidays", "timeZone", "label", "tag", "sound", "speak", "snooze", "autoSilenceMinutes")
 
     /** T127: the actions of `timer_control`; `add` is `addTime` of the contract. zh-CN: T127: `timer_control` 的动作; `add` 即契约的 `addTime`. */
     val TIMER_ACTIONS = listOf("pause", "resume", "add", "reset", "cancel")
@@ -90,6 +92,13 @@ internal object ChimeToolCatalog {
             "repeatInterval": {"type": "integer", "minimum": 0, "maximum": ${AlarmLimits.MAX_SPEAK_REPEAT_INTERVAL_SECONDS}, "description": "Seconds between readings, 0 to read once."}
           }, "required": ["text"], "additionalProperties": false, "description": "Read text aloud when the alarm rings."}"""
 
+    private const val REGION_CODE = "Region code of the holiday data: ISO 3166-1 alpha-2 such as CN, HK, TW, JP or US, with a subdivision where the data has one, such as US-CA or DE-BY"
+
+    private val HOLIDAYS = """"holidays": {"type": "object", "properties": {
+            "mode": {"type": "string", "enum": ["skip", "only", "workdays"], "description": "skip: no ring on public holidays; only: ring only on public holidays; workdays: ring on every workday, a day that is neither a weekend day of the region nor a holiday, plus the makeup workdays the data lists (mainland China and Taiwan move workdays to weekends around some holidays). workdays needs time and either no repeat or a daily repeat with interval 1."},
+            "region": {"type": "string", "minLength": 2, "maxLength": 128, "description": "$REGION_CODE. Omitted, the default region of the 3-Chime Alarm settings, also after it changes."}
+          }, "required": ["mode"], "additionalProperties": false, "description": "Holiday filter (3-Chime Alarm 1.2.0) from the public holidays of a region. A year without holiday data rings by the repeat rule alone. chime_holiday_check tells how a day counts."}"""
+
     private val AUTO_SILENCE = """"autoSilenceMinutes": {"type": "integer", "minimum": ${AlarmLimits.MIN_AUTO_SILENCE_MINUTES}, "maximum": ${AlarmLimits.MAX_AUTO_SILENCE_MINUTES}, "description": "Stop ringing after this many minutes without an answer; omitted, the 3-Chime Alarm setting (10)."}"""
 
     private val OPTIONS = """
@@ -123,6 +132,7 @@ internal object ChimeToolCatalog {
             }, "required": ["freq"], "additionalProperties": false, "description": "A structured rule; the fields are the RRULE parts."}
           ], "description": "Repeat rule; omitted for a one-shot alarm. Rules finer than a day (HOURLY, BYHOUR, ...) fail with INVALID_RULE: an alarm rings once a day at its time."},
           "exclude": {"type": "array", "items": {"type": "string", "minLength": 10, "maxLength": 10}, "maxItems": ${AlarmLimits.MAX_EXCLUDE_DATES}, "description": "Days (YYYY-MM-DD) on which a repeating alarm does not ring."},
+          $HOLIDAYS,
           "timeZone": {"type": "string", "minLength": 1, "maxLength": 64, "description": "IANA zone such as Asia/Shanghai for time and date; omitted, the alarm follows the phone's zone."},
           "label": {"type": "string", "maxLength": ${AlarmLimits.MAX_LABEL_CHARS}, "description": "Text shown on the ringing screen and in the alarm list."},
           "enabled": {"type": "boolean", "description": "Whether the alarm is armed; new alarms default to true."},
@@ -192,7 +202,7 @@ internal object ChimeToolCatalog {
     {
       "name": "$TOOL_UPDATE",
       "title": "Change an alarm (3-Chime Alarm)",
-      "description": "Changes options of an alarm of 3-Chime Alarm; options left out keep their value. time replaces the time and drops at, at drops time and date (a repeating alarm then also needs repeat in clear). sound, speak and snooze objects change only the members given. clear resets the named options to their defaults (no repeat, the phone's zone, the 3-Chime Alarm settings, ...). The alarm is marked as last changed by a tool. Returns {alarm}. $ALARM_RESULT Errors: $OPTION_ERRORS; INVALID_ARGUMENTS with NOT_FOUND for an unknown id; INVALID_ARGUMENTS when nothing would change.",
+      "description": "Changes options of an alarm of 3-Chime Alarm; options left out keep their value. time replaces the time and drops at, at drops time and date (a repeating alarm then also needs repeat in clear). sound, speak and snooze objects change only the members given; holidays replaces the whole filter. clear resets the named options to their defaults (no repeat, no holiday filter, the phone's zone, the 3-Chime Alarm settings, ...). The alarm is marked as last changed by a tool. Returns {alarm}. $ALARM_RESULT Errors: $OPTION_ERRORS; INVALID_ARGUMENTS with NOT_FOUND for an unknown id; INVALID_ARGUMENTS when nothing would change.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -350,6 +360,25 @@ internal object ChimeToolCatalog {
       "risk": "write",
       "timeoutMs": $TIMEOUT_MS,
       "maxConcurrency": 1
+    },
+    {
+      "name": "$TOOL_HOLIDAY_CHECK",
+      "title": "Check a day for holidays (3-Chime Alarm)",
+      "description": "Tells whether a day is a public holiday or a workday in a region, from the holiday data of 3-Chime Alarm (the public holidays of python-holidays, with the makeup workdays of mainland China and Taiwan). A workday is a day that is neither a weekend day of the region nor a holiday, or a makeup workday. The same data drives the holidays option of chime_alarm_add. Returns {date, region, isHoliday, isWorkday, name, estimated}: region is the code the answer is for, name the holiday's name in the phone's language (absent on other days), estimated true for a year the data computes from the usual rules because the official schedule is not out yet (makeup workdays may be missing). Errors: INVALID_ARGUMENTS (an invalid date or an unknown region: the message starts with INVALID_OPTIONS; a year outside the data: the message starts with HOLIDAY_DATA_MISSING and gives the years covered), FAILED (damaged holiday data).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "date": {"oneOf": [
+            {"type": "string", "minLength": 10, "maxLength": 10, "description": "YYYY-MM-DD"},
+            {"type": "integer", "minimum": 0, "description": "A Unix time in milliseconds; its day in the phone's zone is used."}
+          ], "description": "The day to check; omitted, today in the phone's zone."},
+          "region": {"type": "string", "minLength": 2, "maxLength": 128, "description": "$REGION_CODE. Omitted, the default region of the 3-Chime Alarm settings."}
+        },
+        "additionalProperties": false
+      },
+      "risk": "readonly",
+      "timeoutMs": $TIMEOUT_MS,
+      "maxConcurrency": 4
     }
   ]
 }"""

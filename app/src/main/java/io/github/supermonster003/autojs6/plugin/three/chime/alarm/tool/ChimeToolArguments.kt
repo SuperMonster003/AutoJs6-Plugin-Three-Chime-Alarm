@@ -21,6 +21,8 @@ import java.time.format.DateTimeParseException
  * text without offset are read in `timeZone`, the stored zone of the alarm (update) or the phone's zone. `sound.source`
  * takes `default`, `silent` or a URI other than `file:` (T91). For `alarm_update` the partial groups `sound`, `speak` and
  * `snooze` are merged over the stored group (T29 as the host does it) and `clear` names options to send as null (T93).
+ * Since 1.2.0 the `holidays` group (`mode`, optional `region`) is sent as given and replaces the stored one as a whole,
+ * so an omitted region keeps following the default region of the settings (roadmap P8.7, T193).
  * Type and range problems the host's schema check lets through fail with `INVALID_OPTIONS` naming the argument; the
  * validator checks the rest. Pure Kotlin.
  * zh-CN: 把工具参数转为契约的闹钟选项 (路线图 P4.1, T90): 附录 A 第 4.2 节 `AlarmOptions` 的形式 (`time` 文本或对象, `date` 文本或时间戳, `at`
@@ -28,7 +30,8 @@ import java.time.format.DateTimeParseException
  * `minute` / `second`, `date` 文本, `at` 时间戳, RRULE 文本, `vibratePattern`, `snooze.enabled`), 插件自己的校验器与仓库像处理脚本调用一样处理它.
  * 由时间戳得到的日期与不带偏移的 `at` 文本按 `timeZone`, 闹钟已存的时区 (修改时) 或手机时区解读. `sound.source` 接受 `default`, `silent` 或
  * `file:` 以外的 URI (T91). `alarm_update` 中不完整的 `sound`, `speak`, `snooze` 分组与已存分组合并 (同宿主的 T29 做法), `clear` 列出以 null
- * 发送的选项 (T93). 宿主 schema 检查放过的类型与范围问题以 `INVALID_OPTIONS` 失败并写明参数名, 其余由校验器检查. 纯 Kotlin.
+ * 发送的选项 (T93). 1.2.0 起 `holidays` 分组 (`mode`, 可选 `region`) 原样发送并整体替换已存分组, 因此省略的地区继续随设置中的默认地区 (路线图 P8.7,
+ * T193). 宿主 schema 检查放过的类型与范围问题以 `INVALID_OPTIONS` 失败并写明参数名, 其余由校验器检查. 纯 Kotlin.
  */
 internal class ChimeToolArguments(private val deviceZone: () -> ZoneId = ZoneId::systemDefault) {
 
@@ -86,6 +89,13 @@ internal class ChimeToolArguments(private val deviceZone: () -> ZoneId = ZoneId:
         is Number -> integral(name, value)
         else -> throw invalid("$name must be milliseconds or text such as 25m, 1h30m or 90s, got ${describe(value)}")
     }
+
+    /**
+     * The day of `holiday_check` as `YYYY-MM-DD`: text as given (the holiday API checks it) or the day of a Unix time in
+     * milliseconds in the phone's zone; null when absent (T192).
+     * zh-CN: `holiday_check` 的日子, 形如 `YYYY-MM-DD`: 文本原样 (由节假日 API 检查), 或毫秒时间戳在手机时区中的那一天; 缺省时为 null (T192).
+     */
+    fun day(args: Map<String, Any?>): String? = args["date"]?.let { date("date", it, deviceZone) }
 
     /** The `filter` group of `listAlarms` and `upcoming`, null when empty. zh-CN: `listAlarms` 与 `upcoming` 的 `filter` 分组, 为空时 null. */
     fun filter(args: Map<String, Any?>): Map<String, Any?>? {
@@ -149,6 +159,7 @@ internal class ChimeToolArguments(private val deviceZone: () -> ZoneId = ZoneId:
             val list = value as? List<*> ?: throw invalid("exclude must be an array of YYYY-MM-DD dates")
             wire[AlarmOptionKeys.EXCLUDE] = list.map { string("exclude[]", it) }
         }
+        args["holidays"]?.let { wire[AlarmOptionKeys.HOLIDAYS] = holidays(it) }
         args["timeZone"]?.let { wire[AlarmOptionKeys.TIME_ZONE] = string("timeZone", it).trim() }
         args["label"]?.let { wire[AlarmOptionKeys.LABEL] = string("label", it) }
         args["enabled"]?.let { wire[AlarmOptionKeys.ENABLED] = bool("enabled", it) }
@@ -299,6 +310,15 @@ internal class ChimeToolArguments(private val deviceZone: () -> ZoneId = ZoneId:
         return map
     }
 
+    /** T193: the whole `holidays` group; the validator checks `mode` and the repository the region. zh-CN: T193: 整个 `holidays` 分组. */
+    private fun holidays(value: Any): Map<String, Any?> {
+        val map = group("holidays", value, HOLIDAY_KEYS)
+        if (map[AlarmOptionKeys.HOLIDAY_MODE] == null) throw invalid("holidays.mode is required: skip, only or workdays")
+        map[AlarmOptionKeys.HOLIDAY_MODE] = string("holidays.mode", map[AlarmOptionKeys.HOLIDAY_MODE]).trim()
+        map[AlarmOptionKeys.HOLIDAY_REGION]?.let { map[AlarmOptionKeys.HOLIDAY_REGION] = string("holidays.region", it).trim() }
+        return map
+    }
+
     private fun snooze(value: Any): Map<String, Any?> = when (value) {
         is Boolean -> linkedMapOf(AlarmOptionKeys.SNOOZE_ENABLED to value)
         is Map<*, *> -> {
@@ -310,7 +330,7 @@ internal class ChimeToolArguments(private val deviceZone: () -> ZoneId = ZoneId:
 
     // ------------------------------------------------------------------ value checks
 
-    private fun group(name: String, value: Any, keys: Set<String>): Map<String, Any?> {
+    private fun group(name: String, value: Any, keys: Set<String>): MutableMap<String, Any?> {
         val map = value as? Map<*, *> ?: throw invalid("$name must be an object, got ${describe(value)}")
         rejectUnknown(map, keys, "$name.")
         return LinkedHashMap<String, Any?>().apply { map.forEach { (key, member) -> if (member != null) put(key.toString(), member) } }
@@ -341,9 +361,13 @@ internal class ChimeToolArguments(private val deviceZone: () -> ZoneId = ZoneId:
 
     companion object {
 
-        /** The `AlarmOptions` keys the 1.0.0 tools take (appendix A 4.2 without `holidays` and `dismiss`). zh-CN: 1.0.0 工具接受的选项键. */
+        /**
+         * The `AlarmOptions` keys the tools take (appendix A 4.2 without `dismiss`; `holidays` since 1.2.0, T193).
+         * zh-CN: 工具接受的选项键 (附录 A 4.2 去掉 `dismiss`; `holidays` 自 1.2.0 起, T193).
+         */
         val OPTION_KEYS: Set<String> = linkedSetOf(
-            "time", "date", "at", "repeat", "exclude", "timeZone", "label", "enabled", "tag", "sound", "vibrate", "speak", "snooze", "autoSilenceMinutes",
+            "time", "date", "at", "repeat", "exclude", "holidays", "timeZone", "label", "enabled", "tag", "sound", "vibrate", "speak", "snooze",
+            "autoSilenceMinutes",
         )
 
         /** T126: the arguments of `timer_start`. zh-CN: T126: `timer_start` 的参数. */
@@ -357,6 +381,7 @@ internal class ChimeToolArguments(private val deviceZone: () -> ZoneId = ZoneId:
         )
         private val SOUND_GROUP = SOUND_KEYS
         private val SPEAK_GROUP = SPEAK_KEYS
+        private val HOLIDAY_KEYS = setOf(AlarmOptionKeys.HOLIDAY_MODE, AlarmOptionKeys.HOLIDAY_REGION)
         private val SNOOZE_GROUP = setOf(AlarmOptionKeys.SNOOZE_ENABLED, AlarmOptionKeys.SNOOZE_MINUTES, AlarmOptionKeys.SNOOZE_MAX)
 
         private val STRUCTURED_PARTS = linkedMapOf(
