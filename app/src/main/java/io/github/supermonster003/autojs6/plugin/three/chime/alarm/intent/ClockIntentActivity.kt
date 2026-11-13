@@ -84,7 +84,7 @@ class ClockIntentActivity : Activity() {
         val search = ClockRequests.search(extras)
         val runtime = AlarmRuntime.get(this)
         val ringing = runtime.rings.ringing().mapTo(HashSet()) { it.id }
-        val found = ClockRequests.matches(search, runtime.repository.list(), ringing, System.currentTimeMillis(), ZoneId.systemDefault())
+        val found = ClockRequests.matches(search, runtime.repository.list(), ringing, System.currentTimeMillis(), ZoneId.systemDefault(), runtime.holidayJudge)
         if (found.size > 1 && search != ClockRequests.Search.All) {
             startActivity(ClockDialogActivity.choose(this, found.map { it.id }))
             ClockActions.report(this, action, "matched=${found.size} choose", null)

@@ -2,6 +2,8 @@ package io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule
 
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmException
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmRecord
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.holiday.HolidayFilter
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.holiday.HolidayJudge
 import org.autojs.plugin.alarm.api.AlarmLimits
 import org.autojs.plugin.alarm.api.AlarmSpec
 import org.autojs.plugin.alarm.api.OccurrenceSnapshot
@@ -37,10 +39,14 @@ import org.dmfs.rfc5545.recur.RecurrenceRule as LibRecurRule
  * A rule that can never give a date from its start fails with `INVALID_RULE` (for example `FREQ=YEARLY;BYMONTHDAY=31`
  * from a date in February: a yearly rule with `BYMONTHDAY` alone stays in the month of the start).
  *
+ * From 1.2.0 the holiday filter of the alarm (roadmap P8.3, [HolidayFilter]) decides which of these dates ring: [rings]
+ * and the methods built on it take a [HolidayJudge]; a `time` alarm in `workdays` mode without `repeat` uses every day.
+ *
  * zh-CN: 闹钟的各次响铃 (路线图 P2.2, T10, 附录 A 第 4.2, 4.3 节): `at` 闹钟在该时刻响一次, 无 `repeat` 的 `time` 闹钟在 `date` 当天响一次,
  * 重复闹钟从 `date` (DTSTART; 起点本身只在符合规则时才算) 起按规则的每个日期在 `time` 响, 时区按 [TimeZonePolicy]. `COUNT` 计规则的日期, `exclude`
  * (EXDATE) 随后去掉日期且不补回, `UNTIL` 结束序列 (日期按整天算, UTC 时刻与响铃时刻比较). 不存在的日期 (30 天月份的 31 日, 非闰年的 2 月 29 日) 按
- * RFC 5545 跳过. 日期由 lib-recur 计算, 带 `BYWEEKNO` 的规则 (第 1 周是从 `WKST` 起算且含 1 月 4 日的那一周; 一年 52 或 53 周, 该年没有的周号不产生日期)
+ * RFC 5545 跳过. 自 1.2.0 起由闹钟的节假日过滤 (路线图 P8.3, [HolidayFilter]) 决定这些日期中哪些响铃: [rings] 及基于它的方法接收 [HolidayJudge];
+ * 没有 `repeat` 的 `workdays` 模式 `time` 闹钟按每天计算. 日期由 lib-recur 计算, 带 `BYWEEKNO` 的规则 (第 1 周是从 `WKST` 起算且含 1 月 4 日的那一周; 一年 52 或 53 周, 该年没有的周号不产生日期)
  * 与带 `BYYEARDAY` 或 `BYSETPOS` 的按年规则除外, 由插件自行展开 (T52): lib-recur 0.17.1 在 52 周的年份把第 53 周当作第 52 周, 弄混跨年前后的周,
  * 在带 `BYMONTH` 或 `BYYEARDAY` 的按年规则中先去掉起点之前的日期再应用 `BYSETPOS`, 并且在 `BYYEARDAY` 与 `BYDAY` 同用时出错. 交给 lib-recur 的规则去掉 `UNTIL`
  * (浮动起点时它拒绝 UTC 的 `UNTIL`). lib-recur 给出的每个日期使用前再按规则核对一次. 从起点起永远不产生日期的规则报 `INVALID_RULE` (例如从 2 月某日起的
@@ -63,24 +69,28 @@ object NextOccurrence {
     data class Occurrence(val local: LocalDateTime, val at: Long)
 
     /**
-     * The date a `time` alarm without `date` gets (appendix A section 4.2, T48): today for a repeating alarm, the next
-     * day the time is reached after [now] for a one-shot alarm.
-     * zh-CN: 没有 `date` 的 `time` 闹钟得到的日期 (附录 A 第 4.2 节, T48): 重复闹钟取今天, 一次性闹钟取 [now] 之后第一个到达该时刻的日子.
+     * The date a `time` alarm without `date` gets (appendix A section 4.2, T48): today for a repeating alarm (a
+     * `workdays` alarm included), the next day the time is reached after [now] for a one-shot alarm, holidays not
+     * considered (T183).
+     * zh-CN: 没有 `date` 的 `time` 闹钟得到的日期 (附录 A 第 4.2 节, T48): 重复闹钟 (含 `workdays` 闹钟) 取今天, 一次性闹钟取 [now] 之后第一个到达该时刻的
+     * 日子, 不考虑节假日 (T183).
      */
     fun implicitDate(spec: AlarmSpec, now: Long, zone: ZoneId): LocalDate {
         val time = spec.time ?: throw IllegalArgumentException("an at alarm has no date")
         val today = Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
         return when {
-            spec.repeat != null -> today
+            HolidayFilter.repeats(spec) -> today
             TimeZonePolicy.millisOf(today.atTime(time.hour, time.minute, time.second), zone) > now -> today
             else -> today.plusDays(1)
         }
     }
 
     /**
-     * Every ring of [spec] in time order. [after] only lets the computation skip ahead: rings at or before it may still
-     * be in the sequence. The `date` of a `time` alarm must be filled in (see [implicitDate]).
-     * zh-CN: [spec] 按时间顺序的每次响铃. [after] 只用于跳过前面的计算, 序列里仍可能有不晚于它的响铃. `time` 闹钟的 `date` 必须已补上 (见 [implicitDate]).
+     * Every date of [spec] in time order, the holiday filter not applied (see [rings]). [after] only lets the
+     * computation skip ahead: rings at or before it may still be in the sequence. The `date` of a `time` alarm must be
+     * filled in (see [implicitDate]).
+     * zh-CN: [spec] 按时间顺序的每个日期, 未应用节假日过滤 (见 [rings]). [after] 只用于跳过前面的计算, 序列里仍可能有不晚于它的响铃. `time` 闹钟的 `date`
+     * 必须已补上 (见 [implicitDate]).
      */
     fun occurrences(spec: AlarmSpec, deviceZone: ZoneId, after: Long? = null): Sequence<Occurrence> {
         val zone = TimeZonePolicy.zoneOf(spec, deviceZone)
@@ -89,7 +99,7 @@ object NextOccurrence {
         val clock = LocalTime.of(time.hour, time.minute, time.second)
         val date = LocalDate.parse(spec.date ?: throw IllegalArgumentException("the date of the alarm is not filled in"))
         val excluded = spec.exclude.orEmpty().mapTo(HashSet(), LocalDate::parse)
-        val repeat = spec.repeat
+        val repeat = HolidayFilter.baseRule(spec)
         if (repeat == null) {
             if (date in excluded) return emptySequence()
             val local = date.atTime(clock)
@@ -107,23 +117,58 @@ object NextOccurrence {
     }
 
     /**
+     * The instances of [spec] in time order with what the holiday filter makes of them ([HolidayFilter.Verdict.RING] or
+     * [HolidayFilter.Verdict.HOLIDAY]); dates that are not instances are left out. Without a filter every date rings.
+     * zh-CN: [spec] 按时间顺序的各次及节假日过滤的结论 ([HolidayFilter.Verdict.RING] 或 [HolidayFilter.Verdict.HOLIDAY]); 不算一次的日期不列出.
+     * 没有过滤时每个日期都响.
+     */
+    fun instances(spec: AlarmSpec, deviceZone: ZoneId, judge: HolidayJudge, after: Long? = null): Sequence<Pair<Occurrence, HolidayFilter.Verdict>> {
+        val filter = spec.holidays ?: return occurrences(spec, deviceZone, after).map { it to HolidayFilter.Verdict.RING }
+        return occurrences(spec, deviceZone, after)
+            .map { it to HolidayFilter.verdict(filter, it.local.toLocalDate(), judge) }
+            .filter { it.second != HolidayFilter.Verdict.NONE }
+    }
+
+    /**
+     * The rings of [spec] in time order: its dates the holiday filter keeps (roadmap P8.3). [after] as for [occurrences].
+     * zh-CN: [spec] 按时间顺序的响铃: 节假日过滤保留的日期 (路线图 P8.3). [after] 同 [occurrences].
+     */
+    fun rings(spec: AlarmSpec, deviceZone: ZoneId, judge: HolidayJudge, after: Long? = null): Sequence<Occurrence> =
+        if (spec.holidays == null) occurrences(spec, deviceZone, after)
+        else instances(spec, deviceZone, judge, after).filter { it.second == HolidayFilter.Verdict.RING }.map { it.first }
+
+    /**
      * The first ring after [after] that is not the skipped one ([skipAt], from `skipNext`), or null when the alarm has
      * no more rings.
      * zh-CN: [after] 之后第一个不是被跳过的那次 ([skipAt], 来自 `skipNext`) 的响铃; 没有更多响铃时为 null.
      */
-    fun next(spec: AlarmSpec, after: Long, deviceZone: ZoneId, skipAt: Long? = null): Occurrence? =
-        occurrences(spec, deviceZone, after).firstOrNull { it.at > after && it.at != skipAt }
+    fun next(spec: AlarmSpec, after: Long, deviceZone: ZoneId, skipAt: Long? = null, judge: HolidayJudge = HolidayJudge.NONE): Occurrence? =
+        rings(spec, deviceZone, judge, after).firstOrNull { it.at > after && it.at != skipAt }
+
+    /**
+     * The first instance after [after] and before [before] (no bound when null) that a holiday takes away (roadmap P8.3,
+     * T181), or null; always null without a holiday filter.
+     * zh-CN: [after] 之后, [before] 之前 (null 为不限) 第一个被节假日拿掉的那一次 (路线图 P8.3, T181), 没有时为 null; 没有节假日过滤时总为 null.
+     */
+    fun nextHolidaySkip(spec: AlarmSpec, after: Long, before: Long?, deviceZone: ZoneId, judge: HolidayJudge): Long? {
+        if (spec.holidays == null) return null
+        return instances(spec, deviceZone, judge, after)
+            .filter { it.first.at > after }
+            .takeWhile { before == null || it.first.at < before }
+            .firstOrNull { it.second == HolidayFilter.Verdict.HOLIDAY }
+            ?.first?.at
+    }
 
     /**
      * The next [count] ring instants of an alarm that is not stored (`alarms.preview`, at most 366), the date filled
-     * in as for a new alarm.
-     * zh-CN: 未保存的闹钟接下来 [count] 次响铃的时刻 (`alarms.preview`, 至多 366), 日期按新建闹钟的方式补上.
+     * in as for a new alarm, the holiday filter applied.
+     * zh-CN: 未保存的闹钟接下来 [count] 次响铃的时刻 (`alarms.preview`, 至多 366), 日期按新建闹钟的方式补上, 已应用节假日过滤.
      */
-    fun preview(spec: AlarmSpec, count: Int, now: Long, deviceZone: ZoneId): List<Long> {
+    fun preview(spec: AlarmSpec, count: Int, now: Long, deviceZone: ZoneId, judge: HolidayJudge = HolidayJudge.NONE): List<Long> {
         val resolved = if (spec.time != null && spec.date == null) {
             spec.copy(date = implicitDate(spec, now, TimeZonePolicy.zoneOf(spec, deviceZone)).toString())
         } else spec
-        return occurrences(resolved, deviceZone, now)
+        return rings(resolved, deviceZone, judge, now)
             .filter { it.at > now }
             .take(count.coerceIn(0, AlarmLimits.MAX_PREVIEW_COUNT))
             .map { it.at }
@@ -132,12 +177,12 @@ object NextOccurrence {
 
     /**
      * The next [count] rings of the enabled alarms among [records] after [now] (`alarms.upcoming`, at most 100), in
-     * time order (alarms in list order at the same instant). A skipped ring is left out, a snoozed alarm rings again at
-     * the end of its snooze; an alarm whose rule fails is left out.
+     * time order (alarms in list order at the same instant). A skipped ring and the instances the holiday filter takes
+     * away are left out, a snoozed alarm rings again at the end of its snooze; an alarm whose rule fails is left out.
      * zh-CN: [records] 中已启用的闹钟在 [now] 之后接下来的 [count] 次响铃 (`alarms.upcoming`, 至多 100), 按时间排序 (同一时刻按列表顺序).
-     * 被跳过的那次不列出, 贪睡中的闹钟在贪睡结束时再响; 规则计算失败的闹钟不列出.
+     * 被跳过的那次与被节假日过滤拿掉的各次不列出, 贪睡中的闹钟在贪睡结束时再响; 规则计算失败的闹钟不列出.
      */
-    fun upcoming(records: List<AlarmRecord>, count: Int, now: Long, deviceZone: ZoneId): List<OccurrenceSnapshot> {
+    fun upcoming(records: List<AlarmRecord>, count: Int, now: Long, deviceZone: ZoneId, judge: HolidayJudge = HolidayJudge.NONE): List<OccurrenceSnapshot> {
         val limit = count.coerceIn(0, AlarmLimits.MAX_UPCOMING_COUNT)
         if (limit == 0) return emptyList()
         val all = ArrayList<Pair<Int, OccurrenceSnapshot>>()
@@ -146,7 +191,7 @@ object NextOccurrence {
             val label = record.spec.label
             record.state.snoozeUntil?.takeIf { it > now }?.let { all.add(index to OccurrenceSnapshot(record.id, label, it)) }
             try {
-                occurrences(record.spec, deviceZone, now)
+                rings(record.spec, deviceZone, judge, now)
                     .filter { it.at > now && it.at != record.state.skipAt }
                     .take(limit)
                     .forEach { all.add(index to OccurrenceSnapshot(record.id, label, it.at)) }

@@ -209,6 +209,22 @@ T1 - T18 来自设计稿 (2026-11-03), T19 - T25 为立项时补充, T26 起由�
 | T165 | 周末: 文件级默认 `weekend`, 年份可覆盖 (AE 2021 及以前为周五六, 2022 起周六日), 下级地区可覆盖 (MY: Johor 01 在 2024 及以前周五六, Kedah 02 / Kelantan 03 / Terengganu 11 一直周五六); 下级地区没有自己的补班日 (全国 `workdays` 适用于所有下级地区, 生成器断言) | 上游逐日数据如此; "仅工作日" 模式按它判定 (Q46 (a)) | P8.3 |
 | T166 | 目录 `catalog-v1.json` 的每个地区带 `name`, `years`, `estimatedFrom`, `hasMakeupWorkdays` 与下级地区 `{code, name}` 列表 | 不下载日历文件即可回答 `holidays.regions()` 与地区选择界面 | P8.2 |
 | T167 | 可复现: `requirements.txt` 按哈希锁定 holidays 0.108 + python-dateutil 2.9.0.post0 + six 1.17.0 (仅二进制 wheel), `generator.json` 记录 wheel 的 sha256, 安装版本不符即拒绝运行; `generate_calendars.py --check-dir` 在 Python 3.12.5 / 3.13.0 与两种 `PYTHONHASHSEED` 下逐字节一致, 工作流发布前重复该检查 | 发布的数据要能由任何人从源重现并核对 | 每年 11 月重建 (Shared-Assets `tools/holiday-calendar-distribution/README.md` "Yearly rebuild") |
+| T170 | 地区写法规范化 (P8.2): 国家代码不区分大小写, 下级地区先精确匹配, 否则取唯一的不区分大小写匹配, 结果是目录里的写法 (`CN`, `US-CA`); 格式错误为 `INVALID_OPTIONS`, 没有数据的地区或下级地区为 `HOLIDAY_DATA_MISSING` | 脚本写 `cn` / `us-ca` 也能用, 存储与事件里只出现一种写法 | P8.6 (地区选择界面) |
+| T171 | 节日名称 (P8.2): 同一天多个节日用 "; " 连接; 语言按插件界面语言的候选链取 (例如 zh-Hant-HK -> zh-HK -> zh-Hant -> zh-TW -> zh -> 文件默认语言), 没有时用文件默认语言 | 上游名称语言不齐 (T161), 候选链让繁体与地区变体先用最接近的写法 | P8.6 |
+| T172 | 刷新照 Macaw 目录刷新 (P8.2): 内置 P-256 公钥核对分离签名, 拒绝回滚 (目录版本不得小于已用版本); HTTP 传输只走 HTTPS, 只允许 raw.githubusercontent.com 与 github.com 入口及其 GitHub 下载重定向, 内置 ISRG Root X1 (`network_security_config`, Android 7.0) | 与 3-Macaw Speech 同一套已验证的资产下载惯例 | 资产镜像变化时 |
+| T173 | `holidays.info` 与 `capabilities()` (P8.2): 版本号 = Release tag (`holiday-calendars-v1`, 即 `HOLIDAY_DATA_VERSION`), 来源 (内置 / 下载) 与检查时间; 警告列出缺年 (闹钟年份不在数据范围内), 推算年份 (Q47 (a)) 与没有数据的地区 | 脚本与界面都能知道当前判定靠的是哪份数据, 哪些年份不可靠 | P8.6 (数据更新状态) |
+| T174 | 存储布局 (P8.2): 内置快照只读; 下载的数据至多保留一套 `holidays/set-<catalogVersion>/`, 由 `current` 指针切换, 目录在设备保护存储 (未解锁也能判定); 切换成功后才删旧套 | 未解锁的开机早期也要能判定节假日; 半途失败不留下混合版本 | 无 |
+| T175 | 刷新以整套为单位 (P8.2): 同一时刻只有一个刷新, 只下载内容寻址文件名 (T163) 里缺少的文件, 每个文件按 sha256 核对; 取消或任一文件失败为 `IO_FAILED`, 仍用旧套 | 每次更新只下载变化的地区, 判定永远基于一份完整且已核对的数据 | 无 |
+| T176 | 节假日设置 (P8.2): 默认地区首次按系统区域的国家推断并随即保存 (之后改系统语言不换日历); 推断不出时为空, 省略 `region` 的闹钟此时不过滤, 省略地区的查询为 `HOLIDAY_DATA_MISSING`; 自动更新默认开, 每周一次持久化的 JobScheduler 任务, 默认只在不计量网络运行, 打开 "允许计量网络" 后不限; 设置变化后重排闹钟 (`Cause.HOLIDAYS`) | 计量网络策略与开关同 Macaw; 默认地区影响所有省略 `region` 的闹钟 | P8.6 (设置页) |
+| T177 | 查询的错误 (P8.2): `checkDate` / `listHolidays` 的日期或年份不在数据范围内为 `HOLIDAY_DATA_MISSING`, 数据文件损坏为 `IO_FAILED`; 闹钟判定遇到同样情况不抛出, 当作非节假日 (按星期规则响) | 查询要让脚本知道没有数据; 闹钟绝不因缺数据而不响 (P8.2 原文) | 无 |
+| T178 | 答复里的扩展键 (P8.2): `holidayRegions` 每项另带 `estimatedFrom` 与 `subdivisions`, `checkDate` 另带 `estimated` (该日落在推算年份) | 不改契约 (T25) 而让脚本拿到推算标记 (Q47 (a)) 与下级地区 | P8.5 (宿主 d.ts) |
+| T179 | 判定 (P8.3): 判定的日期是该次响铃在闹钟时区的本地日期; `skip` 在节假日不响, `only` 只在节假日响, `workdays` 按 Q46 (a); 地区未知, 数据打不开或年份缺失时一律当作非节假日 / 照星期规则, 推算年份照常判定 (Q47 (a)) | 过滤只能让闹钟少响, 不能因数据问题让闹钟消失 | 无 |
+| T180 | `workdays` 的规则限制 (P8.3): `repeat` 省略或 `FREQ=DAILY` 且间隔 1, 允许 `UNTIL`; `COUNT`, `BY*`, 间隔不为 1, 非 DAILY 与 `at` 均为 `INVALID_OPTIONS` | "工作日" 已经决定了哪些天响, 其他重复规则与它叠加后语义不清 | 有需求时放宽 |
+| T181 | 节假日 `skip` 事件 (P8.3): 只对被节假日过滤掉, 原本会响的那一次发 (`reason: 'holiday'`, 不触发 `beforeRing`); `workdays` 的普通周末不发, `only` 模式的非节假日不发 (Q50) | 事件表示 "本该响但因节假日没响", 否则每个周末与平日都会发一串事件 | Q50 |
+| T182 | `region` 的存储 (P8.3): 显式写出的地区在 `add` / `update` / `preview` 时规范化 (T170) 后保存, 错误码同 T170; 省略时不保存默认地区, 每次判定时取当时的默认地区 | 改默认地区后所有省略地区的闹钟随之变化 (T176 重排) | P8.6 |
+| T183 | 一次性闹钟 (P8.3): 隐含日期 (只给 `hour` / `minute`) 不为避开节假日而顺延; 一次性闹钟那次被过滤时发 `skip` 后退役; `only` 模式的一次性闹钟落在非节假日时没有响铃 (`upcoming` 为空), 也不发事件 | 一次性闹钟的含义是 "那一次", 不应被推到另一天 | 无 |
+| T184 | `repeatText` (P8.3): `workdays` 显示 "工作日" (10 种界面语言), 带 `UNTIL` 时仍显示规则文字; `skip` / `only` 的说明留给界面 (P8.6) | 列表与工具输出能直接看出闹钟按工作日响 | P8.6 |
+| T185 | 计入过滤的其他入口 (P8.3): 系统时钟 Intent 的 "下一个闹钟" 匹配与关闭, 列表的 "跳过下一次" 菜单 (过滤后的下一次), `upcoming` / `preview`; 判定失败的日志每分钟至多一行 | 用户在任何入口看到的 "下一次" 都与实际响铃一致 | 无 |
 
 ---
 
@@ -1205,6 +1221,7 @@ Q1 - Q6 已于 2026-11-03 拍板为 D20 - D25 (原表见附录 F), 编号不复�
 | Q45 | 节假日目录的签名密钥由 chime-p8-data 生成 (2026-11-12 15:05, OpenSSL 3.2.1, keyId `p256-35ac0585129625d2`, 私钥离线在 `D:/offline-keys/holiday-calendars.private.pem`, 公钥已入库 Shared-Assets `a64529f`) | (a) 保持现状, 维护者用这把离线私钥签 `pending/v1` (推荐, 已实施); (b) 维护者自己重新生成密钥对 | P8.1 发布, P8.2 内置公钥, T164 | (b): 按 Shared-Assets `holiday-calendars/README.md` "Maintainer signing" 第 1 步生成, 替换 `keys/catalog-signing-public.pem`, 改 README 两处 keyId 与 SPKI 指纹, 跑 `check_docs`, 约 5 分钟; P8.2 尚未开始, 无其他返工 | P8.2 前 | 已决 (2026-11-12 16:30, 维护者选 (a); chime-p8-data 登记, chime-p7-release 写入本表): 沿用 keyId `p256-35ac0585129625d2` 的密钥; 维护者已用它签名并发布 `holiday-calendars-v1` (`fc61c47`, 见 P8.1) |
 | Q46 | "仅工作日" 模式的工作日定义: P8.3 原写 "无补班日地区退化为 '周一至周五且非节假日'", 但数据的周末按年份与下级地区变化 (沙特等 18 国周五六, AE 2022 前周五六, MY 部分州周五六, T165) | (a) 工作日 = 不在该地区数据 `weekend` 中且非节假日, 或是补班日 (推荐); (b) 照原文固定周一至周五, 只在有补班日的地区用补班日 | P8.3, P8.2 (`isWorkday`) | 约 0 (数据两种都支持, 只是插件实现与本文不同) | P8.3 前 | 已决 (2026-11-12 16:30, 维护者选 (a); chime-p8-data 登记, chime-p7-release 写入本表并改写 P8.3 原文) |
 | Q47 | `estimatedFrom` 起的推算年份如何使用 (例如 CN 2027 起只有按规则推算的节日, 没有补班日; 14 个有补班日的地区里 RU 2028 起, 其余 2027 起, T162) | (a) 照常用于判定, 在 `capabilities()` 与界面上标 "推算" 并提示可能有调休 (推荐); (b) 当作缺年, 只按星期规则响; (c) 照常用, 不提示 | P8.2, P8.3, P8.6, P8.8 (文档) | 只改插件逻辑, 数据不变 | P8.2 前 | 已决 (2026-11-12 16:30, 维护者选 (a); chime-p8-data 登记, chime-p7-release 写入本表与 P8.2 / P8.3 / P8.6 的条目文字) |
+| Q50 | `only` 模式与 `workdays` 模式中 "本来就不响" 的日子 (`only` 的非节假日, `workdays` 的普通周末) 是否发 `skip` 事件 | (a) 不发, 只有被节假日拿掉, 原本会响的那一次发 `skip` (`reason: 'holiday'`) (推荐, 已实施: 否则 `only` 闹钟每个平日都发一条事件, 绑定脚本被无意义地唤醒); (b) 都发, 原因同为 `holiday` | P8.3 (T181), P8.4, P8.5 文档 | 改选 (b): `HolidayFilter.verdict` 把这两类日子从 `NONE` 改为 `HOLIDAY`, 但 `nextHolidaySkip` 的跳过唤醒会变成每天一次, 需另加合并, 约半天 | P8.8 (文档) 前 | 待决 (chime-p8-plugin 登记, 2026-11-13; 按推荐先行) |
 
 ---
 

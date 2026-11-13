@@ -4,6 +4,8 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.Ala
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmRecord
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmRepository
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.event.AlarmEventBus
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.holiday.HolidayFilter
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.holiday.HolidayJudge
 import org.autojs.plugin.alarm.api.AlarmEvent
 import java.time.ZoneId
 
@@ -19,8 +21,9 @@ interface AlarmSchedulePort {
 
     /**
      * Sets the wake-ups of [record] ([io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmRuntimeState.wakeAt]
-     * as an alarm clock, the skipped instance as a plain exact wake-up when it comes first) or cancels them when it has none.
-     * zh-CN: 设置 [record] 的唤醒 (`wakeAt` 作为闹钟时钟, 被跳过的那次先到时另设普通精确唤醒), 没有时取消.
+     * as an alarm clock, the skipped instance ([io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmRuntimeState.skipWakeAt],
+     * `skipNext` or a holiday) as a plain exact wake-up when it comes first) or cancels them when it has none.
+     * zh-CN: 设置 [record] 的唤醒 (`wakeAt` 作为闹钟时钟, 被跳过的那次 (`skipWakeAt`, `skipNext` 或节假日) 先到时另设普通精确唤醒), 没有时取消.
      */
     fun schedule(record: AlarmRecord)
 
@@ -51,6 +54,7 @@ class AlarmSchedule(
     private val events: AlarmEventBus,
     private val clock: () -> Long = System::currentTimeMillis,
     private val deviceZone: () -> ZoneId = ZoneId::systemDefault,
+    private val judge: HolidayJudge = HolidayJudge.NONE,
 ) {
 
     private val changeListener: (AlarmChange) -> Unit = { change ->
@@ -63,7 +67,7 @@ class AlarmSchedule(
     }
 
     /** The planner of [repository]. zh-CN: [repository] 的 planner. */
-    fun plan(record: AlarmRecord) = AlarmPlanner.plan(record, clock(), deviceZone())
+    fun plan(record: AlarmRecord) = AlarmPlanner.plan(record, clock(), deviceZone(), judge)
 
     /**
      * Reconciles [ids] (every alarm when null), then reschedules them: rings what is due, sends `miss` / `skip`,
@@ -74,7 +78,7 @@ class AlarmSchedule(
         val now = clock()
         val zone = deviceZone()
         val settled = repository.settle(ids) { record ->
-            val outcome = AlarmPlanner.reconcile(record, now, zone, cause)
+            val outcome = AlarmPlanner.reconcile(record, now, zone, cause, judge)
             AlarmRepository.Settlement(outcome.state, outcome.retire, outcome)
         }
         val schedulable = port.canScheduleExact()
@@ -119,7 +123,7 @@ class AlarmSchedule(
     fun endRound(alarmId: String): AlarmRecord? {
         val record = repository.settle(listOf(alarmId)) { current ->
             val state = current.state.copy(snoozeUntil = null, snoozeCount = 0, ringSince = null, ringingAt = null)
-            AlarmRepository.Settlement(state, current.spec.repeat == null && state.nextTrigger == null, Unit)
+            AlarmRepository.Settlement(state, !HolidayFilter.repeats(current.spec) && state.nextTrigger == null && state.holidaySkipAt == null, Unit)
         }.firstOrNull()?.first ?: return null
         if (port.canScheduleExact()) port.schedule(record) else port.cancel(record.id)
         return record

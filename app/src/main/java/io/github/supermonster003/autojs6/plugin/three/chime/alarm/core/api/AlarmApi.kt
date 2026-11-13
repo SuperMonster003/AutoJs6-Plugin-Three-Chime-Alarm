@@ -5,9 +5,12 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.Ala
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmOptionsValidator
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmRecord
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmRepository
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.holiday.HolidayFilter
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.holiday.HolidayJudge
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.ring.RingCoordinator
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.ring.RingtoneLibrary
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.NextOccurrence
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.RecurrenceRule
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.RepeatText
 import org.autojs.plugin.alarm.api.AlarmContract
 import org.autojs.plugin.alarm.api.AlarmLimits
@@ -28,13 +31,15 @@ import java.util.Locale
  * tools (roadmap P4.1) use a second instance with `tool`. Requests are checked as
  * appendix A section 11 says: unknown keys and mistyped values are `INVALID_OPTIONS`, counts above their limit
  * `LIMIT_EXCEEDED`; `getAlarm` of an unknown id answers no `alarm`, `dismiss` / `snooze` of an alarm that is not
- * ringing answer `handled` false (T75).
+ * ringing answer `handled` false (T75). From 1.2.0 `upcoming` and `preview` count the holiday filter through [judge]
+ * (roadmap P8.3), and `preview` checks an explicit `holidays.region` like `addAlarm` ([holidayRegion], T182).
  *
  * zh-CN: 以值树实现 `IAlarmPlugin` 的 1.0.0 方法 (路线图 P2.5, 附录 A 第 4.1 节), 使 JVM 测试覆盖完整的请求与应答映射; Binder 服务只负责 Bundle 的
  * 解码与编码. Binder 服务所用的实例服务于宿主脚本: 变更以 [source] `script` 记录, 关闭以 [by] `script` 记录 (T18); 插件工具 (路线图 P4.1)
  * 另用一个记 `tool` 的实例. 请求按附录 A 第 11 节检查: 未知键与类型不符报
  * `INVALID_OPTIONS`, 数量超出上限报 `LIMIT_EXCEEDED`; `getAlarm` 查不到 id 时应答不含 `alarm`, 对未在响铃的闹钟 `dismiss` / `snooze` 应答 `handled`
- * 为 false (T75).
+ * 为 false (T75). 自 1.2.0 起 `upcoming` 与 `preview` 经 [judge] 计入节假日过滤 (路线图 P8.3), `preview` 像 `addAlarm` 一样检查显式的
+ * `holidays.region` ([holidayRegion], T182).
  */
 class AlarmApi(
     private val repository: AlarmRepository,
@@ -49,6 +54,8 @@ class AlarmApi(
     private val source: String = AlarmContract.SOURCE_SCRIPT,
     private val by: String = AlarmContract.BY_SCRIPT,
     private val timerExists: (String) -> Boolean = { false },
+    private val judge: HolidayJudge = HolidayJudge.NONE,
+    private val holidayRegion: (String) -> String = { it },
 ) {
 
     fun addAlarm(values: Map<String, Any?>): Map<String, Any?> {
@@ -99,7 +106,7 @@ class AlarmApi(
         val request = AlarmRequest.of(values, UPCOMING_KEYS)
         val count = request.count(AlarmOptionKeys.COUNT, 1, AlarmLimits.MAX_UPCOMING_COUNT, AlarmLimits.DEFAULT_UPCOMING_COUNT)
         val filter = AlarmFilter.fromValues(request.map(AlarmOptionKeys.FILTER))
-        val occurrences = NextOccurrence.upcoming(repository.list(filter), count, clock(), deviceZone())
+        val occurrences = NextOccurrence.upcoming(repository.list(filter), count, clock(), deviceZone(), judge)
         return mapOf(AlarmResultKeys.OCCURRENCES to occurrences.map { it.toValues() })
     }
 
@@ -107,8 +114,8 @@ class AlarmApi(
         val request = AlarmRequest.of(values, PREVIEW_KEYS)
         val options = request.requireMap(AlarmOptionKeys.OPTIONS)
         val count = request.count(AlarmOptionKeys.COUNT, 1, AlarmLimits.MAX_PREVIEW_COUNT, AlarmLimits.DEFAULT_PREVIEW_COUNT)
-        val spec = validator.options(options)
-        return mapOf(AlarmResultKeys.TIMES to NextOccurrence.preview(spec, count, clock(), deviceZone()).toLongArray())
+        val spec = HolidayFilter.canonical(validator.options(options), holidayRegion)
+        return mapOf(AlarmResultKeys.TIMES to NextOccurrence.preview(spec, count, clock(), deviceZone(), judge).toLongArray())
     }
 
     fun ringing(values: Map<String, Any?>): Map<String, Any?> {
@@ -173,8 +180,15 @@ class AlarmApi(
 
     private fun alarmAnswer(record: AlarmRecord): Map<String, Any?> = mapOf(AlarmResultKeys.ALARM to snapshot(record).toValues())
 
-    private fun repeatTextOf(spec: AlarmSpec): String? = spec.repeat?.let { rule ->
-        runCatching { RepeatText.of(rule, spec.date?.let(LocalDate::parse), locale()) }.getOrNull()
+    /**
+     * `repeatText`: an alarm in `workdays` mode that rings on every workday reads "Workdays" (T184), even without `repeat`.
+     * zh-CN: `repeatText`: 每个工作日都响的 `workdays` 模式闹钟显示 "工作日" (T184), 没有 `repeat` 时也是.
+     */
+    private fun repeatTextOf(spec: AlarmSpec): String? {
+        if (spec.holidays?.mode == AlarmContract.HOLIDAY_MODE_WORKDAYS && HolidayFilter.repeats(spec) && spec.repeat.let { it == null || runCatching { RecurrenceRule.parse(it).until == null }.getOrDefault(false) }) {
+            return RepeatText.workdays(locale())
+        }
+        return spec.repeat?.let { rule -> runCatching { RepeatText.of(rule, spec.date?.let(LocalDate::parse), locale()) }.getOrNull() }
     }
 
     private companion object {

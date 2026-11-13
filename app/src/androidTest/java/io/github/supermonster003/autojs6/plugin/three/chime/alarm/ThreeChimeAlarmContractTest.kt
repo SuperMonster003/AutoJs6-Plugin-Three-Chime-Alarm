@@ -217,7 +217,7 @@ class ThreeChimeAlarmContractTest {
         const val PLUGIN_PERMISSION = "org.autojs.permission.PLUGIN"
 
         /** Roadmap T25 / P7.3: what version 1.1.0 declares. zh-CN: 路线图 T25 / P7.3: 1.1.0 版声明的功能. */
-        val FEATURES = arrayOf(AlarmFeatures.ALARMS, AlarmFeatures.TIMERS, AlarmFeatures.STOPWATCH)
+        val FEATURES = arrayOf(AlarmFeatures.ALARMS, AlarmFeatures.TIMERS, AlarmFeatures.STOPWATCH, AlarmFeatures.HOLIDAYS)
 
         @Suppress("UNCHECKED_CAST")
         val pluginInfoCreator: Parcelable.Creator<PluginInfo> =

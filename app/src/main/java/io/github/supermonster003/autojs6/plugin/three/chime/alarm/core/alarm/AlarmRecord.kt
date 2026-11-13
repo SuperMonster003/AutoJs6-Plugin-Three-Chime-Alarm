@@ -101,6 +101,8 @@ data class AlarmRecord(
  * - [nextTrigger]: epoch milliseconds of the next planned ring (skips, exclusions applied, a snooze not counted), or
  *   null when the alarm will not ring again.
  * - [skipAt]: the occurrence `skipNext` covers; `skipping` is true while it is set.
+ * - [holidaySkipAt]: the next instance the holiday filter takes away before [nextTrigger] (roadmap P8.3, T181); it
+ *   wakes the plugin for its `skip` event with reason `holiday`.
  * - [handledThrough]: the latest occurrence that rang, was skipped or was missed; the next one is computed after it.
  * - [occurrence]: id of the current ring round (appendix A section 5.1, T31), at most 128 characters.
  * - [snoozeUntil] / [snoozeCount]: the running snooze of the current round.
@@ -112,7 +114,8 @@ data class AlarmRecord(
  * Unknown or mistyped fields read as their defaults: the state can always be recomputed.
  *
  * zh-CN: 插件自己的闹钟状态, 不属于选项 (路线图 P2.1): [nextTrigger] 为调度器计划的下一次响铃 (已计入跳过与排除, 不计贪睡), 不再响时为 null;
- * [skipAt] 为 `skipNext` 跳过的那一次, 设置期间 `skipping` 为 true; [handledThrough] 为最近一次已响, 已跳过或已错过的时刻, 下一次在其之后计算;
+ * [skipAt] 为 `skipNext` 跳过的那一次, 设置期间 `skipping` 为 true;
+ * [holidaySkipAt] 为 [nextTrigger] 之前被节假日过滤拿掉的下一次 (路线图 P8.3, T181), 到时唤醒插件发原因为 `holiday` 的 `skip` 事件; [handledThrough] 为最近一次已响, 已跳过或已错过的时刻, 下一次在其之后计算;
  * [occurrence] 为本轮响铃的 id (附录 A 第 5.1 节, T31), 至多 128 个字符; [snoozeUntil] / [snoozeCount] 为本轮正在进行的贪睡;
  * [ringSince] 为该次响铃首次开始的时刻 (贪睡期间保留, 即 `ringing()` 的 `since`), 结束后为 null; [ringingAt] 为正在发声或在响铃队列中等待的那一轮的
  * 计划时刻 (路线图 P2.4), 贪睡或空闲时为 null, 进程死亡后留下的值表示被中断的一轮; [dateImplicit] 表示 `date` 由插件补上 (路线图 T48) 而非调用方给出. 未知或类型不符的字段读为默认值, 状态总能重新计算.
@@ -127,6 +130,7 @@ data class AlarmRuntimeState(
     val ringSince: Long? = null,
     val ringingAt: Long? = null,
     val dateImplicit: Boolean = false,
+    val holidaySkipAt: Long? = null,
 ) {
 
     val skipping: Boolean get() = skipAt != null
@@ -138,6 +142,12 @@ data class AlarmRuntimeState(
      */
     val wakeAt: Long? get() = listOfNotNull(nextTrigger, snoozeUntil).minOrNull()
 
+    /**
+     * The wake-up of a skip: the earlier of [skipAt] and [holidaySkipAt].
+     * zh-CN: 跳过的唤醒时刻: [skipAt] 与 [holidaySkipAt] 中较早者.
+     */
+    val skipWakeAt: Long? get() = listOfNotNull(skipAt, holidaySkipAt).minOrNull()
+
     fun toValues(): Map<String, Any?> = LinkedHashMap<String, Any?>().apply {
         putIfPresent(KEY_NEXT_TRIGGER, nextTrigger)
         putIfPresent(KEY_SKIP_AT, skipAt)
@@ -148,6 +158,7 @@ data class AlarmRuntimeState(
         putIfPresent(KEY_RING_SINCE, ringSince)
         putIfPresent(KEY_RINGING_AT, ringingAt)
         if (dateImplicit) put(KEY_DATE_IMPLICIT, true)
+        putIfPresent(KEY_HOLIDAY_SKIP_AT, holidaySkipAt)
     }
 
     companion object {
@@ -161,6 +172,7 @@ data class AlarmRuntimeState(
         const val KEY_RING_SINCE = "ringSince"
         const val KEY_RINGING_AT = "ringingAt"
         const val KEY_DATE_IMPLICIT = "dateImplicit"
+        const val KEY_HOLIDAY_SKIP_AT = "holidaySkipAt"
 
         fun fromValues(values: Map<String, Any?>) = AlarmRuntimeState(
             nextTrigger = AlarmValues.long(values, KEY_NEXT_TRIGGER)?.takeIf { it >= 0 },
@@ -172,6 +184,7 @@ data class AlarmRuntimeState(
             ringSince = AlarmValues.long(values, KEY_RING_SINCE)?.takeIf { it >= 0 },
             ringingAt = AlarmValues.long(values, KEY_RINGING_AT)?.takeIf { it >= 0 },
             dateImplicit = AlarmValues.boolean(values, KEY_DATE_IMPLICIT) ?: false,
+            holidaySkipAt = AlarmValues.long(values, KEY_HOLIDAY_SKIP_AT)?.takeIf { it >= 0 },
         )
     }
 }

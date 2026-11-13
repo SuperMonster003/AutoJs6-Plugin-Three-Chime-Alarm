@@ -1,5 +1,7 @@
 package io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm
 
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.holiday.HolidayFilter
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.holiday.HolidayJudge
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.NextOccurrence
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.schedule.AlarmPlanner
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.TimeZonePolicy
@@ -43,6 +45,10 @@ data class AlarmChange(
  * false (the exact alarm permission is missing on API 31 - 32), a change that leaves an alarm enabled throws
  * `PERMISSION_REQUIRED` and nothing changes.
  *
+ * An explicit `holidays.region` is stored in its canonical form ([holidayRegion], roadmap P8.3, T182): an unknown region
+ * throws `HOLIDAY_DATA_MISSING`, a malformed one `INVALID_OPTIONS`; an omitted region stays omitted and follows the
+ * default region of the settings. [holidayJudge] is the holiday judgement `skipNext` uses.
+ *
  * zh-CN: 插件的闹钟列表 (路线图 P2.1): 所有调用方 (Binder 服务, 插件工具, 系统时钟 Intent, 插件自己的界面) 都经过它, 因此上限 (300 条, 其中启用
  * 200 条, `LIMIT_EXCEEDED`), 变更通知与来源记录 (T18) 对所有调用方都成立. 每次变更先保存再生效; 保存失败时报 `IO_FAILED`, 列表不变.
  * 没有 `date` 的 `time` 闹钟会补上日期 (附录 A 第 4.2 节, T48): 重复闹钟取今天, 一次性闹钟取下一个到达该时刻的日子 (按闹钟的 `timeZone`, 否则按设备时区).
@@ -50,6 +56,8 @@ data class AlarmChange(
  * [planner] 在每次变更后计算记录的插件状态 (`nextTrigger` 等), 路线图 P2.3 的调度器接在这里并监听变更. [updateState] 与 [settle] 只改状态 (响铃, 跳过,
  * 贪睡), 不发变更通知; [settle] 还可以让一次性闹钟退役 (T57). [schedulingAllowed] 为 false (API 31 - 32 缺精确闹钟权限) 时, 让闹钟保持启用的变更报
  * `PERMISSION_REQUIRED`, 什么都不变.
+ * 显式给出的 `holidays.region` 以规范形式保存 ([holidayRegion], 路线图 P8.3, T182): 未知地区报 `HOLIDAY_DATA_MISSING`, 格式错误报 `INVALID_OPTIONS`;
+ * 省略的地区保持省略, 随设置中的默认地区. [holidayJudge] 为 `skipNext` 所用的节假日判定.
  */
 class AlarmRepository(
     private val store: AlarmStore,
@@ -59,6 +67,8 @@ class AlarmRepository(
     private val idGenerator: () -> String = ::randomId,
     private val planner: (AlarmRecord) -> AlarmRuntimeState = AlarmRecord::state,
     private val schedulingAllowed: () -> Boolean = { true },
+    private val holidayJudge: HolidayJudge = HolidayJudge.NONE,
+    private val holidayRegion: (String) -> String = { it },
 ) {
 
     private val lock = Any()
@@ -89,7 +99,7 @@ class AlarmRepository(
 
     fun add(values: Map<String, Any?>, source: String): AlarmRecord {
         requireSource(source)
-        val spec = validator.options(values)
+        val spec = canonicalRegion(validator.options(values))
         val change = synchronized(lock) {
             val all = loaded()
             if (all.size >= AlarmLimits.MAX_ALARMS) throw AlarmException.limitExceeded("at most ${AlarmLimits.MAX_ALARMS} alarms")
@@ -127,7 +137,7 @@ class AlarmRepository(
             val current = all[id] ?: throw AlarmException.notFound("no alarm with id '$id'")
             val followsTime = DATE_FOLLOWS_KEYS.any(patch::containsKey) && !patch.containsKey(AlarmOptionKeys.DATE)
             val base = if (implicitDate || (current.state.dateImplicit && followsTime)) current.spec.copy(date = null) else current.spec
-            val merged = if (implicitDate && patch.isEmpty()) base else validator.patch(base, patch)
+            val merged = if (implicitDate && patch.isEmpty()) base else validator.patch(base, patch).let { if (patch.containsKey(AlarmOptionKeys.HOLIDAYS)) canonicalRegion(it) else it }
             val spec = merged.copy(enabled = merged.enabled != false)
             val enabling = !current.enabled && spec.enabled == true
             if (enabling) checkEnabledLimit(all)
@@ -175,14 +185,14 @@ class AlarmRepository(
      */
     fun skipNext(id: String, by: String): AlarmRecord {
         requireSource(by)
-        val oneShot = synchronized(lock) { (loaded()[id] ?: throw AlarmException.notFound("no alarm with id '$id'")).spec.repeat == null }
+        val oneShot = synchronized(lock) { !HolidayFilter.repeats((loaded()[id] ?: throw AlarmException.notFound("no alarm with id '$id'")).spec) }
         if (oneShot) return setEnabled(id, false, by)
         val change = synchronized(lock) {
             val all = loaded()
             val current = all[id] ?: throw AlarmException.notFound("no alarm with id '$id'")
             if (!current.enabled || current.state.skipAt != null) return current
             val now = clock()
-            val target = AlarmPlanner.skipTarget(current, now, deviceZone()) ?: return current
+            val target = AlarmPlanner.skipTarget(current, now, deviceZone(), holidayJudge) ?: return current
             val record = plan(current.copy(updatedBy = by, updatedAt = now, state = current.state.copy(skipAt = target)))
             commit(all, record)
             AlarmChange(AlarmContract.CHANGE_UPDATE, id, by, current, record)
@@ -313,6 +323,9 @@ class AlarmRepository(
 
     private fun plan(record: AlarmRecord): AlarmRecord = record.copy(state = planner(record))
 
+    /** [spec] with its explicit holiday region in canonical form (T182). zh-CN: 显式节假日地区改为规范形式 (T182). */
+    private fun canonicalRegion(spec: AlarmSpec): AlarmSpec = HolidayFilter.canonical(spec, holidayRegion)
+
     private fun checkScheduling() {
         if (!schedulingAllowed()) throw AlarmException.permissionRequired("the exact alarm permission is not granted, so the alarm cannot be scheduled")
     }
@@ -332,7 +345,7 @@ class AlarmRepository(
     /** A one-shot `time` alarm whose date and time are not after [now]. zh-CN: 日期与时刻不晚于 [now] 的一次性 `time` 闹钟. */
     private fun passed(spec: AlarmSpec, now: Long): Boolean {
         val time = spec.time ?: return false
-        if (spec.repeat != null) return false
+        if (HolidayFilter.repeats(spec)) return false
         val date = spec.date?.let(LocalDate::parse) ?: return false
         return TimeZonePolicy.millisOf(date.atTime(time.hour, time.minute, time.second), zoneOf(spec)) <= now
     }
@@ -364,6 +377,7 @@ class AlarmRepository(
         /** Keys whose change moves an implicit date along (T48). zh-CN: 修改后隐式日期随之更新的键 (T48). */
         private val DATE_FOLLOWS_KEYS: Set<String> = linkedSetOf(
             AlarmOptionKeys.HOUR, AlarmOptionKeys.MINUTE, AlarmOptionKeys.SECOND, AlarmOptionKeys.REPEAT, AlarmOptionKeys.TIME_ZONE,
+            AlarmOptionKeys.HOLIDAYS,
         )
 
         private const val MAX_ID_ATTEMPTS = 16

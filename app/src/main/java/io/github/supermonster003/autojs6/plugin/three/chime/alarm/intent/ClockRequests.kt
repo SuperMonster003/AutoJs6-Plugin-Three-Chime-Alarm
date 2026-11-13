@@ -3,6 +3,7 @@ package io.github.supermonster003.autojs6.plugin.three.chime.alarm.intent
 import android.provider.AlarmClock
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmException
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmRecord
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.holiday.HolidayJudge
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.NextOccurrence
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.RecurrenceRule
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.timer.TimerDurations
@@ -225,18 +226,18 @@ object ClockRequests {
      * The alarms [search] picks among [records] (T80): the enabled ones and those in [ringing] (sounding, waiting or
      * snoozed). [Search.Unspecified] and [Search.Next] take what rings now first; [Search.Next] otherwise takes the
      * alarms of the earliest coming ring; [Search.Time] compares the clock time (an `at` alarm: its time in [zone]);
-     * [Search.Label] compares labels ignoring case.
+     * [Search.Label] compares labels ignoring case. The coming rings count the holiday filter through [judge] (P8.3).
      * zh-CN: [search] 在 [records] 中挑出的闹钟 (T80): 已启用的与 [ringing] 中的 (发声, 排队或贪睡). [Search.Unspecified] 与 [Search.Next]
-     * 先取正在响的; 否则 [Search.Next] 取最早一次响铃的闹钟; [Search.Time] 比较钟点 (`at` 闹钟取其在 [zone] 中的钟点); [Search.Label] 忽略大小写比较标签.
+     * 先取正在响的; 否则 [Search.Next] 取最早一次响铃的闹钟; [Search.Time] 比较钟点 (`at` 闹钟取其在 [zone] 中的钟点); [Search.Label] 忽略大小写比较标签. 即将到来的响铃经 [judge] 计入节假日过滤 (P8.3).
      */
-    fun matches(search: Search, records: List<AlarmRecord>, ringing: Set<String>, now: Long, zone: ZoneId): List<AlarmRecord> {
+    fun matches(search: Search, records: List<AlarmRecord>, ringing: Set<String>, now: Long, zone: ZoneId, judge: HolidayJudge = HolidayJudge.NONE): List<AlarmRecord> {
         val candidates = records.filter { it.enabled || it.id in ringing }
         val sounding = candidates.filter { it.id in ringing }
         return when (search) {
             Search.Unspecified -> sounding.ifEmpty { candidates }
             Search.All -> candidates
             Search.Next -> sounding.ifEmpty {
-                val coming = NextOccurrence.upcoming(candidates, AlarmLimits.MAX_UPCOMING_COUNT, now, zone)
+                val coming = NextOccurrence.upcoming(candidates, AlarmLimits.MAX_UPCOMING_COUNT, now, zone, judge)
                 val first = coming.firstOrNull()?.at ?: return emptyList()
                 val ids = coming.filter { it.at == first }.mapTo(HashSet()) { it.alarmId }
                 candidates.filter { it.id in ids }
@@ -255,10 +256,10 @@ object ClockRequests {
      * skipped when it comes within [DISMISS_AHEAD_MILLIS] (as the AOSP clock does).
      * zh-CN: 关闭 [record] 的做法 (T80): 正在响或在贪睡的闹钟结束本轮; 否则下一次响铃在 [DISMISS_AHEAD_MILLIS] 之内时跳过它 (与 AOSP 时钟一致).
      */
-    fun dismissPlan(record: AlarmRecord, ringing: Boolean, now: Long, zone: ZoneId): DismissPlan {
+    fun dismissPlan(record: AlarmRecord, ringing: Boolean, now: Long, zone: ZoneId, judge: HolidayJudge = HolidayJudge.NONE): DismissPlan {
         if (ringing) return DismissPlan.EndRound
         if (record.state.skipAt != null) return DismissPlan.AlreadySkipped
-        val at = NextOccurrence.upcoming(listOf(record), 1, now, zone).firstOrNull()?.at ?: return DismissPlan.NoRing
+        val at = NextOccurrence.upcoming(listOf(record), 1, now, zone, judge).firstOrNull()?.at ?: return DismissPlan.NoRing
         return if (at - now > DISMISS_AHEAD_MILLIS) DismissPlan.TooEarly(at) else DismissPlan.Skip(at)
     }
 

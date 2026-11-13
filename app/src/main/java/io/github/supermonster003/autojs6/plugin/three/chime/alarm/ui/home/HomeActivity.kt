@@ -69,6 +69,7 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.R
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmChange
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmException
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmRecord
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.holiday.HolidayFilter
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.RepeatText
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.TimeZonePolicy
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.StandaloneActivity
@@ -550,7 +551,7 @@ private fun AlarmMenu(item: AlarmItem, onSkip: () -> Unit, onCancelSkip: () -> U
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             if (record.state.skipping) {
                 MenuItem(R.string.home_cancel_skip, R.drawable.ic_skip_next_24, "$tag.cancelSkip") { open = false; onCancelSkip() }
-            } else if (record.enabled && record.spec.repeat != null && record.state.nextTrigger != null) {
+            } else if (record.enabled && HolidayFilter.repeats(record.spec) && record.state.nextTrigger != null) {
                 MenuItem(R.string.home_skip_next, R.drawable.ic_skip_next_24, "$tag.skip") { open = false; onSkip() }
             }
             if (item.bound) MenuItem(R.string.home_unbind_title, R.drawable.ic_link_off_24, "$tag.unbind") { open = false; onUnbind() }

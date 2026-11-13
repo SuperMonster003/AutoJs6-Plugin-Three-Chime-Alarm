@@ -84,7 +84,7 @@ internal object ClockActions {
         val parts = ArrayList<String>()
         for (record in records) {
             try {
-                when (val plan = ClockRequests.dismissPlan(record, record.id in ringing, now, ZoneId.systemDefault())) {
+                when (val plan = ClockRequests.dismissPlan(record, record.id in ringing, now, ZoneId.systemDefault(), runtime.holidayJudge)) {
                     ClockRequests.DismissPlan.EndRound -> {
                         val handled = runtime.rings.dismiss(record.id, AlarmContract.BY_USER)
                         if (handled) done += timeOf(context, record)

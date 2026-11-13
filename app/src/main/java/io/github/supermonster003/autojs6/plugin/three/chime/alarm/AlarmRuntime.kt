@@ -1,8 +1,10 @@
 package io.github.supermonster003.autojs6.plugin.three.chime.alarm
 
 import android.content.Context
+import android.os.SystemClock
 import android.provider.Settings
 import android.util.Log
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmException
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmOptionsValidator
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmRepository
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmStore
@@ -98,10 +100,36 @@ class AlarmRuntime private constructor(context: Context) {
         try {
             holidays.day(date, region)
         } catch (e: Exception) {
-            Log.e(HolidayUpdateJob.TAG, "holiday data unavailable", e)
+            val now = SystemClock.elapsedRealtime()
+            if (now - holidayFailureLoggedAt > HOLIDAY_FAILURE_LOG_INTERVAL_MILLIS || holidayFailureLoggedAt == 0L) {
+                holidayFailureLoggedAt = now
+                Log.e(HolidayUpdateJob.TAG, "holiday data unavailable", e)
+            }
             null
         }
     }
+
+    /** When the last failure of [holidayJudge] was logged (one line a minute at most). zh-CN: 上次记录 [holidayJudge] 失败的时刻 (至多每分钟一行). */
+    @Volatile
+    private var holidayFailureLoggedAt = 0L
+
+    /**
+     * The canonical form of an explicit `holidays.region` (T182): an unknown or malformed region throws as
+     * `HolidayDataSet.region` does; the region is kept as given when the data cannot be opened at all.
+     * zh-CN: 显式 `holidays.region` 的规范形式 (T182): 未知或格式错误的地区按 `HolidayDataSet.region` 抛出; 数据完全无法打开时保持原样.
+     */
+    private val holidayRegion: (String) -> String = { text ->
+        try {
+            holidays.set.region(text).code
+        } catch (e: AlarmException) {
+            throw e
+        } catch (e: Exception) {
+            text
+        }
+    }
+
+    /** The validator of the alarm options, with the features of this build (T25). zh-CN: 闹钟选项的校验器, 带本构建的功能 (T25). */
+    private val alarmValidator = AlarmOptionsValidator(features = ThreeChimeAlarmContract.FEATURES.toSet())
 
     val port = AndroidAlarmSchedulePort(this.context) { record, request ->
         rings.offer(record, request)
@@ -110,11 +138,14 @@ class AlarmRuntime private constructor(context: Context) {
 
     val repository: AlarmRepository = AlarmRepository(
         store = AlarmStore(File(deviceFilesDir, STORE_DIRECTORY)),
+        validator = alarmValidator,
         planner = { schedule.plan(it) },
         schedulingAllowed = port::canScheduleExact,
+        holidayJudge = holidayJudge,
+        holidayRegion = holidayRegion,
     )
 
-    val schedule: AlarmSchedule = AlarmSchedule(repository, port, events)
+    val schedule: AlarmSchedule = AlarmSchedule(repository, port, events, judge = holidayJudge)
 
     /** The plugin defaults of the settings screen (T84). zh-CN: 设置页的插件默认值 (T84). */
     val defaults = RingDefaultsStore(this.context)
@@ -167,7 +198,10 @@ class AlarmRuntime private constructor(context: Context) {
     val triggers = AlarmTriggerSender(this.context, hints, events)
 
     /** The `IAlarmPlugin` methods on value trees (roadmap P2.5). zh-CN: 以值树实现的 `IAlarmPlugin` 方法 (路线图 P2.5). */
-    val api = AlarmApi(repository, rings, hints, ringtones, { SystemRingtones.list(this.context) }, timerExists = ::timerExists)
+    val api = AlarmApi(
+        repository, rings, hints, ringtones, { SystemRingtones.list(this.context) }, validator = alarmValidator,
+        timerExists = ::timerExists, judge = holidayJudge, holidayRegion = holidayRegion,
+    )
 
     /**
      * The same methods for the plugin tools (roadmap P4.1): changes are recorded with source `tool` and dismissals with
@@ -176,7 +210,8 @@ class AlarmRuntime private constructor(context: Context) {
      */
     val toolApi = AlarmApi(
         repository, rings, hints, ringtones, { SystemRingtones.list(this.context) },
-        source = AlarmContract.SOURCE_TOOL, by = AlarmContract.BY_TOOL, timerExists = ::timerExists,
+        validator = alarmValidator, source = AlarmContract.SOURCE_TOOL, by = AlarmContract.BY_TOOL, timerExists = ::timerExists,
+        judge = holidayJudge, holidayRegion = holidayRegion,
     )
 
     /**
@@ -326,6 +361,9 @@ class AlarmRuntime private constructor(context: Context) {
         /** Device-protected preferences with the boot count of the previous process start (T96). zh-CN: 保存上次进程启动时开机次数的设备加密偏好. */
         private const val BOOT_PREFERENCES = "boot"
         private const val KEY_BOOT_COUNT = "bootCount"
+
+        /** At most one log line a minute while the holiday data cannot be opened. zh-CN: 节假日数据无法打开时至多每分钟记一行日志. */
+        private const val HOLIDAY_FAILURE_LOG_INTERVAL_MILLIS = 60_000L
 
         @Volatile
         private var instance: AlarmRuntime? = null

@@ -127,7 +127,7 @@ class AlarmStore(
             if (enabledCount < AlarmLimits.MAX_ENABLED_ALARMS) {
                 enabledCount++
             } else {
-                records[i] = record.copy(spec = record.spec.copy(enabled = false), state = record.state.copy(nextTrigger = null, skipAt = null, snoozeUntil = null, snoozeCount = 0))
+                records[i] = record.copy(spec = record.spec.copy(enabled = false), state = record.state.copy(nextTrigger = null, skipAt = null, holidaySkipAt = null, snoozeUntil = null, snoozeCount = 0))
                 disabled += record.id
             }
         }

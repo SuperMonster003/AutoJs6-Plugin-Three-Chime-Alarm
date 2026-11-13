@@ -3,6 +3,8 @@ package io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.schedule
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmException
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmRecord
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmRuntimeState
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.holiday.HolidayFilter
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.holiday.HolidayJudge
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.NextOccurrence
 import org.autojs.plugin.alarm.api.AlarmContract
 import org.autojs.plugin.alarm.api.AlarmEvent
@@ -24,12 +26,19 @@ import java.time.ZoneId
  * event once its time has come. A planned ring that has not come yet is computed again, so a new time zone or clock
  * applies at once.
  *
+ * The rings follow the holiday filter of the alarm (roadmap P8.3) as the [HolidayJudge] passed in sees it. The first
+ * instance a holiday takes away before the next ring is kept in [AlarmRuntimeState.holidaySkipAt] and gives a `skip`
+ * event with reason `holiday` when its time comes (T181); a one-shot alarm whose only instance is such a holiday then
+ * retires.
+ *
  * zh-CN: 路线图 P2.3 的排程决策 (T3, T8, T16, T55 - T58), 不依赖 Android, 由 JVM 测试覆盖. 启用的闹钟只计划下一次响铃
  * ([AlarmRuntimeState.nextTrigger]); 正在进行的贪睡另存于 [AlarmRuntimeState.snoozeUntil], 唤醒时刻取两者中较早者 ([AlarmRuntimeState.wakeAt]).
  * 下一次响铃取现在与 [AlarmRuntimeState.handledThrough] (最近一次已响, 已跳过或已错过的响铃) 中较晚者之后的第一次, 因此时钟往回调时同一次不会响两遍;
  * 比时钟超前 [REPLAY_GUARD_MILLIS] 以上的已处理时刻被忽略 (时钟是被有意往回调的, T56). [reconcile] 在闹钟触发与 T8 的各个时机运行: 计划的响铃
  * 迟到不超过 [AlarmLimits.MISSED_RING_WINDOW_MILLIS] (5 分钟) 时照常补响, 超过则不响, 发 `miss` 事件 (开机后为 `off`, 其他为 `late`) 并留一条通知 (T16);
- * `skipNext` 跳过的那次到时发 `skip` 事件. 还没到的计划响铃重新计算, 新的时区或时钟立即生效.
+ * `skipNext` 跳过的那次到时发 `skip` 事件. 还没到的计划响铃重新计算, 新的时区或时钟立即生效. 响铃按传入的 [HolidayJudge] 所见的闹钟节假日过滤计算
+ * (路线图 P8.3); 下一次响铃之前第一个被节假日拿掉的那一次存于 [AlarmRuntimeState.holidaySkipAt], 到时发原因为 `holiday` 的 `skip` 事件 (T181);
+ * 唯一一次就是这种节假日的一次性闹钟随后退役.
  */
 object AlarmPlanner {
 
@@ -107,17 +116,21 @@ object AlarmPlanner {
 
     /**
      * The state after a change of the alarm (the planner of [io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmRepository]):
-     * the next ring, and the skip kept only while the skipped instance is still a future ring of the alarm (T58).
-     * A rule that never gives a date throws `INVALID_RULE`, so the change is refused.
-     * zh-CN: 闹钟变更后的状态 (仓库的 planner): 下一次响铃; 被跳过的那次仍是闹钟将来的一次响铃时才保留跳过 (T58). 永远不产生日期的规则报 `INVALID_RULE`, 变更被拒绝.
+     * the next ring, the skip kept only while the skipped instance is still a future ring of the alarm (T58), and the
+     * next holiday skip before the next ring. A rule that never gives a date throws `INVALID_RULE`, so the change is
+     * refused.
+     * zh-CN: 闹钟变更后的状态 (仓库的 planner): 下一次响铃; 被跳过的那次仍是闹钟将来的一次响铃时才保留跳过 (T58); 以及下一次响铃之前的节假日跳过.
+     * 永远不产生日期的规则报 `INVALID_RULE`, 变更被拒绝.
      */
-    fun plan(record: AlarmRecord, now: Long, zone: ZoneId): AlarmRuntimeState {
+    fun plan(record: AlarmRecord, now: Long, zone: ZoneId, judge: HolidayJudge = HolidayJudge.NONE): AlarmRuntimeState {
         val state = record.state
         if (!record.enabled) return idle(state)
         val handled = guarded(state.handledThrough, now)
-        val skipAt = state.skipAt?.takeIf { it > now && isRing(record, it, zone) }
-        val next = NextOccurrence.next(record.spec, maxOf(now, handled ?: now), zone, skipAt)?.at
-        return state.copy(nextTrigger = next, skipAt = skipAt, handledThrough = handled)
+        val skipAt = state.skipAt?.takeIf { it > now && isRing(record, it, zone, judge) }
+        val from = maxOf(now, handled ?: now)
+        val next = NextOccurrence.next(record.spec, from, zone, skipAt, judge)?.at
+        val holidaySkipAt = NextOccurrence.nextHolidaySkip(record.spec, from, next, zone, judge)
+        return state.copy(nextTrigger = next, skipAt = skipAt, holidaySkipAt = holidaySkipAt, handledThrough = handled)
     }
 
     /**
@@ -125,10 +138,10 @@ object AlarmPlanner {
      * disabled or will not ring again.
      * zh-CN: `skipNext` 跳过的那一次: 从现在起的第一次计划响铃 (不计贪睡); 闹钟已禁用或不再响时为 null.
      */
-    fun skipTarget(record: AlarmRecord, now: Long, zone: ZoneId): Long? {
+    fun skipTarget(record: AlarmRecord, now: Long, zone: ZoneId, judge: HolidayJudge = HolidayJudge.NONE): Long? {
         if (!record.enabled) return null
         val handled = guarded(record.state.handledThrough, now)
-        return NextOccurrence.next(record.spec, maxOf(now, handled ?: now), zone)?.at
+        return NextOccurrence.next(record.spec, maxOf(now, handled ?: now), zone, judge = judge)?.at
     }
 
     /**
@@ -137,7 +150,7 @@ object AlarmPlanner {
      * zh-CN: 决定 [record] 在 [now] 的处理 (见类注释). 无法计算的已存规则不计划响铃. [cause] 决定 `miss` 的原因; 只有 [Cause.TRIGGER] 接受提前
      * [EARLY_TOLERANCE_MILLIS] 的响铃.
      */
-    fun reconcile(record: AlarmRecord, now: Long, zone: ZoneId, cause: Cause): Outcome {
+    fun reconcile(record: AlarmRecord, now: Long, zone: ZoneId, cause: Cause, judge: HolidayJudge = HolidayJudge.NONE): Outcome {
         val state = record.state
         if (!record.enabled) return Outcome(idle(state))
         val due = now + if (cause == Cause.TRIGGER) EARLY_TOLERANCE_MILLIS else 0L
@@ -167,14 +180,22 @@ object AlarmPlanner {
             snoozeUntil = null
         }
 
-        val skipped = skipAt
-        if (skipped != null && skipped <= due) {
-            if (handled == null || skipped > handled) {
-                events += event(record, AlarmContract.EVENT_SKIP, skipped, now).copy(reason = AlarmContract.SKIP_REASON_SKIP_NEXT)
-                handled = skipped
+        // The skip of skipNext and the holiday skip that have come, in time order (T181).
+        // zh-CN: 已到的 skipNext 跳过与节假日跳过, 按时间顺序处理 (T181).
+        val skipped = skipAt?.takeIf { it <= due }
+        val holiday = state.holidaySkipAt?.takeIf { it <= due }
+        for (at in listOfNotNull(skipped, holiday).distinct().sorted()) {
+            if (handled != null && at <= handled) continue
+            val reason = when {
+                at == skipped -> AlarmContract.SKIP_REASON_SKIP_NEXT
+                isHolidaySkip(record, at, zone, judge) -> AlarmContract.SKIP_REASON_HOLIDAY
+                else -> continue
             }
-            skipAt = null
+            events += event(record, AlarmContract.EVENT_SKIP, at, now).copy(reason = reason)
+            handled = at
+            if (reason == AlarmContract.SKIP_REASON_HOLIDAY) ended = true
         }
+        if (skipped != null) skipAt = null
 
         val planned = state.nextTrigger
         if (planned != null && planned <= due && (handled == null || planned > handled)) {
@@ -194,9 +215,15 @@ object AlarmPlanner {
             }
         }
 
-        if (skipAt != null && !isRing(record, skipAt, zone)) skipAt = null
+        if (skipAt != null && !isRing(record, skipAt, zone, judge)) skipAt = null
+        val from = maxOf(now, handled ?: now)
         val next = try {
-            NextOccurrence.next(record.spec, maxOf(now, handled ?: now), zone, skipAt)?.at
+            NextOccurrence.next(record.spec, from, zone, skipAt, judge)?.at
+        } catch (_: AlarmException) {
+            null
+        }
+        val holidaySkipAt = try {
+            NextOccurrence.nextHolidaySkip(record.spec, from, next, zone, judge)
         } catch (_: AlarmException) {
             null
         }
@@ -209,10 +236,11 @@ object AlarmPlanner {
             snoozeUntil != null || ringingAt != null -> state.ringSince
             else -> null
         }
-        val retire = ended && record.spec.repeat == null && next == null && ring == null && snoozeUntil == null && ringingAt == null
+        val retire = ended && !HolidayFilter.repeats(record.spec) && next == null && holidaySkipAt == null && ring == null && snoozeUntil == null && ringingAt == null
         val result = state.copy(
             nextTrigger = next,
             skipAt = skipAt,
+            holidaySkipAt = holidaySkipAt,
             handledThrough = handled,
             occurrence = occurrence,
             snoozeUntil = snoozeUntil,
@@ -223,9 +251,18 @@ object AlarmPlanner {
         return Outcome(result, retire, ring, events)
     }
 
-    /** True when [at] is a ring of [record]. zh-CN: [at] 是 [record] 的一次响铃时为 true. */
-    fun isRing(record: AlarmRecord, at: Long, zone: ZoneId): Boolean = try {
-        NextOccurrence.occurrences(record.spec, zone, at - 1).takeWhile { it.at <= at }.any { it.at == at }
+    /** True when [at] is a ring of [record], the holiday filter applied. zh-CN: [at] 是 [record] 的一次响铃时为 true (已应用节假日过滤). */
+    fun isRing(record: AlarmRecord, at: Long, zone: ZoneId, judge: HolidayJudge = HolidayJudge.NONE): Boolean = try {
+        NextOccurrence.rings(record.spec, zone, judge, at - 1).takeWhile { it.at <= at }.any { it.at == at }
+    } catch (_: AlarmException) {
+        false
+    }
+
+    /** True when a holiday takes away the instance of [record] at [at]. zh-CN: [record] 在 [at] 的那一次被节假日拿掉时为 true. */
+    private fun isHolidaySkip(record: AlarmRecord, at: Long, zone: ZoneId, judge: HolidayJudge): Boolean = try {
+        NextOccurrence.instances(record.spec, zone, judge, at - 1)
+            .takeWhile { it.first.at <= at }
+            .any { it.first.at == at && it.second == HolidayFilter.Verdict.HOLIDAY }
     } catch (_: AlarmException) {
         false
     }
@@ -235,7 +272,7 @@ object AlarmPlanner {
      * zh-CN: 禁用闹钟的状态 (T50): 没有计划响铃, 跳过, 贪睡与响铃轮次.
      */
     fun idle(state: AlarmRuntimeState): AlarmRuntimeState =
-        state.copy(nextTrigger = null, skipAt = null, snoozeUntil = null, snoozeCount = 0, ringSince = null, ringingAt = null)
+        state.copy(nextTrigger = null, skipAt = null, holidaySkipAt = null, snoozeUntil = null, snoozeCount = 0, ringSince = null, ringingAt = null)
 
     /** [handled] unless it is more than [REPLAY_GUARD_MILLIS] ahead of [now]. zh-CN: 超前 [now] 超过 [REPLAY_GUARD_MILLIS] 时为 null. */
     private fun guarded(handled: Long?, now: Long): Long? = handled?.takeIf { it - now <= REPLAY_GUARD_MILLIS }

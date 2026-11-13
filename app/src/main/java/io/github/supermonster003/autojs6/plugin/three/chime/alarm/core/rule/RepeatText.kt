@@ -38,6 +38,12 @@ object RepeatText {
         else -> "en"
     }
 
+    /**
+     * The description of an alarm in `holidays.mode` `workdays` that rings on every workday (roadmap P8.3, T184).
+     * zh-CN: `holidays.mode` 为 `workdays` 且每个工作日都响的闹钟的描述 (路线图 P8.3, T184).
+     */
+    fun workdays(locale: Locale = Locale.getDefault()): String = phrasesOf(languageOf(locale)).workdays()
+
     internal fun describe(rule: RecurrenceRule, start: LocalDate?, phrases: Phrases): String =
         shape(rule, start)?.let { phrases.text(it) } ?: rule.text
 
@@ -150,6 +156,9 @@ object RepeatText {
         abstract fun monthlyNth(ordinal: Int, day: DayOfWeek): String
         abstract fun yearly(month: Int, day: Int): String
 
+        /** Every workday of the holiday calendar (`holidays.mode` `workdays`, T184). zh-CN: 节假日日历的每个工作日 (T184). */
+        abstract fun workdays(): String
+
         fun text(shape: Shape): String = when (shape) {
             Shape.Daily -> daily()
             is Shape.EveryNDays -> everyNDays(shape.n)
@@ -187,6 +196,7 @@ object RepeatText {
         override fun monthlyNth(ordinal: Int, day: DayOfWeek) =
             if (ordinal == -1) "每月最后一个${name(long, day)}" else "每月第 $ordinal 个${name(long, day)}"
         override fun yearly(month: Int, day: Int) = "每年 $month 月 $day 日"
+        override fun workdays() = "工作日"
     }
 
     private object ZhHantTw : Phrases() {
@@ -203,6 +213,7 @@ object RepeatText {
         override fun monthlyNth(ordinal: Int, day: DayOfWeek) =
             if (ordinal == -1) "每月最後一個${name(long, day)}" else "每月第 $ordinal 個${name(long, day)}"
         override fun yearly(month: Int, day: Int) = "每年 $month 月 $day 日"
+        override fun workdays() = "工作日"
     }
 
     private object ZhHantHk : Phrases() {
@@ -218,6 +229,7 @@ object RepeatText {
         override fun monthlyNth(ordinal: Int, day: DayOfWeek) =
             if (ordinal == -1) "每月最後一個${name(long, day)}" else "每月第 $ordinal 個${name(long, day)}"
         override fun yearly(month: Int, day: Int) = "每年 $month 月 $day 日"
+        override fun workdays() = "工作日"
     }
 
     private object En : Phrases() {
@@ -243,6 +255,7 @@ object RepeatText {
         override fun monthlyNth(ordinal: Int, day: DayOfWeek) =
             "Every month on the ${if (ordinal == -1) "last" else ordinals[ordinal - 1]} ${name(names, day)}"
         override fun yearly(month: Int, day: Int) = "Every year on ${months[month - 1]} $day"
+        override fun workdays() = "Workdays"
     }
 
     private object Ja : Phrases() {
@@ -258,6 +271,7 @@ object RepeatText {
         override fun monthlyNth(ordinal: Int, day: DayOfWeek) =
             if (ordinal == -1) "毎月最終${name(names, day)}" else "毎月第 $ordinal ${name(names, day)}"
         override fun yearly(month: Int, day: Int) = "毎年 $month 月 $day 日"
+        override fun workdays() = "勤務日"
     }
 
     private object Ko : Phrases() {
@@ -274,6 +288,7 @@ object RepeatText {
         override fun monthlyNth(ordinal: Int, day: DayOfWeek) =
             "매월 ${if (ordinal == -1) "마지막" else ordinals[ordinal - 1]} ${name(names, day)}"
         override fun yearly(month: Int, day: Int) = "매년 ${month}월 ${day}일"
+        override fun workdays() = "근무일"
     }
 
     private object Es : Phrases() {
@@ -294,6 +309,7 @@ object RepeatText {
         override fun monthlyNth(ordinal: Int, day: DayOfWeek) =
             "El ${if (ordinal == -1) "último" else ordinals[ordinal - 1]} ${name(singular, day)} de cada mes"
         override fun yearly(month: Int, day: Int) = "Cada año el $day de ${months[month - 1]}"
+        override fun workdays() = "Días laborables"
     }
 
     private object Fr : Phrases() {
@@ -313,6 +329,7 @@ object RepeatText {
         override fun monthlyNth(ordinal: Int, day: DayOfWeek) =
             "Le ${if (ordinal == -1) "dernier" else ordinals[ordinal - 1]} ${name(singular, day)} de chaque mois"
         override fun yearly(month: Int, day: Int) = "Tous les ans le ${day(day)} ${months[month - 1]}"
+        override fun workdays() = "Jours ouvrés"
     }
 
     private object Ru : Phrases() {
@@ -348,6 +365,7 @@ object RepeatText {
             return "$preposition $word ${name(accusative, day)} каждого месяца"
         }
         override fun yearly(month: Int, day: Int) = "Каждый год $day ${months[month - 1]}"
+        override fun workdays() = "По рабочим дням"
     }
 
     private object Ar : Phrases() {
@@ -375,5 +393,6 @@ object RepeatText {
         override fun monthlyNth(ordinal: Int, day: DayOfWeek) =
             "في ${if (ordinal == -1) "آخر" else ordinals[ordinal - 1]} ${name(bare, day)} من كل شهر"
         override fun yearly(month: Int, day: Int) = "كل عام في $day ${months[month - 1]}"
+        override fun workdays() = "أيام العمل"
     }
 }

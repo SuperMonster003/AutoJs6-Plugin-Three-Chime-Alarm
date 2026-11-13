@@ -1,5 +1,6 @@
 package io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm
 
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.holiday.HolidayFilter
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.RecurrenceRule
 import org.autojs.plugin.alarm.api.AlarmContract
 import org.autojs.plugin.alarm.api.AlarmDismiss
@@ -67,6 +68,7 @@ class AlarmOptionsValidator(
             zone
         }
         val holidays = reader.group(AlarmOptionKeys.HOLIDAYS)?.let { holidays(it) }
+        if (holidays?.mode == AlarmContract.HOLIDAY_MODE_WORKDAYS) workdays(at, repeat)
         val label = reader.text(AlarmOptionKeys.LABEL, AlarmLimits.MAX_LABEL_CHARS)
         val enabled = reader.boolean(AlarmOptionKeys.ENABLED)
         val tag = reader.text(AlarmOptionKeys.TAG, AlarmLimits.MAX_TAG_CHARS)
@@ -181,6 +183,18 @@ class AlarmOptionsValidator(
         val mode = reader.string(AlarmOptionKeys.HOLIDAY_MODE) ?: throw invalid("holidays.mode is required")
         if (mode !in AlarmContract.HOLIDAY_MODES) throw invalid("holidays.mode must be one of ${AlarmContract.HOLIDAY_MODES.joinToString(" / ")}, got \"${clip(mode)}\"")
         return AlarmHolidayFilter(region, mode)
+    }
+
+    /**
+     * `workdays` rings on every workday (roadmap P8.3, T180): it needs `hour` / `minute`, and `repeat` is omitted or
+     * `FREQ=DAILY` with interval 1 (an `UNTIL` may end it).
+     * zh-CN: `workdays` 在每个工作日响铃 (路线图 P8.3, T180): 需要 `hour` / `minute`, `repeat` 省略或为间隔 1 的 `FREQ=DAILY` (可用 `UNTIL` 结束).
+     */
+    private fun workdays(at: Long?, repeat: String?) {
+        if (at != null) throw invalid("holidays.mode workdays rings on every workday and needs hour and minute, not at")
+        if (repeat != null && !HolidayFilter.allowsWorkdays(RecurrenceRule.parse(repeat))) {
+            throw invalid("holidays.mode workdays rings on every workday: omit repeat or use FREQ=DAILY with interval 1, got \"${clip(repeat)}\"")
+        }
     }
 
     private fun sound(values: Map<String, Any?>): AlarmSound {

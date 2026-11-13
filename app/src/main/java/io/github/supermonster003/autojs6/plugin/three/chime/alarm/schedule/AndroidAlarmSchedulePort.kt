@@ -50,7 +50,7 @@ class AndroidAlarmSchedulePort(
         } else {
             alarmManager.setAlarmClock(AlarmManager.AlarmClockInfo(wake, showIntent()), pending(record.id, ACTION_RING, wake))
         }
-        val skipAt = record.state.skipAt?.takeIf { record.enabled && exact && (wake == null || it < wake) }
+        val skipAt = record.state.skipWakeAt?.takeIf { record.enabled && exact && (wake == null || it < wake) }
         if (skipAt == null) {
             cancel(record.id, ACTION_SKIP)
         } else {

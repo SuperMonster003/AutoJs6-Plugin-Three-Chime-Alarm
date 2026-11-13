@@ -44,7 +44,7 @@ class PluginRuntimeInfoTest {
         assertEquals(6641L, fields.requiredHostVersion)
         assertEquals(ThreeChimeAlarmContract.REQUIRED_HOST_VERSION, fields.requiredHostVersion)
         assertEquals(1, fields.contractVersion)
-        assertEquals("roadmap T25: 1.1.0 adds timers and stopwatch once they work end to end (P7.3)", listOf("alarms", "timers", "stopwatch"), fields.features)
+        assertEquals("roadmap T25: 1.1.0 adds timers and stopwatch (P7.3), 1.2.0 holidays (P8.2 / P8.3)", listOf("alarms", "timers", "stopwatch", "holidays"), fields.features)
     }
 
     @Test
