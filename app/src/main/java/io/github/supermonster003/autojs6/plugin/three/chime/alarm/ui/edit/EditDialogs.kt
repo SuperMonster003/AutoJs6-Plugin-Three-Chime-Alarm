@@ -315,6 +315,38 @@ internal fun ZoneDialog(current: String?, deviceZone: ZoneId, onDismiss: () -> U
     }
 }
 
+/** The holiday modes in dialog order; null is no filter. zh-CN: 对话框中的节假日模式顺序; null 为不过滤. */
+private val HOLIDAY_MODES: List<String?> = listOf(null, AlarmContract.HOLIDAY_MODE_SKIP, AlarmContract.HOLIDAY_MODE_ONLY, AlarmContract.HOLIDAY_MODE_WORKDAYS)
+
+/** The name of a holiday mode (roadmap P8.6). zh-CN: 节假日模式的名称 (路线图 P8.6). */
+internal fun holidayModeLabel(mode: String?): Int = when (mode) {
+    AlarmContract.HOLIDAY_MODE_SKIP -> R.string.edit_holidays_skip
+    AlarmContract.HOLIDAY_MODE_ONLY -> R.string.edit_holidays_only
+    AlarmContract.HOLIDAY_MODE_WORKDAYS -> R.string.edit_holidays_workdays
+    else -> R.string.edit_holidays_none
+}
+
+/**
+ * The holiday mode (roadmap P8.6): none, or one of the three modes of the contract, each with what it does.
+ * zh-CN: 节假日模式 (路线图 P8.6): 不过滤, 或契约的三种模式之一, 每项说明其作用.
+ */
+@Composable
+internal fun HolidayModeDialog(mode: String?, onDismiss: () -> Unit, onConfirm: (String?) -> Unit) {
+    val notes = mapOf(
+        AlarmContract.HOLIDAY_MODE_SKIP to R.string.edit_holidays_skip_note,
+        AlarmContract.HOLIDAY_MODE_ONLY to R.string.edit_holidays_only_note,
+        AlarmContract.HOLIDAY_MODE_WORKDAYS to R.string.edit_holidays_workdays_note,
+    )
+    ChoiceDialog(
+        title = stringResource(R.string.edit_holidays),
+        options = HOLIDAY_MODES.map { Choice(stringResource(holidayModeLabel(it)), note = notes[it]?.let { note -> stringResource(note) }) },
+        selectedIndex = HOLIDAY_MODES.indexOf(mode).coerceAtLeast(0),
+        onDismissRequest = onDismiss,
+        onConfirm = { onConfirm(HOLIDAY_MODES[it]) },
+        tag = "chime.edit.holidaysDialog",
+    )
+}
+
 /** The label, at most [AlarmLimits.MAX_LABEL_CHARS] characters. zh-CN: 标签, 最多 [AlarmLimits.MAX_LABEL_CHARS] 个字符. */
 @Composable
 internal fun LabelDialog(label: String?, onDismiss: () -> Unit, onConfirm: (String) -> Unit) {

@@ -6,6 +6,7 @@ import android.app.Notification
 import android.app.NotificationManager
 import android.content.Context
 import android.os.SystemClock
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasTestTag
@@ -20,6 +21,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
 import androidx.test.runner.lifecycle.Stage
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.NextOccurrence
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.timer.TimerNotifications
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.home.HomeActivity
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.home.HomeIntents
@@ -37,6 +39,8 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.UUID
 
 /**
@@ -44,14 +48,17 @@ import java.util.UUID
  * between the alarms, the timers and the stopwatch and back returns to the alarms; a preset starts a timer (source `user`)
  * whose card pauses, adds a minute, resets, starts and deletes it; the custom duration dialog keeps its start button off
  * outside 1 s - 100 h and starts a labelled timer; the stopwatch starts, takes laps, marks the fastest and the slowest,
- * pauses and resets; a tap on a timer or the stopwatch notification opens its page.
+ * pauses and resets; a tap on a timer or the stopwatch notification opens its page. With 1.2.0 (roadmap P8.6) an alarm that
+ * filters by holidays shows "next (N holidays skipped)" and the hint of an estimated year, and the list shows the
+ * holiday data card.
  *
  * Timers made here are cancelled afterwards; the stopwatch steps run only while the stopwatch is idle and reset it at
  * the end, and the stored stopwatch notification setting is restored.
  *
  * zh-CN: 已安装插件中 1.1.0 的首页各页 (路线图 P7.4, T136 - T139, T122, T123): 底部导航在闹钟, 计时器与秒表之间切换, 返回键回到闹钟页; 预设开始一个计时器
  * (来源 `user`), 其卡片可以暂停, 加一分钟, 重置, 开始与删除; 自定义时长对话框在 1 秒 - 100 小时之外时开始按钮不可用, 并能开始带标签的计时器; 秒表开始, 计次,
- * 标出最快与最慢圈, 暂停并重置; 点按计时器或秒表通知打开对应页面. 这里创建的计时器在结束后取消; 秒表步骤只在秒表空闲时运行, 结束时重置, 并恢复存储的秒表通知设置.
+ * 标出最快与最慢圈, 暂停并重置; 点按计时器或秒表通知打开对应页面. 1.2.0 起 (路线图 P8.6) 使用节假日过滤的闹钟显示 "下一次 (已跳过 N 个节假日)" 与推算年份
+ * 的提示, 列表显示节假日数据卡片. 这里创建的计时器在结束后取消, 闹钟在结束后删除; 秒表步骤只在秒表空闲时运行, 结束时重置, 并恢复存储的秒表通知设置.
  */
 @RunWith(AndroidJUnit4::class)
 class HomePagesTest {
@@ -86,17 +93,19 @@ class HomePagesTest {
         finishAll()
         runtime.timers.list().filter { it.id !in before }.forEach { runCatching { runtime.userTimerApi.cancel(it.id) } }
         if (stopwatchUsed) runtime.stopwatch.reset()
+        runtime.repository.list().filter { it.spec.label == label }.forEach { runtime.repository.remove(it.id, AlarmContract.SOURCE_TOOL) }
         TimerNotifications.setStopwatchShown(context, stopwatchShown)
     }
 
     @Test
     fun theBottomNavigationSwitchesPagesAndBackReturnsToTheAlarms() {
-        val home = open(HomePage.ALARMS)
+        open(HomePage.ALARMS)
         waitShown("chime.home.add")
         compose.onNodeWithTag("chime.nav.timers").performClick()
         waitShown("chime.timers.add")
         compose.onNodeWithTag("chime.nav.stopwatch").performClick()
         waitShown("chime.stopwatch.time")
+        val home = resumedHome()
         instrumentation.runOnMainSync { home.onBackPressedDispatcher.onBackPressed() }
         waitShown("chime.home.add")
         assertTrue("back on another page keeps the screen", !home.isFinishing)
@@ -206,6 +215,35 @@ class HomePagesTest {
         }
     }
 
+    @Test
+    fun aHolidayAlarmShowsItsSkipsAndTheDataCard() {
+        // From New Year's Day of next year, a holiday of the bundled CN data in a year it estimates (T162).
+        // zh-CN: 自明年元旦起, 元旦是内置 CN 数据中的节假日, 落在其推算年份 (T162).
+        val newYear = LocalDate.now().plusYears(1).withDayOfYear(1)
+        val record = runtime.repository.add(
+            mapOf(
+                "hour" to 8, "minute" to 0, "date" to newYear.toString(), "repeat" to "FREQ=DAILY", "label" to label,
+                "holidays" to mapOf("region" to "CN", "mode" to AlarmContract.HOLIDAY_MODE_SKIP),
+            ),
+            AlarmContract.SOURCE_TOOL,
+        )
+        val next = record.state.nextTrigger!!
+        val skipped = NextOccurrence.holidaySkips(record.spec, System.currentTimeMillis(), next, ZoneId.systemDefault(), runtime.holidayJudge)
+        assertTrue("New Year's Day is skipped", skipped > 0)
+
+        open(HomePage.ALARMS)
+        waitShown("chime.home.holidays")
+        // The lines and the status merge into their clickable card and row. zh-CN: 各行与状态合并进可点按的卡片与行.
+        waitShown("chime.home.holidays.line.0", unmerged = true)
+        compose.onNodeWithTag("chime.home.list").performScrollToKey(record.id)
+        val tag = "chime.home.alarm.${record.id}.status"
+        waitShown(tag, unmerged = true)
+        val status = compose.onNodeWithTag(tag, useUnmergedTree = true).fetchSemanticsNode().config[SemanticsProperties.Text].joinToString("\n") { it.text }
+        val parts = context.resources.getQuantityString(R.plurals.home_next_holidays, skipped, MARK, skipped).split(MARK).filter { it.isNotBlank() }
+        assertTrue("'$status' names $skipped skipped", parts.all { status.contains(it.trim()) })
+        assertTrue("'$status' marks the estimated year", status.contains(context.getString(R.string.holiday_estimated_next)))
+    }
+
     private fun open(page: HomePage): HomeActivity {
         val monitor = instrumentation.addMonitor(HomeActivity::class.java.name, null, false)
         try {
@@ -216,7 +254,24 @@ class HomePagesTest {
         }
     }
 
-    private fun waitShown(tag: String) = compose.waitUntil(WAIT_MILLIS) { compose.shows(hasTestTag(tag)) }
+    /**
+     * The home screen in front now. A changed host appearance recreates the screen [open] returned (T98), and back sent to
+     * that old instance finds no callback, so its fallback finishes the live screen, whose record is the same.
+     *
+     * zh-CN: 当前在前台的首页. 宿主外观变化会重建 [open] 返回的那个实例 (T98), 发给旧实例的返回找不到回调, 其兜底处理会结束同一记录下仍在显示的页面.
+     */
+    private fun resumedHome(): HomeActivity {
+        var home: HomeActivity? = null
+        waitFor("a resumed home screen") {
+            instrumentation.runOnMainSync {
+                home = ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(Stage.RESUMED).filterIsInstance<HomeActivity>().firstOrNull()
+            }
+            home != null
+        }
+        return home!!
+    }
+
+    private fun waitShown(tag: String, unmerged: Boolean = false) = compose.waitUntil(WAIT_MILLIS) { compose.shows(hasTestTag(tag), unmerged) }
 
     /** Scrolls the timer list to the card of [id] and clicks [tag]. zh-CN: 把计时器列表滚动到 [id] 的卡片并点击 [tag]. */
     private fun tap(id: String, tag: String) {
@@ -254,6 +309,7 @@ class HomePagesTest {
     }
 
     companion object {
+        private const val MARK = "\u0001"
         private const val WAIT_MILLIS = 10_000L
 
         // The tags and the id TimerNotifications posts under. zh-CN: TimerNotifications 发出通知时使用的标签与 id.

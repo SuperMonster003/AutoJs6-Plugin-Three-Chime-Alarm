@@ -52,8 +52,11 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.AlarmRuntime
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.R
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmException
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmRecord
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.holiday.HolidayFilter
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.holiday.HolidayJudge
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.ring.RingDefaults
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.RepeatText
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.TimeZonePolicy
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.intent.ClockActions
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.intent.ClockIntentActivity
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.service.SystemRingtones
@@ -65,6 +68,9 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.components.
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.components.SwitchRow
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.components.TopBarAction
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.format.TimeFormats
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.holiday.HolidayView
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.holiday.RegionDialog
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.holiday.regionText
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.home.PermissionBanner
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.permissions.PermissionRow
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.permissions.Permissions
@@ -78,6 +84,7 @@ import kotlinx.coroutines.withContext
 import org.autojs.plugin.alarm.api.AlarmBundles
 import org.autojs.plugin.alarm.api.AlarmContract
 import org.autojs.plugin.alarm.api.AlarmErrorCodes
+import org.autojs.plugin.alarm.api.AlarmHolidayFilter
 import org.autojs.plugin.alarm.api.AlarmLimits
 import org.autojs.plugin.alarm.api.AlarmSpec
 import org.autojs.plugin.alarm.api.RingtoneSnapshot
@@ -178,6 +185,8 @@ internal object EditDialogs {
     const val SPEAK = "speak"
     const val SNOOZE = "snooze"
     const val AUTO_SILENCE = "autoSilence"
+    const val HOLIDAYS = "holidays"
+    const val HOLIDAY_REGION = "holidayRegion"
     const val DISCARD = "discard"
 }
 
@@ -217,6 +226,8 @@ private fun EditScreen(mode: EditMode, onDirtyChange: (Boolean) -> Unit, onClose
     var ringtones by remember { mutableStateOf<List<RingtoneSnapshot>?>(null) }
     var defaults by remember { mutableStateOf(RingDefaults.PROTOCOL) }
     var engines by remember { mutableStateOf(emptyList<SpeechEngine>()) }
+    var holidays by remember { mutableStateOf<HolidayView?>(null) }
+    val judge = holidays?.judge ?: HolidayJudge.NONE
 
     LaunchedEffect(Unit) {
         if (draft != null && start != null) return@LaunchedEffect
@@ -243,6 +254,8 @@ private fun EditScreen(mode: EditMode, onDirtyChange: (Boolean) -> Unit, onClose
     OnResume {
         now = System.currentTimeMillis()
         scope.launch { missing = withContext(Dispatchers.IO) { Permissions.read(context).missing.filter { it in BANNER_ROWS } } }
+        // The default region may change in the settings. zh-CN: 默认地区可能在设置中改变.
+        scope.launch { holidays = withContext(Dispatchers.IO) { HolidayView.load(context) } }
         scope.launch(Dispatchers.Main.immediate) {
             val (tones, plugin) = withContext(Dispatchers.IO) {
                 val runtime = AlarmRuntime.get(context)
@@ -283,7 +296,7 @@ private fun EditScreen(mode: EditMode, onDirtyChange: (Boolean) -> Unit, onClose
         RuleEditor(
             initial = current.spec.repeat,
             start = current.dateOf(now, deviceZone),
-            preview = { rule -> current.preview(PREVIEW_COUNT, now, deviceZone, rule) },
+            preview = { rule -> current.preview(PREVIEW_COUNT, now, deviceZone, rule, judge) },
             onApply = { rule ->
                 draft = current.withRepeat(rule, deviceZone)
                 page = PAGE_MAIN
@@ -311,7 +324,7 @@ private fun EditScreen(mode: EditMode, onDirtyChange: (Boolean) -> Unit, onClose
             if (missing.isNotEmpty()) {
                 PermissionBanner(missing, { context.startActivity(Intent(context, PermissionsActivity::class.java)) }, "chime.edit.permissionBanner")
             }
-            EditContent(current, ringtones, defaults, now, deviceZone, onDialog = { which ->
+            EditContent(current, ringtones, defaults, holidays, now, deviceZone, onDialog = { which ->
                 // The sound is chosen on the ringtone page (T85). zh-CN: 铃声在铃声页选择 (T85).
                 if (which == EditDialogs.SOUND) picker.launch(RingtoneRequest(current.spec.sound?.source, defaults.sound)) else dialog = which
             }, onChange = { draft = it })
@@ -329,7 +342,7 @@ private fun EditScreen(mode: EditMode, onDirtyChange: (Boolean) -> Unit, onClose
         EditDialogs.TIME -> TimeDialog(current.timeOf(deviceZone), TimeFormats.is24Hour(context), close) { hour, minute ->
             apply(current.withTime(hour, minute, deviceZone))
         }
-        EditDialogs.REPEAT -> RepeatDialog(current.spec.repeat, current.dateOf(now, deviceZone), close) { preset ->
+        EditDialogs.REPEAT -> RepeatDialog(current.shownRepeat, current.dateOf(now, deviceZone), close) { preset ->
             when (preset) {
                 RepeatPreset.CUSTOM -> dialog = EditDialogs.DAYS
                 RepeatPreset.ADVANCED -> {
@@ -355,6 +368,28 @@ private fun EditScreen(mode: EditMode, onDirtyChange: (Boolean) -> Unit, onClose
             apply(current.withExclude(it))
         }
         EditDialogs.ZONE -> ZoneDialog(current.spec.timeZone, deviceZone, close) { apply(current.withTimeZone(it, deviceZone)) }
+        EditDialogs.HOLIDAYS -> HolidayModeDialog(current.spec.holidays?.mode, close) { mode ->
+            apply(current.withHolidays(mode?.let { AlarmHolidayFilter(region = current.spec.holidays?.region, mode = it) }, deviceZone))
+        }
+        EditDialogs.HOLIDAY_REGION -> {
+            val view = holidays
+            val filter = current.spec.holidays
+            if (view == null || filter == null) {
+                SideEffect { dialog = null }
+            } else {
+                val locale = LocalConfiguration.current.locales[0]
+                RegionDialog(
+                    view = view,
+                    current = filter.region,
+                    title = stringResource(R.string.edit_holiday_region),
+                    firstLabel = stringResource(R.string.edit_holiday_region_follow),
+                    firstNote = view.region(null)?.let { regionText(it, locale) } ?: stringResource(R.string.edit_holiday_region_unset_note),
+                    onDismiss = close,
+                    onConfirm = { apply(current.withHolidays(filter.copy(region = it), deviceZone)) },
+                    tag = "chime.edit.regionDialog",
+                )
+            }
+        }
         EditDialogs.LABEL -> LabelDialog(current.spec.label, close) { apply(current.withLabel(it)) }
         EditDialogs.SPEAK -> SpeakDialog(current.spec.speak, engines, close) { apply(current.withSpeak(it)) }
         EditDialogs.SNOOZE -> SnoozeDialog(current.spec.snooze, defaults, close, { apply(current.withSnooze(it)) })
@@ -380,6 +415,7 @@ private fun EditContent(
     draft: AlarmDraft,
     ringtones: List<RingtoneSnapshot>?,
     defaults: RingDefaults,
+    holidays: HolidayView?,
     now: Long,
     deviceZone: ZoneId,
     onDialog: (String) -> Unit,
@@ -401,42 +437,76 @@ private fun EditContent(
             .padding(top = 24.dp, bottom = 8.dp)
             .testTag("chime.edit.time"),
     )
-    val next = remember(draft, now) { draft.preview(1, now, deviceZone).firstOrNull() }
+    val judge = holidays?.judge ?: HolidayJudge.NONE
+    val filter = spec.holidays
+    val next = remember(draft, now, holidays) { draft.preview(1, now, deviceZone, judge = judge).firstOrNull() }
+    val skipped = remember(draft, now, holidays, next) { if (next == null || filter == null) 0 else draft.holidaySkips(now, next, deviceZone, judge) }
+    val estimated = remember(draft, holidays, next) {
+        next != null && filter != null && holidays?.estimated(next, filter.region, TimeZonePolicy.zoneOf(spec, deviceZone)) == true
+    }
+    val noRegion = filter != null && holidays != null && holidays.region(filter.region) == null
+    val nextText = if (next == null) {
+        stringResource(R.string.edit_never_rings)
+    } else {
+        stringResource(R.string.home_next_ring, TimeFormats.dayOf(context, next), TimeFormats.timeOf(context, next), TimeFormats.remaining(context, next, now))
+    }
     Text(
-        text = if (next == null) {
-            stringResource(R.string.edit_never_rings)
-        } else {
-            stringResource(R.string.home_next_ring, TimeFormats.dayOf(context, next), TimeFormats.timeOf(context, next), TimeFormats.remaining(context, next, now))
-        },
+        text = if (skipped > 0) pluralStringResource(R.plurals.home_next_holidays, skipped, nextText, skipped) else nextText,
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         textAlign = TextAlign.Center,
-        modifier = Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, bottom = 16.dp).testTag("chime.edit.next"),
+        modifier = Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, bottom = if (estimated || noRegion) 4.dp else 16.dp).testTag("chime.edit.next"),
     )
+    if (estimated || noRegion) {
+        Text(
+            text = stringResource(if (noRegion) R.string.edit_holiday_region_missing else R.string.holiday_estimated_next),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.tertiary,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, bottom = 16.dp).testTag(if (noRegion) "chime.edit.noRegion" else "chime.edit.estimated"),
+        )
+    }
 
     SectionHeader(stringResource(R.string.edit_section_schedule))
     SettingsRow(
         title = stringResource(R.string.edit_repeat),
-        summary = repeatSummary(spec.repeat, date),
+        summary = repeatSummary(spec, date),
         icon = R.drawable.ic_repeat_24,
         modifier = Modifier.testTag("chime.edit.repeat"),
         onClick = { onDialog(EditDialogs.REPEAT) },
     )
     SettingsRow(
-        title = stringResource(if (spec.repeat == null) R.string.edit_date else R.string.edit_start_date),
+        title = stringResource(if (HolidayFilter.repeats(spec)) R.string.edit_start_date else R.string.edit_date),
         summary = if (draft.dateAuto) stringResource(R.string.edit_date_auto, dayText(date, today)) else TimeFormats.date(context, date),
         icon = R.drawable.ic_event_24,
         modifier = Modifier.testTag("chime.edit.date"),
         onClick = { onDialog(EditDialogs.DATE) },
     )
     val exclude = spec.exclude.orEmpty()
-    if (spec.repeat != null || exclude.isNotEmpty()) {
+    if (HolidayFilter.repeats(spec) || exclude.isNotEmpty()) {
         SettingsRow(
             title = stringResource(R.string.edit_exclude),
             summary = if (exclude.isEmpty()) stringResource(R.string.edit_none) else pluralStringResource(R.plurals.edit_exclude_count, exclude.size, exclude.size),
             icon = R.drawable.ic_event_24,
             modifier = Modifier.testTag("chime.edit.exclude"),
             onClick = { onDialog(EditDialogs.EXCLUDE) },
+        )
+    }
+    SettingsRow(
+        title = stringResource(R.string.edit_holidays),
+        summary = stringResource(holidayModeLabel(filter?.mode)),
+        icon = R.drawable.ic_beach_access_24,
+        modifier = Modifier.testTag("chime.edit.holidays"),
+        onClick = { onDialog(EditDialogs.HOLIDAYS) },
+    )
+    if (filter != null) {
+        SettingsRow(
+            title = stringResource(R.string.edit_holiday_region),
+            summary = holidayRegionSummary(filter.region, holidays),
+            icon = R.drawable.ic_public_24,
+            enabled = holidays != null,
+            modifier = Modifier.testTag("chime.edit.holidayRegion"),
+            onClick = { onDialog(EditDialogs.HOLIDAY_REGION) },
         )
     }
     SettingsRow(
@@ -497,12 +567,28 @@ private fun EditContent(
     Spacer(Modifier.height(24.dp))
 }
 
-/** The repeat row: the rule described from its first date, or "Once". zh-CN: 重复一行: 从首个日期描述规则, 或 "一次". */
+/**
+ * The repeat row: the rule described from its first date as the script API describes it (T184: "Workdays" for an alarm
+ * on every workday), or "Once".
+ * zh-CN: 重复一行: 与脚本 API 相同, 从首个日期描述规则 (T184: 每个工作日都响的闹钟为 "工作日"), 或 "一次".
+ */
 @Composable
-private fun repeatSummary(repeat: String?, start: LocalDate): String {
-    repeat ?: return stringResource(R.string.home_once)
+private fun repeatSummary(spec: AlarmSpec, start: LocalDate): String {
     val locale = LocalConfiguration.current.locales[0]
-    return remember(repeat, start, locale) { runCatching { RepeatText.of(repeat, start, locale) }.getOrDefault(repeat) }
+    val text = remember(spec, start, locale) { RepeatText.ofAlarm(spec.copy(date = start.toString()), locale) ?: spec.repeat }
+    return text ?: stringResource(R.string.home_once)
+}
+
+/**
+ * The holiday region row: the chosen region, or the default region it follows ("not set" when there is none).
+ * zh-CN: 节假日地区一行: 选定的地区, 或所跟随的默认地区 (没有时为 "未设置").
+ */
+@Composable
+private fun holidayRegionSummary(region: String?, holidays: HolidayView?): String {
+    val locale = LocalConfiguration.current.locales[0]
+    if (region != null) return holidays?.region(region)?.let { regionText(it, locale) } ?: region
+    val default = holidays?.region(null)?.let { regionText(it, locale) } ?: stringResource(R.string.holiday_region_unset)
+    return stringResource(R.string.edit_holiday_region_default, default)
 }
 
 /** "Today", "Tomorrow" or the date. zh-CN: "今天", "明天" 或日期. */

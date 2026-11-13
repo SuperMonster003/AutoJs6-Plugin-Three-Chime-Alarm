@@ -11,6 +11,9 @@ import android.os.SystemClock
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
@@ -43,7 +46,10 @@ import java.time.ZoneId
  * the ringtones and the settings page; `clock` for the timers page, its custom duration dialog and the stopwatch page of
  * 1.1.0 (roadmap P7.4), with sample timers (running, paused, ready) and, while the stopwatch is idle, four sample laps;
  * `notice` for the ring notification shown while the device is in use, once in the system theme; `ring` for the ringing
- * screen; `all` for all four) with `screencap` into [DEVICE_DIR] as `<page>-<mode>.png`. The ringing screen is captured on the lock screen: the screen is turned off
+ * screen; `all` for all four; `holidays`, not part of `all`, for the holiday screens of 1.2.0 (roadmap P8.6): the list
+ * with the holiday data card, the editor of a holiday alarm and its holiday rows, the holiday mode dialog, the settings
+ * page at its holiday rows and the region dialog, with their own sample alarms) with `screencap` into [DEVICE_DIR] as
+ * `<page>-<mode>.png`. The ringing screen is captured on the lock screen: the screen is turned off
  * before a silent sample alarm rings, so the full-screen intent opens it there; when it does not show within
  * [RING_SHOW_MILLIS] the screen is started directly and marked `direct` (`chimeRingDirectSeconds` waits longer for it,
  * for example while the maintainer answers a lock screen prompt of the system). The plugin night mode is restored and the
@@ -52,7 +58,8 @@ import java.time.ZoneId
  * zh-CN: 路线图 P3.6 与 P3.1 - P3.5 的 E4 核对所用截图, 由 `.python/device_screens.py` 运行: 添加几个示例闹钟 (标签按插件语言取中文或英文), 然后
  * 对 `chimeModes` 所列的每种夜间模式 (默认 `light,dark`), 用 `screencap` 把 `chimeScreens` 所列的页面 (`pages` 为列表, 编辑页, 铃声页与设置页;
  * `clock` 为 1.1.0 的计时器页, 其自定义时长对话框与秒表页 (路线图 P7.4), 带示例计时器 (运行, 暂停, 就绪), 秒表空闲时另计四个示例圈; `notice` 为设备使用中时的响铃通知,
- * 按系统主题截一次; `ring` 为响铃界面; `all` 为四者) 存到 [DEVICE_DIR], 文件名 `<页面>-<模式>.png`. 响铃界面在锁屏上截取: 静音示例闹钟响铃前先关屏, 由全屏 Intent
+ * 按系统主题截一次; `ring` 为响铃界面; `all` 为四者; `holidays` 不属于 `all`, 为 1.2.0 的节假日界面 (路线图 P8.6): 带节假日数据卡片的列表, 节假日闹钟的编辑页
+ * 及其节假日行, 节假日模式对话框, 停在节假日各行的设置页与地区对话框, 使用单独的示例闹钟) 存到 [DEVICE_DIR], 文件名 `<页面>-<模式>.png`. 响铃界面在锁屏上截取: 静音示例闹钟响铃前先关屏, 由全屏 Intent
  * 在锁屏上打开它; [RING_SHOW_MILLIS] 内未出现时直接启动并标为 `direct` (`chimeRingDirectSeconds` 可延长对它的等待, 例如维护者应答系统的锁屏提示时). 结束时 (含中途失败) 恢复插件夜间模式, 删除示例闹钟与计时器, 并重置探针启动的秒表. 没有该参数时跳过, 因此
  * `connectedDebugAndroidTest` 不会改夜间模式, 也不会关屏.
  */
@@ -82,12 +89,13 @@ class ScreenshotProbe {
             val chinese = AppearancePreferences.resolve(context, HostAppearanceReader.read(context)).language.startsWith("zh")
             out.putString("chime.language", if (chinese) "zh" else "en")
             out.putString("chime.others", runtime.repository.list().size.toString())
-            val main = samples(chinese)
+            val main = if (screens == HOLIDAYS) holidaySamples(chinese) else samples(chinese)
             if (screens == "clock" || screens == "all") clockSamples(chinese, out)
             for (mode in modes) {
                 setNightMode(mode)
                 if (screens == "pages" || screens == "all") pages(mode, main, out)
                 if (screens == "clock" || screens == "all") clock(mode, out)
+                if (screens == HOLIDAYS) holidays(mode, main, out)
             }
             if (screens == "notice" || screens == "ring" || screens == "all") {
                 // `am instrument` leaves the plugin stopped; starting an activity first lets the alarm be delivered.
@@ -141,6 +149,47 @@ class ScreenshotProbe {
         return main
     }
 
+    /**
+     * The holiday sample alarms (roadmap P8.6), all in the bundled CN data: workdays, daily skipping holidays from New
+     * Year's Day of next year (a year the data estimates, T162, so the editor shows the hint), and daily on holidays only.
+     * Returns the one the editor shows.
+     * zh-CN: 节假日示例闹钟 (路线图 P8.6), 都使用内置 CN 数据: 工作日; 自明年元旦起每天并跳过节假日 (数据推算的年份, T162, 编辑页因此显示提示); 每天但只在节假日.
+     * 返回编辑页展示的那一个.
+     */
+    private fun holidaySamples(chinese: Boolean): String {
+        fun text(zh: String, en: String) = if (chinese) zh else en
+        fun filter(mode: String) = mapOf("region" to "CN", "mode" to mode)
+        add(mapOf("hour" to 7, "minute" to 30, "label" to text("上班", "Work"), "holidays" to filter(AlarmContract.HOLIDAY_MODE_WORKDAYS)), AlarmContract.SOURCE_USER)
+        val main = add(
+            mapOf(
+                "hour" to 8, "minute" to 0, "date" to LocalDate.now().plusYears(1).withDayOfYear(1).toString(), "repeat" to "FREQ=DAILY",
+                "label" to text("晨跑", "Morning run"), "holidays" to filter(AlarmContract.HOLIDAY_MODE_SKIP),
+            ),
+            AlarmContract.SOURCE_SCRIPT,
+        )
+        add(mapOf("hour" to 9, "minute" to 0, "repeat" to "FREQ=DAILY", "label" to text("节日问候", "Holiday greeting"), "holidays" to filter(AlarmContract.HOLIDAY_MODE_ONLY)), AlarmContract.SOURCE_TOOL)
+        return main
+    }
+
+    private fun holidays(mode: String, main: String, out: Bundle) {
+        shot("holidays-list-$mode", Intent(context, HomeActivity::class.java), listOf("chime.home.holidays"), out)
+        shot("holidays-edit-$mode", EditAlarmActivity.edit(context, main), listOf("chime.edit.estimated", "chime.edit.noRegion"), out)
+        shot("holidays-edit-rows-$mode", EditAlarmActivity.edit(context, main), listOf("chime.edit.content"), out, "chime.edit.holidayRegion") {
+            compose.onNodeWithTag("chime.edit.holidayRegion").performScrollTo()
+        }
+        shot("holidays-mode-$mode", EditAlarmActivity.edit(context, main), listOf("chime.edit.content"), out) {
+            compose.onNodeWithTag("chime.edit.holidays").performScrollTo().performClick()
+            compose.waitUntil(WAIT_MILLIS) { compose.onAllNodesWithTag("chime.edit.holidaysDialog").fetchSemanticsNodes().isNotEmpty() }
+        }
+        shot("holidays-settings-$mode", Intent(context, SettingsActivity::class.java), listOf("chime.settings"), out, "chime.settings.holidayRegion") {
+            compose.onNodeWithTag("chime.settings.holidayCheck").performScrollTo()
+        }
+        shot("holidays-region-$mode", Intent(context, SettingsActivity::class.java), listOf("chime.settings"), out, "chime.settings.holidayRegion") {
+            compose.onNodeWithTag("chime.settings.holidayRegion").performScrollTo().performClick()
+            compose.waitUntil(WAIT_MILLIS) { compose.onAllNodesWithTag("chime.dialog.holidayRegion").fetchSemanticsNodes().isNotEmpty() }
+        }
+    }
+
     private fun add(options: Map<String, Any>, source: String): String = runtime.repository.add(options, source).id.also { added += it }
 
     private fun pages(mode: String, main: String, out: Bundle) {
@@ -183,13 +232,19 @@ class ScreenshotProbe {
         shot("stopwatch-$mode", HomeIntents.of(context, HomePage.STOPWATCH), listOf("chime.stopwatch.time"), out)
     }
 
-    private fun shot(name: String, intent: Intent, tags: List<String>, out: Bundle, ready: String? = null) {
+    /** Shows [intent], runs [action] (a scroll or a dialog) when given, and captures the screen. zh-CN: 显示 [intent], 给出 [action] (滚动或打开对话框) 时先执行, 然后截屏. */
+    private fun shot(name: String, intent: Intent, tags: List<String>, out: Bundle, ready: String? = null, action: (() -> Unit)? = null) {
         out.putString(
             "chime.shot.$name",
             runCatching {
                 val started = SystemClock.uptimeMillis()
                 show(intent, tags, ready)
                 if (ready != null) out.putString("chime.ready.$name", (SystemClock.uptimeMillis() - started - SETTLE_MILLIS).toString())
+                if (action != null) {
+                    action()
+                    compose.waitForIdle()
+                    SystemClock.sleep(SETTLE_MILLIS)
+                }
                 capture(name)
             }.getOrElse { "error:${it.javaClass.simpleName}: ${it.message.orEmpty().take(120)}" },
         )
@@ -362,6 +417,7 @@ class ScreenshotProbe {
         const val ARGUMENT_MODES = "chimeModes"
         const val ARGUMENT_DIRECT_SECONDS = "chimeRingDirectSeconds"
         const val DEVICE_DIR = "/data/local/tmp/chime-screens"
+        const val HOLIDAYS = "holidays"
         private val HOME_TAGS = listOf("chime.home.list", "chime.emptyState")
         private const val WAIT_MILLIS = 10_000L
         private const val SETTLE_MILLIS = 1_500L

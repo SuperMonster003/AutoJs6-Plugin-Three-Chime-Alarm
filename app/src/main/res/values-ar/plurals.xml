@@ -56,6 +56,14 @@
         <item quantity="many">يمكن تفعيل %1$d منبها على الأكثر في الوقت نفسه</item>
         <item quantity="other">يمكن تفعيل %1$d منبه على الأكثر في الوقت نفسه</item>
     </plurals>
+    <plurals name="home_next_holidays">
+        <item quantity="zero">%1$s (تم تخطي %2$d عطلة)</item>
+        <item quantity="one">%1$s (تم تخطي عطلة واحدة)</item>
+        <item quantity="two">%1$s (تم تخطي عطلتين)</item>
+        <item quantity="few">%1$s (تم تخطي %2$d عطلات)</item>
+        <item quantity="many">%1$s (تم تخطي %2$d عطلة)</item>
+        <item quantity="other">%1$s (تم تخطي %2$d عطلة)</item>
+    </plurals>
     <plurals name="home_selected_count">
         <item quantity="zero">لم يتم تحديد أي منبه</item>
         <item quantity="one">تم تحديد منبه واحد</item>

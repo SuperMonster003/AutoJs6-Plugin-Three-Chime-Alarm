@@ -10,7 +10,6 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.holiday.H
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.ring.RingCoordinator
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.ring.RingtoneLibrary
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.NextOccurrence
-import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.RecurrenceRule
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.RepeatText
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.schedule.AlarmSchedule
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.schedule.BeforeRingOverrides
@@ -22,7 +21,6 @@ import org.autojs.plugin.alarm.api.AlarmSnapshot
 import org.autojs.plugin.alarm.api.AlarmSpec
 import org.autojs.plugin.alarm.api.RingtoneSnapshot
 import java.io.InputStream
-import java.time.LocalDate
 import java.time.ZoneId
 import java.util.Locale
 
@@ -213,20 +211,9 @@ class AlarmApi(
     }
 
     /** The contract snapshot of [record]. zh-CN: [record] 的契约快照. */
-    fun snapshot(record: AlarmRecord): AlarmSnapshot = record.toSnapshot(repeatTextOf(record.spec), hints.hasBindings(record.id))
+    fun snapshot(record: AlarmRecord): AlarmSnapshot = record.toSnapshot(RepeatText.ofAlarm(record.spec, locale()), hints.hasBindings(record.id))
 
     private fun alarmAnswer(record: AlarmRecord): Map<String, Any?> = mapOf(AlarmResultKeys.ALARM to snapshot(record).toValues())
-
-    /**
-     * `repeatText`: an alarm in `workdays` mode that rings on every workday reads "Workdays" (T184), even without `repeat`.
-     * zh-CN: `repeatText`: 每个工作日都响的 `workdays` 模式闹钟显示 "工作日" (T184), 没有 `repeat` 时也是.
-     */
-    private fun repeatTextOf(spec: AlarmSpec): String? {
-        if (spec.holidays?.mode == AlarmContract.HOLIDAY_MODE_WORKDAYS && HolidayFilter.repeats(spec) && spec.repeat.let { it == null || runCatching { RecurrenceRule.parse(it).until == null }.getOrDefault(false) }) {
-            return RepeatText.workdays(locale())
-        }
-        return spec.repeat?.let { rule -> runCatching { RepeatText.of(rule, spec.date?.let(LocalDate::parse), locale()) }.getOrNull() }
-    }
 
     private companion object {
 

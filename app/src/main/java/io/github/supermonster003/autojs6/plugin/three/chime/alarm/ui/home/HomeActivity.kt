@@ -70,6 +70,7 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.Ala
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmException
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmRecord
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.holiday.HolidayFilter
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.NextOccurrence
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.RepeatText
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.TimeZonePolicy
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.StandaloneActivity
@@ -88,6 +89,9 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.permissions
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.permissions.PermissionsActivity
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.permissions.titleOf
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.release.ReleaseHistoryActivity
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.holiday.HolidayStatusCard
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.holiday.HolidayView
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.holiday.statusLines
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.settings.SettingsActivity
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.stopwatch.StopwatchScreen
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.timers.TimersScreen
@@ -186,8 +190,39 @@ class HomeActivity : StandaloneActivity() {
     }
 }
 
-/** One row of the list. zh-CN: 列表的一行. */
-internal data class AlarmItem(val record: AlarmRecord, val repeatText: String?, val bound: Boolean, val ringing: Boolean)
+/**
+ * One row of the list. [holidaySkips]: how many instances holidays take away before the next ring; [estimated]: the next
+ * ring falls in an estimated year of the region (roadmap P8.6).
+ * zh-CN: 列表的一行. [holidaySkips]: 下次响铃之前被节假日拿掉的次数; [estimated]: 下次响铃落在地区的推算年份 (路线图 P8.6).
+ */
+internal data class AlarmItem(
+    val record: AlarmRecord,
+    val repeatText: String?,
+    val bound: Boolean,
+    val ringing: Boolean,
+    val holidaySkips: Int = 0,
+    val estimated: Boolean = false,
+)
+
+/**
+ * The holiday data card of the list (roadmap P8.6, T173): shown while an alarm filters by holidays, [attention] when one
+ * of the facts needs it.
+ * zh-CN: 列表的节假日数据卡片 (路线图 P8.6, T173): 有闹钟使用节假日过滤时显示, 有需要注意的事实时 [attention] 为真.
+ */
+internal data class HolidayCard(val lines: List<String>, val attention: Boolean)
+
+/**
+ * The card for the enabled alarms that filter by holidays among [records], or null when none does: the facts cover the default
+ * region and the regions of those alarms, as `capabilities()` does.
+ * zh-CN: [records] 中已启用且使用节假日过滤的闹钟对应的卡片, 没有这类闹钟时为 null: 与 `capabilities()` 一样, 事实覆盖默认地区与这些闹钟的地区.
+ */
+internal fun loadHolidayCard(context: Context, records: List<AlarmRecord>, now: Long = System.currentTimeMillis()): HolidayCard? {
+    val regions = records.filter { it.enabled }.mapNotNull { it.spec.holidays }.map { it.region }
+    if (regions.isEmpty()) return null
+    val view = HolidayView.load(context) ?: return null
+    val lines = statusLines(context, view, listOf<String?>(null) + regions, now)
+    return HolidayCard(lines, lines.size > 2)
+}
 
 /** The list in display order: by time of day, then by creation. zh-CN: 按显示顺序的列表: 先按钟点, 再按创建时间. */
 internal fun loadItems(context: Context): List<AlarmItem> {
@@ -195,9 +230,20 @@ internal fun loadItems(context: Context): List<AlarmItem> {
     val ringing = runtime.rings.ringing().mapTo(HashSet()) { it.id }
     val locale = context.resources.configuration.locales[0]
     val deviceZone = ZoneId.systemDefault()
+    val now = System.currentTimeMillis()
     return runtime.repository.list().map { record ->
-        val repeat = record.spec.repeat?.let { rule -> runCatching { RepeatText.of(rule, record.spec.date?.let(LocalDate::parse), locale) }.getOrNull() }
-        AlarmItem(record, repeat, runtime.hints.hasBindings(record.id), record.id in ringing)
+        val repeat = RepeatText.ofAlarm(record.spec, locale)
+        val filter = record.spec.holidays
+        val next = record.state.nextTrigger.takeIf { record.enabled }
+        var skips = 0
+        var estimated = false
+        if (filter != null && next != null) {
+            skips = runCatching { NextOccurrence.holidaySkips(record.spec, now, next, deviceZone, runtime.holidayJudge) }.getOrDefault(0)
+            estimated = runCatching {
+                runtime.holidayJudge.day(Instant.ofEpochMilli(next).atZone(TimeZonePolicy.zoneOf(record.spec, deviceZone)).toLocalDate(), filter.region)?.estimated == true
+            }.getOrDefault(false)
+        }
+        AlarmItem(record, repeat, runtime.hints.hasBindings(record.id), record.id in ringing, skips, estimated)
     }.sortedWith(compareBy<AlarmItem> { minuteOfDay(it.record, deviceZone) }.thenBy { it.record.createdAt })
 }
 
@@ -221,6 +267,7 @@ private fun HomeScreen(bottomBar: @Composable () -> Unit) {
     var unbinding by rememberSaveable { mutableStateOf<String?>(null) }
     var deleting by rememberSaveable { mutableStateOf<List<String>?>(null) }
     var timeFormat by remember { mutableStateOf(TimeFormat.SYSTEM) }
+    var holidayCard by remember { mutableStateOf<HolidayCard?>(null) }
     val selecting = selection.isNotEmpty()
 
     LaunchedEffect(generation) {
@@ -228,6 +275,7 @@ private fun HomeScreen(bottomBar: @Composable () -> Unit) {
         items = loaded
         missing = lacking
         timeFormat = format
+        holidayCard = withContext(Dispatchers.IO) { loadHolidayCard(context, loaded.map { it.record }) }
         val ids = loaded.mapTo(HashSet()) { it.record.id }
         if (selection.any { it !in ids }) selection = selection.filter { it in ids }
     }
@@ -284,6 +332,7 @@ private fun HomeScreen(bottomBar: @Composable () -> Unit) {
         val list = items
         val banner = missing.isNotEmpty() && !selecting
         val openPermissions = { context.startActivity(Intent(context, PermissionsActivity::class.java)) }
+        val openSettings = { context.startActivity(Intent(context, SettingsActivity::class.java)) }
         // A clock format chosen in the settings rebuilds the rows (P3.5). zh-CN: 在设置中选择的时钟格式会重建各行 (P3.5).
         key(timeFormat) {
         when {
@@ -302,6 +351,9 @@ private fun HomeScreen(bottomBar: @Composable () -> Unit) {
                 contentPadding = PaddingValues(top = padding.calculateTopPadding(), bottom = padding.calculateBottomPadding() + 88.dp),
             ) {
                 if (banner) item(key = "permissionBanner") { PermissionBanner(missing, openPermissions) }
+                holidayCard?.takeIf { !selecting }?.let { card ->
+                    item(key = "holidayCard") { HolidayStatusCard(card.lines, card.attention, openSettings) }
+                }
                 items(list, key = { it.record.id }) { item ->
                     val id = item.record.id
                     AlarmRow(
@@ -596,7 +648,10 @@ internal fun statusText(context: Context, item: AlarmItem, now: Long = System.cu
     }
     if (!record.enabled) return null
     val next = state.nextTrigger ?: return context.getString(R.string.home_no_next)
-    val nextText = context.getString(R.string.home_next_ring, TimeFormats.dayOf(context, next), TimeFormats.timeOf(context, next), TimeFormats.remaining(context, next, now))
+    var nextText = context.getString(R.string.home_next_ring, TimeFormats.dayOf(context, next), TimeFormats.timeOf(context, next), TimeFormats.remaining(context, next, now))
+    // "Next (N holidays skipped)" and the estimated year (roadmap P8.6). zh-CN: "下一次 (已跳过 N 个节假日)" 与推算年份 (路线图 P8.6).
+    if (item.holidaySkips > 0) nextText = context.resources.getQuantityString(R.plurals.home_next_holidays, item.holidaySkips, nextText, item.holidaySkips)
+    if (item.estimated) nextText += "\n" + context.getString(R.string.holiday_estimated_next)
     val skipped = state.skipAt ?: return nextText
     return context.getString(R.string.home_skipped, TimeFormats.dayOf(context, skipped), TimeFormats.timeOf(context, skipped)) + "\n" + nextText
 }

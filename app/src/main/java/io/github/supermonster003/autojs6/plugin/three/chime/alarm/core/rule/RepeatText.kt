@@ -1,5 +1,8 @@
 package io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule
 
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.holiday.HolidayFilter
+import org.autojs.plugin.alarm.api.AlarmContract
+import org.autojs.plugin.alarm.api.AlarmSpec
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.util.Locale
@@ -43,6 +46,22 @@ object RepeatText {
      * zh-CN: `holidays.mode` 为 `workdays` 且每个工作日都响的闹钟的描述 (路线图 P8.3, T184).
      */
     fun workdays(locale: Locale = Locale.getDefault()): String = phrasesOf(languageOf(locale)).workdays()
+
+    /**
+     * The `repeatText` of [spec] (`Alarm.repeatText`): an alarm in `workdays` mode that rings on every workday reads
+     * [workdays] (T184), even without `repeat`; any other alarm describes its `repeat` ([of]), or has none. The script API,
+     * the home list and the edit page all use this (roadmap P8.6).
+     * zh-CN: [spec] 的 `repeatText` (`Alarm.repeatText`): 每个工作日都响的 `workdays` 模式闹钟显示 [workdays] (T184), 没有 `repeat` 时也是; 其他闹钟描述
+     * 其 `repeat` ([of]), 或没有描述. 脚本 API, 首页列表与编辑页都用它 (路线图 P8.6).
+     */
+    fun ofAlarm(spec: AlarmSpec, locale: Locale = Locale.getDefault()): String? {
+        val rule = spec.repeat?.let { runCatching { RecurrenceRule.parse(it) }.getOrNull() }
+        if (spec.holidays?.mode == AlarmContract.HOLIDAY_MODE_WORKDAYS && HolidayFilter.repeats(spec) && (spec.repeat == null || rule != null && rule.until == null)) {
+            return workdays(locale)
+        }
+        rule ?: return null
+        return runCatching { describe(rule, spec.date?.let(LocalDate::parse), phrasesOf(languageOf(locale))) }.getOrNull()
+    }
 
     internal fun describe(rule: RecurrenceRule, start: LocalDate?, phrases: Phrases): String =
         shape(rule, start)?.let { phrases.text(it) } ?: rule.text

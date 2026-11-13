@@ -198,7 +198,7 @@ class AlarmPluginBinderTest {
         assertError(AlarmErrorCodes.INVALID_OPTIONS, plugin.decideBeforeRing(request(*decision, "decision" to AlarmContract.DECISION_SKIP, "overrides" to mapOf("label" to "x"))))
         assertError(AlarmErrorCodes.INVALID_OPTIONS, plugin.decideBeforeRing(request(*decision, "decision" to AlarmContract.DECISION_RING, "reason" to "x")))
         assertError(AlarmErrorCodes.INVALID_OPTIONS, plugin.decideBeforeRing(request(*decision, "decision" to AlarmContract.DECISION_SKIP, "reason" to "x".repeat(101))))
-        assertTrue("a decision for no pending beforeRing is ignored", answerOf(plugin.decideBeforeRing(request(*decision, "decision" to AlarmContract.DECISION_SKIP))).isEmpty())
+        assertTrue("a decision for no pending beforeRing is ignored", emptyAnswer(plugin.decideBeforeRing(request(*decision, "decision" to AlarmContract.DECISION_SKIP))))
     }
 
     @Test
@@ -229,18 +229,24 @@ class AlarmPluginBinderTest {
             val firedEarly = skipAt - (skipBefore["firedAt"] as Long)
             assertTrue("beforeRing fires about $LEAD_SECONDS s ahead, got $firedEarly ms", firedEarly in 6_000L..(LEAD_SECONDS * 1_000L + 2_000L))
             val occurrence = skipBefore["occurrence"] as String
-            assertTrue(answerOf(plugin.decideBeforeRing(request("occurrence" to occurrence, "alarmId" to skipped, "decision" to AlarmContract.DECISION_SKIP, "reason" to "p25 probe"))).isEmpty())
-            val skip = await(1, 5_000) { of(skipped, AlarmContract.EVENT_SKIP) }.single()
-            assertEquals(AlarmContract.SKIP_REASON_SCRIPT, skip["reason"])
-            assertEquals(occurrence, skip["occurrence"])
+            assertTrue(emptyAnswer(plugin.decideBeforeRing(request("occurrence" to occurrence, "alarmId" to skipped, "decision" to AlarmContract.DECISION_SKIP, "reason" to "p25 probe"))))
 
+            // Both decisions go out before either instance is due: the deadline of the second (ringAt - 5 s) is before skipAt.
+            // zh-CN: 两个决定都在应响之前发出: 第二个的截止时刻 (ringAt - 5 s) 早于 skipAt.
             val ringBefore = await(1, BEFORE_RING_WAIT_MILLIS) { of(rung, AlarmContract.EVENT_BEFORE_RING) }.single()
             val overridden = "$label-overridden"
-            assertTrue(answerOf(plugin.decideBeforeRing(request(
+            assertTrue(emptyAnswer(plugin.decideBeforeRing(request(
                 "occurrence" to ringBefore["occurrence"], "alarmId" to rung, "decision" to AlarmContract.DECISION_RING,
                 "overrides" to mapOf("label" to overridden),
-            ))).isEmpty())
-            val ring = await(1, RING_WAIT_MILLIS) { of(rung, AlarmContract.EVENT_RING) }.single()
+            ))))
+
+            // A script's skip takes effect at the scheduled time (T189): the skip event comes then, not with the answer.
+            // zh-CN: 脚本的 skip 在应响时刻生效 (T189): skip 事件那时才发, 不随应答发出.
+            val skip = await(1, skipAt - System.currentTimeMillis() + RING_WAIT_MILLIS) { of(skipped, AlarmContract.EVENT_SKIP) }.single()
+            assertEquals(AlarmContract.SKIP_REASON_SCRIPT, skip["reason"])
+            assertEquals("p25 probe", skip["detail"])
+            assertEquals(occurrence, skip["occurrence"])
+            val ring =await(1, ringAt - System.currentTimeMillis() + RING_WAIT_MILLIS) { of(rung, AlarmContract.EVENT_RING) }.single()
             assertEquals("ring(overrides) changes the label of this ring", overridden, ring["label"])
             assertEquals(ringBefore["occurrence"], ring["occurrence"])
             assertEquals(true, answerOf(plugin.dismiss(request("id" to rung)))[AlarmResultKeys.HANDLED])
@@ -341,6 +347,9 @@ class AlarmPluginBinderTest {
         assertNoError(bundle)
         return AlarmBundles.fromBundle(bundle)
     }
+
+    /** Whether [bundle] answers with no values: every answer carries the contract version. zh-CN: [bundle] 是否为不含任何值的应答: 每个应答都带契约版本. */
+    private fun emptyAnswer(bundle: Bundle?): Boolean = (answerOf(bundle) - AlarmContract.KEY_CONTRACT_VERSION).isEmpty()
 
     private fun alarmOf(bundle: Bundle?): Map<*, *> = answerOf(bundle)[AlarmResultKeys.ALARM] as Map<*, *>
 

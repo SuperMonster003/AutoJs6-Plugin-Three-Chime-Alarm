@@ -42,6 +42,12 @@
         <item quantity="many">Одновременно можно включить не более %1$d будильников</item>
         <item quantity="other">Одновременно можно включить не более %1$d будильника</item>
     </plurals>
+    <plurals name="home_next_holidays">
+        <item quantity="one">%1$s (пропущен %2$d праздник)</item>
+        <item quantity="few">%1$s (пропущено %2$d праздника)</item>
+        <item quantity="many">%1$s (пропущено %2$d праздников)</item>
+        <item quantity="other">%1$s (пропущено %2$d праздника)</item>
+    </plurals>
     <plurals name="home_selected_count">
         <item quantity="one">Выбран %1$d</item>
         <item quantity="few">Выбрано %1$d</item>

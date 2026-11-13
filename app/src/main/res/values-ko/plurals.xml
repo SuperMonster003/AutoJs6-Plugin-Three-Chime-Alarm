@@ -21,6 +21,9 @@
     <plurals name="home_limit_enabled">
         <item quantity="other">동시에 켤 수 있는 알람은 최대 %1$d개입니다</item>
     </plurals>
+    <plurals name="home_next_holidays">
+        <item quantity="other">%1$s (공휴일 %2$d일 건너뜀)</item>
+    </plurals>
     <plurals name="home_selected_count">
         <item quantity="other">%1$d개 선택됨</item>
     </plurals>

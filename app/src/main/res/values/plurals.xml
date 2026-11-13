@@ -28,6 +28,10 @@
         <item quantity="one">At most %1$d alarm can be on at the same time</item>
         <item quantity="other">At most %1$d alarms can be on at the same time</item>
     </plurals>
+    <plurals name="home_next_holidays">
+        <item quantity="one">%1$s (%2$d holiday skipped)</item>
+        <item quantity="other">%1$s (%2$d holidays skipped)</item>
+    </plurals>
     <plurals name="home_selected_count">
         <item quantity="one">%1$d selected</item>
         <item quantity="other">%1$d selected</item>

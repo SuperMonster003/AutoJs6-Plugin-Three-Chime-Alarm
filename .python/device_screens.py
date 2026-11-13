@@ -1,6 +1,6 @@
-"""Screenshots of 3-Chime Alarm on one device (roadmap P3.6 and the E4 checks of P3.1 - P3.5 and P7.4).
+"""Screenshots of 3-Chime Alarm on one device (roadmap P3.6 and the E4 checks of P3.1 - P3.5, P7.4 and P8.6).
 
-    py .python/device_screens.py <serial> --out DIR [--screens all|pages|clock|notice|ring] [--modes light,dark] [--no-install]
+    py .python/device_screens.py <serial> --out DIR [--screens all|pages|clock|notice|ring|holidays] [--modes light,dark] [--no-install]
                                  [--keep-test-package] [--direct-seconds N]
 
 1. install: `adb install -r -t` of the newest debug APK and its androidTest APK (the plugin keeps its data and its
@@ -15,6 +15,10 @@
    screen on the lock screen (`ring`: the screen is turned off before a silent sample alarm rings; `direct` marks a
    screen started directly because the full-screen intent did not show it). It restores the night mode, removes the
    samples and resets a stopwatch it started.
+   `holidays` (1.2.0, roadmap P8.6, not part of `all`) adds three holiday sample alarms of the bundled CN data instead
+   (workdays, daily skipping holidays from New Year's Day of next year, daily on holidays only) and captures the list
+   with the holiday data card, the editor (the next ring with the holidays skipped and the estimated year hint), its
+   holiday rows, the holiday mode dialog, the settings page at the holiday rows and the default region dialog.
    The pages that read the ringtones in the background are captured once their rows are enabled (the time is printed).
 4. the captures are pulled into DIR as `<page>-<mode>.png` and removed from the device; the plugin is started once
    again (`am instrument` force-stops it) and the androidTest APK is uninstalled unless --keep-test-package.
@@ -123,7 +127,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("serial")
     parser.add_argument("--out", required=True, help="the directory for the captures")
-    parser.add_argument("--screens", default="all", choices=["all", "pages", "clock", "notice", "ring"])
+    parser.add_argument("--screens", default="all", choices=["all", "pages", "clock", "notice", "ring", "holidays"])
     parser.add_argument("--modes", default="light,dark", help="plugin night modes, from light and dark")
     parser.add_argument("--direct-seconds", type=int, help="wait this long for a ring screen started directly (a system "
                                                                  "lock screen prompt answered by the maintainer)")

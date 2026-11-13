@@ -148,25 +148,50 @@ class HolidayData(initial: HolidayDataSet, private val defaultRegion: () -> Stri
      * zh-CN: `capabilities()` 中关于 [regions] (null 为默认地区) 在 [year] 的警告 (路线图 P8.2, Q47 (a), T173): 没有数据的年份只按星期规则响铃;
      * 推算年份仍可能有补班或调休; 没有数据的地区也会列出. 与其他协议文字一样用英文.
      */
-    fun warnings(regions: Collection<String?>, year: Int): List<String> {
-        val out = LinkedHashSet<String>()
+    fun warnings(regions: Collection<String?>, year: Int): List<String> = issues(regions, year).map { issue ->
+        when (issue) {
+            is Issue.NoData -> "Holiday region ${issue.region}: ${issue.detail}; alarms with it ring by their weekday rules only"
+            is Issue.MissingYear -> "Holiday data for ${issue.region} has no year ${issue.year} (it covers ${issue.firstYear} - ${issue.lastYear}); alarms with it ring by their weekday rules only this year"
+            is Issue.Estimated -> "Holiday data for ${issue.region} from ${issue.from} on is estimated: makeup workdays and adjusted days off are not announced yet and may change"
+        }
+    }.distinct()
+
+    /**
+     * The facts behind [warnings], for texts in the language of the user (roadmap P8.6, T173): each region in [regions]
+     * (null: the default region) gives at most one issue for [year].
+     * zh-CN: [warnings] 背后的事实, 供界面按用户语言显示 (路线图 P8.6, T173): [regions] (null 为默认地区) 中每个地区在 [year] 至多一条.
+     */
+    fun issues(regions: Collection<String?>, year: Int): List<Issue> {
+        val out = LinkedHashSet<Issue>()
         for (text in regions.toSet()) {
             val ref = try {
                 resolve(text)
             } catch (e: AlarmException) {
-                if (text != null || e.code == AlarmErrorCodes.HOLIDAY_DATA_MISSING && defaultRegion() != null) out += "Holiday region ${text ?: defaultRegion()}: ${e.detail}; alarms with it ring by their weekday rules only"
+                if (text != null || e.code == AlarmErrorCodes.HOLIDAY_DATA_MISSING && defaultRegion() != null) out += Issue.NoData(text ?: defaultRegion()!!, e.detail)
                 continue
             }
             val region = ref.region
             when {
-                !region.covers(year) -> out += "Holiday data for ${region.code} has no year $year (it covers ${region.firstYear} - ${region.lastYear}); alarms with it ring by their weekday rules only this year"
-                region.estimated(year) || region.estimated(year + 1) -> {
-                    val from = maxOf(region.estimatedFrom!!, year)
-                    out += "Holiday data for ${region.code} from $from on is estimated: makeup workdays and adjusted days off are not announced yet and may change"
-                }
+                !region.covers(year) -> out += Issue.MissingYear(region.code, year, region.firstYear, region.lastYear)
+                region.estimated(year) || region.estimated(year + 1) -> out += Issue.Estimated(region.code, maxOf(region.estimatedFrom!!, year))
             }
         }
         return out.toList()
+    }
+
+    /** One fact behind a warning of [warnings]. zh-CN: [warnings] 中一条警告背后的事实. */
+    sealed interface Issue {
+
+        val region: String
+
+        /** The data has no [region] (or it is damaged): [detail] says why. zh-CN: 数据中没有 [region] (或已损坏), [detail] 说明原因. */
+        data class NoData(override val region: String, val detail: String) : Issue
+
+        /** [region] has no data for [year]. zh-CN: [region] 没有 [year] 的数据. */
+        data class MissingYear(override val region: String, val year: Int, val firstYear: Int, val lastYear: Int) : Issue
+
+        /** The data of [region] is estimated from [from] on (T162). zh-CN: [region] 自 [from] 年起的数据为推算 (T162). */
+        data class Estimated(override val region: String, val from: Int) : Issue
     }
 
     companion object {

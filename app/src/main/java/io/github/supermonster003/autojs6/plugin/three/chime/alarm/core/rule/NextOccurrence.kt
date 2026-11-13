@@ -65,6 +65,9 @@ object NextOccurrence {
 
     private const val LAST_YEAR = 9999
 
+    /** The most holidays [holidaySkips] counts. zh-CN: [holidaySkips] 至多计数的节假日个数. */
+    const val MAX_COUNTED_SKIPS = 99
+
     /** One ring: the wall-clock moment and its instant. zh-CN: 一次响铃: 墙上时间与对应时刻. */
     data class Occurrence(val local: LocalDateTime, val at: Long)
 
@@ -160,20 +163,38 @@ object NextOccurrence {
     }
 
     /**
+     * How many instances of [spec] after [after] and before [before] a holiday takes away, at most [limit] (roadmap P8.6):
+     * the "N holidays skipped" of the home list and the edit page. Zero without a holiday filter; the date of a `time`
+     * alarm without one is filled in as in [preview].
+     * zh-CN: [spec] 在 [after] 之后, [before] 之前被节假日拿掉的次数, 至多 [limit] (路线图 P8.6): 首页列表与编辑页的 "已跳过 N 个节假日". 没有节假日过滤时
+     * 为 0; 没有 `date` 的 `time` 闹钟按 [preview] 的方式补上日期.
+     */
+    fun holidaySkips(spec: AlarmSpec, after: Long, before: Long, deviceZone: ZoneId, judge: HolidayJudge, limit: Int = MAX_COUNTED_SKIPS): Int {
+        if (spec.holidays == null || before <= after) return 0
+        return instances(withDate(spec, after, deviceZone), deviceZone, judge, after)
+            .filter { it.first.at > after }
+            .takeWhile { it.first.at < before }
+            .filter { it.second == HolidayFilter.Verdict.HOLIDAY }
+            .take(limit)
+            .count()
+    }
+
+    /**
      * The next [count] ring instants of an alarm that is not stored (`alarms.preview`, at most 366), the date filled
      * in as for a new alarm, the holiday filter applied.
      * zh-CN: 未保存的闹钟接下来 [count] 次响铃的时刻 (`alarms.preview`, 至多 366), 日期按新建闹钟的方式补上, 已应用节假日过滤.
      */
     fun preview(spec: AlarmSpec, count: Int, now: Long, deviceZone: ZoneId, judge: HolidayJudge = HolidayJudge.NONE): List<Long> {
-        val resolved = if (spec.time != null && spec.date == null) {
-            spec.copy(date = implicitDate(spec, now, TimeZonePolicy.zoneOf(spec, deviceZone)).toString())
-        } else spec
-        return rings(resolved, deviceZone, judge, now)
+        return rings(withDate(spec, now, deviceZone), deviceZone, judge, now)
             .filter { it.at > now }
             .take(count.coerceIn(0, AlarmLimits.MAX_PREVIEW_COUNT))
             .map { it.at }
             .toList()
     }
+
+    /** [spec] with the date of a `time` alarm filled in as for a new alarm ([implicitDate]). zh-CN: 按新建闹钟的方式补上日期的 [spec]. */
+    private fun withDate(spec: AlarmSpec, now: Long, deviceZone: ZoneId): AlarmSpec =
+        if (spec.time != null && spec.date == null) spec.copy(date = implicitDate(spec, now, TimeZonePolicy.zoneOf(spec, deviceZone)).toString()) else spec
 
     /**
      * The next [count] rings of the enabled alarms among [records] after [now] (`alarms.upcoming`, at most 100), in

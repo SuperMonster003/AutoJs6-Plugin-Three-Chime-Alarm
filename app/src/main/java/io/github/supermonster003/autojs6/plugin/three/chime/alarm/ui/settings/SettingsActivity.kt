@@ -23,6 +23,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -31,6 +32,7 @@ import androidx.core.net.toUri
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.AlarmRuntime
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.BuildConfig
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.R
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.net.CancelToken
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.ring.KeepAliveSettings
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.ring.RingDefaults
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ring.KeepAliveService
@@ -61,6 +63,12 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.edit.snooze
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.edit.soundText
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.format.TimeFormat
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.format.TimeFormats
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.holiday.HolidayView
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.holiday.RegionDialog
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.holiday.holidaySettingsChanged
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.holiday.regionFacts
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.holiday.regionText
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.holiday.statusLines
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.release.ReleaseHistoryActivity
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.ringtones.RingtonePicker
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.ringtones.RingtoneRequest
@@ -78,18 +86,18 @@ import java.util.Locale
  * The settings screen (roadmap P3.5, T84, standalone settings specification), adapted from 3-Macaw Speech: appearance
  * (language, night mode, theme color, launcher icon; the first three follow AutoJs6 by default); the alarm defaults
  * (sound, vibration, snooze, auto stop) that every alarm leaving an option at "Default" uses when it rings; region and
- * format (the clock format of the screens); and about (version, release history, the update check with its automatic
- * frequency and metered network choice, ignored versions, notices). Every choice dialog edits a draft and saves once on
- * confirm. The holiday region joins "Region and format" with 1.2.0 and the emergency dismiss joins the defaults with
- * 1.3.0.
+ * format (the clock format of the screens, the default holiday region); holiday data (the weekly update check, its
+ * metered network choice, the data status and a manual check); and about (version, release history, the update check with
+ * its automatic frequency and metered network choice, ignored versions, notices). Every choice dialog edits a draft and
+ * saves once on confirm. The emergency dismiss joins the defaults with 1.3.0.
  * zh-CN: 设置页 (路线图 P3.5, T84, 独立设置规范), 改编自 3-Macaw Speech: 外观 (语言, 夜间模式, 主题色, 启动器图标; 前三项默认跟随 AutoJs6); 闹钟默认值
- * (铃声, 振动, 贪睡, 自动停止), 每个把选项留在 "默认" 的闹钟响铃时都使用它们; 区域与格式 (界面的时钟格式); 以及关于 (版本, 发行历史, 更新检查及其自动
- * 检查频率与计量网络选项, 已忽略的版本, 声明). 每个选择对话框编辑草稿, 确定时保存一次. 节假日地区随 1.2.0 加入 "区域与格式", 紧急解除随 1.3.0 加入
- * 默认值分组.
+ * (铃声, 振动, 贪睡, 自动停止), 每个把选项留在 "默认" 的闹钟响铃时都使用它们; 区域与格式 (界面的时钟格式, 默认节假日地区); 节假日数据 (每周更新检查,
+ * 其计量网络选项, 数据状态与手动检查); 以及关于 (版本, 发行历史, 更新检查及其自动检查频率与计量网络选项, 已忽略的版本, 声明). 每个选择对话框编辑草稿,
+ * 确定时保存一次. 紧急解除随 1.3.0 加入默认值分组.
  */
 class SettingsActivity : StandaloneActivity() {
 
-    private enum class Dialog { LANGUAGE, DARK_MODE, THEME_COLOR, LAUNCHER_ICON, SNOOZE, AUTO_SILENCE, TIME_FORMAT, FREQUENCY, IGNORED }
+    private enum class Dialog { LANGUAGE, DARK_MODE, THEME_COLOR, LAUNCHER_ICON, SNOOZE, AUTO_SILENCE, TIME_FORMAT, HOLIDAY_REGION, FREQUENCY, IGNORED }
 
     private lateinit var store: AppUpdateStore
     private lateinit var updates: AppUpdateController
@@ -103,6 +111,13 @@ class SettingsActivity : StandaloneActivity() {
     private val snackbar = SnackbarHostState()
     private var pendingMessage by mutableStateOf<String?>(null)
     private var dialog by mutableStateOf<Dialog?>(null)
+
+    /** The holiday data and its status lines, loaded off the main thread (roadmap P8.6). zh-CN: 节假日数据及其状态行, 在主线程外读取 (路线图 P8.6). */
+    private var holidays by mutableStateOf<HolidayView?>(null)
+    private var holidayLines by mutableStateOf<List<String>>(emptyList())
+    private var holidayRevision by mutableIntStateOf(0)
+    private var holidayCheck: CancelToken? = null
+    private var holidayChecking by mutableStateOf(false)
 
     /**
      * The ringtone page without "Default" (T85); the choice is applied to the stored defaults, which the page may have
@@ -127,7 +142,10 @@ class SettingsActivity : StandaloneActivity() {
     }
 
     override fun onDestroy() {
-        if (isFinishing) updates.cancel()
+        if (isFinishing) {
+            updates.cancel()
+            holidayCheck?.cancel()
+        }
         super.onDestroy()
     }
 
@@ -150,6 +168,19 @@ class SettingsActivity : StandaloneActivity() {
             defaults = loaded
             ringtones = tones
         }
+        LaunchedEffect(resumed, holidayRevision) {
+            val app = applicationContext
+            val loaded = withContext(Dispatchers.IO) {
+                HolidayView.load(app)?.let { view ->
+                    val regions = runCatching {
+                        AlarmRuntime.get(app).repository.list().filter { it.enabled }.mapNotNull { it.spec.holidays?.region }
+                    }.getOrDefault(emptyList())
+                    view to statusLines(app, view, listOf<String?>(null) + regions)
+                }
+            }
+            holidays = loaded?.first
+            holidayLines = loaded?.second.orEmpty()
+        }
         val scroll = rememberScrollState()
         ChimeScreen(title = stringResource(R.string.settings_title), onBack = ::finish, snackbarHostState = snackbar) { padding ->
             // A saved choice bumps the revision and rebuilds the rows from the stored values. zh-CN: 保存后修订号增加, 各行按存储值重建.
@@ -160,6 +191,7 @@ class SettingsActivity : StandaloneActivity() {
                     TimersGroup()
                     BackgroundGroup()
                     FormatGroup()
+                    HolidayGroup()
                     AboutGroup()
                     Spacer(Modifier.height(24.dp))
                 }
@@ -270,7 +302,34 @@ class SettingsActivity : StandaloneActivity() {
         SectionHeader(stringResource(R.string.settings_region_format))
         SettingsRow(stringResource(R.string.settings_time_format), summary = timeFormatSummary(TimeFormats.get(this)), icon = R.drawable.ic_schedule_24,
             onClick = { dialog = Dialog.TIME_FORMAT }, modifier = Modifier.testTag("chime.settings.timeFormat"))
-        // The holiday region joins here with 1.2.0. zh-CN: 节假日地区随 1.2.0 加入此处.
+        Hairline()
+        val view = holidays
+        SettingsRow(stringResource(R.string.settings_holiday_region), summary = view?.let { defaultRegionSummary(it) }, icon = R.drawable.ic_beach_access_24,
+            enabled = view != null, onClick = { dialog = Dialog.HOLIDAY_REGION }, modifier = Modifier.testTag("chime.settings.holidayRegion"))
+    }
+
+    /**
+     * Holiday data (roadmap P8.6, T173 / T176): the weekly check and its metered network choice, then the data status
+     * (version, source, last check, facts that need attention) with a manual check.
+     * zh-CN: 节假日数据 (路线图 P8.6, T173 / T176): 每周检查及其计量网络选项, 然后是数据状态 (版本, 来源, 上次检查, 需要注意的事实) 与手动检查.
+     */
+    @Composable
+    private fun HolidayGroup() {
+        val settings = AlarmRuntime.get(applicationContext).holidaySettings
+        SectionHeader(stringResource(R.string.holiday_data))
+        val auto = settings.autoUpdate
+        SwitchRow(stringResource(R.string.settings_holiday_auto_update), auto, { settings.autoUpdate = it; holidaySaved() },
+            summary = stringResource(R.string.settings_holiday_auto_update_summary), icon = R.drawable.ic_update_24,
+            modifier = Modifier.testTag("chime.settings.holidayAutoUpdate"))
+        Hairline()
+        SwitchRow(stringResource(R.string.settings_holiday_metered), settings.allowMeteredDownloads, { settings.allowMeteredDownloads = it; holidaySaved() },
+            summary = stringResource(R.string.settings_holiday_metered_summary), icon = R.drawable.ic_cloud_24, enabled = auto,
+            modifier = Modifier.testTag("chime.settings.holidayMetered"))
+        Hairline()
+        SettingsRow(stringResource(R.string.settings_holiday_check),
+            summary = if (holidayChecking) stringResource(R.string.holiday_checking) else holidayLines.joinToString("\n").ifEmpty { null },
+            icon = R.drawable.ic_event_24, enabled = holidays != null && !holidayChecking, onClick = ::checkHolidays,
+            modifier = Modifier.testTag("chime.settings.holidayCheck"))
     }
 
     @Composable
@@ -398,6 +457,18 @@ class SettingsActivity : StandaloneActivity() {
                     tag = "chime.dialog.timeFormat",
                 )
             }
+            Dialog.HOLIDAY_REGION -> holidays?.let { view ->
+                RegionDialog(
+                    view = view,
+                    current = view.region(null)?.code,
+                    title = stringResource(R.string.settings_holiday_region),
+                    firstLabel = stringResource(R.string.settings_holiday_region_none),
+                    firstNote = stringResource(R.string.settings_holiday_region_none_note),
+                    onDismiss = close,
+                    onConfirm = { region -> close(); saveDefaultRegion(view, region) },
+                    tag = "chime.dialog.holidayRegion",
+                )
+            }
             Dialog.FREQUENCY -> ChoiceDialog(
                 title = stringResource(R.string.update_automatic),
                 options = UpdateFrequency.entries.map { Choice(stringResource(frequencyLabel(it))) },
@@ -460,6 +531,46 @@ class SettingsActivity : StandaloneActivity() {
     private fun saved() {
         revision++
         pendingMessage = getString(R.string.settings_saved)
+    }
+
+    /**
+     * Applies a holiday setting (roadmap P8.6): the weekly check follows the switches and the alarms are replanned.
+     * zh-CN: 应用节假日设置 (路线图 P8.6): 每周检查跟随开关, 闹钟重新排程.
+     */
+    private fun holidaySaved() {
+        holidaySettingsChanged(applicationContext)
+        holidayRevision++
+        saved()
+    }
+
+    private fun saveDefaultRegion(view: HolidayView, region: String?) {
+        val current = view.region(null)?.code
+        if (region == current) return
+        AlarmRuntime.get(applicationContext).holidaySettings.setDefaultRegion(region)
+        holidaySaved()
+    }
+
+    /**
+     * Checks for newer holiday data now, the same refresh as the weekly check and the script `holidays.refresh`.
+     * zh-CN: 立即检查较新的节假日数据, 与每周检查及脚本的 `holidays.refresh` 相同.
+     */
+    private fun checkHolidays() {
+        if (holidayChecking) return
+        val cancel = CancelToken()
+        holidayCheck = cancel
+        holidayChecking = true
+        AlarmRuntime.get(applicationContext).refreshHolidays(cancel, null) { result ->
+            runOnUiThread {
+                if (cancel.isCancelled) return@runOnUiThread
+                holidayChecking = false
+                holidayCheck = null
+                holidayRevision++
+                pendingMessage = result.fold(
+                    onSuccess = { if (it.updated) getString(R.string.holiday_check_updated, it.info.version) else getString(R.string.holiday_check_up_to_date) },
+                    onFailure = { getString(R.string.holiday_check_failed) },
+                )
+            }
+        }
     }
 
     private fun open(url: String) {
@@ -531,6 +642,16 @@ class SettingsActivity : StandaloneActivity() {
         TimeFormat.SYSTEM -> stringResource(R.string.settings_follow_system)
         TimeFormat.H12 -> stringResource(R.string.settings_time_format_12)
         TimeFormat.H24 -> stringResource(R.string.settings_time_format_24)
+    }
+
+    /**
+     * The default holiday region with its facts ("China, 2008 - 2027, with makeup workdays"), or "No default region".
+     * zh-CN: 默认节假日地区及其事实 ("中国, 2008 - 2027 年, 含补班日"), 或 "不设默认地区".
+     */
+    @Composable
+    private fun defaultRegionSummary(view: HolidayView): String {
+        val ref = view.region(null) ?: return stringResource(R.string.settings_holiday_region_none)
+        return regionText(ref, LocalConfiguration.current.locales[0]) + "\n" + regionFacts(this, ref.region)
     }
 
     @StringRes

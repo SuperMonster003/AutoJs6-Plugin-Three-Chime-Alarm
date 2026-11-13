@@ -35,6 +35,11 @@
         <item quantity="many">Como máximo %1$d alarmas pueden estar activadas a la vez</item>
         <item quantity="other">Como máximo %1$d alarmas pueden estar activadas a la vez</item>
     </plurals>
+    <plurals name="home_next_holidays">
+        <item quantity="one">%1$s (%2$d festivo omitido)</item>
+        <item quantity="many">%1$s (%2$d festivos omitidos)</item>
+        <item quantity="other">%1$s (%2$d festivos omitidos)</item>
+    </plurals>
     <plurals name="home_selected_count">
         <item quantity="one">%1$d seleccionada</item>
         <item quantity="many">%1$d seleccionadas</item>

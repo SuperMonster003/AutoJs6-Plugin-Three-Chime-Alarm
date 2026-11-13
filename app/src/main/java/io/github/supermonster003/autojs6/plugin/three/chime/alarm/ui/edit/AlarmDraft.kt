@@ -3,12 +3,15 @@ package io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.edit
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmException
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmOptionsValidator
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmRecord
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.holiday.HolidayFilter
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.holiday.HolidayJudge
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.NextOccurrence
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.RecurrenceRule
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.RecurrenceRule.Freq
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.RecurrenceRule.WeekdayNum
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.TimeZonePolicy
 import org.autojs.plugin.alarm.api.AlarmContract
+import org.autojs.plugin.alarm.api.AlarmHolidayFilter
 import org.autojs.plugin.alarm.api.AlarmOptionKeys
 import org.autojs.plugin.alarm.api.AlarmSnooze
 import org.autojs.plugin.alarm.api.AlarmSound
@@ -27,10 +30,11 @@ import java.time.temporal.ChronoUnit
  * alarm (T48): while it is set, a change of the time, the repeat or the time zone drops the date so that it is filled in
  * again on save, as the repository does for an implicit date. An `at` alarm (a fixed instant from a script) becomes a
  * `time` alarm with an explicit date on the first change of its schedule, read in its own time zone. Options the page
- * leaves at "default" stay null, so the alarm follows the plugin defaults (roadmap P3.5).
+ * leaves at "default" stay null, so the alarm follows the plugin defaults (roadmap P3.5). The holiday filter (roadmap
+ * P8.6) changes the schedule like the repeat does.
  * zh-CN: 编辑页正在编辑的闹钟 (路线图 P3.1, T83). [dateAuto] 表示日期像新建闹钟那样跟随时刻 (T48): 设置时, 修改时刻, 重复或时区会丢弃日期, 保存时重新补上,
  * 与仓库处理隐式日期的方式一致. `at` 闹钟 (脚本给出的固定时刻) 在第一次修改日程时按自身时区转为带显式日期的 `time` 闹钟. 页面上保持 "默认" 的选项为 null,
- * 闹钟因此跟随插件默认值 (路线图 P3.5).
+ * 闹钟因此跟随插件默认值 (路线图 P3.5). 节假日过滤 (路线图 P8.6) 与重复一样会改变日程.
  */
 internal data class AlarmDraft(val spec: AlarmSpec, val dateAuto: Boolean) {
 
@@ -53,12 +57,38 @@ internal data class AlarmDraft(val spec: AlarmSpec, val dateAuto: Boolean) {
         else -> NextOccurrence.implicitDate(spec, now, TimeZonePolicy.zoneOf(spec, deviceZone))
     }
 
-    /** The next [count] rings as saved now; an empty list when the rule never rings. zh-CN: 按现在保存时接下来的 [count] 次响铃; 规则不再响铃时为空. */
-    fun preview(count: Int, now: Long, deviceZone: ZoneId, repeat: String? = spec.repeat): List<Long> = try {
-        NextOccurrence.preview(saved().copy(repeat = repeat), count, now, deviceZone)
+    /**
+     * The next [count] rings as saved now, holidays judged by [judge] (roadmap P8.6); an empty list when the rule never
+     * rings. A [repeat] other than the current one previews the draft [withRepeat] would give.
+     * zh-CN: 按现在保存时接下来的 [count] 次响铃, 节假日按 [judge] 判定 (路线图 P8.6); 规则不再响铃时为空. 给出与当前不同的 [repeat] 时, 预览 [withRepeat]
+     * 会得到的草稿.
+     */
+    fun preview(count: Int, now: Long, deviceZone: ZoneId, repeat: String? = spec.repeat, judge: HolidayJudge = HolidayJudge.NONE): List<Long> = try {
+        val draft = if (repeat == spec.repeat) this else withRepeat(repeat, deviceZone)
+        NextOccurrence.preview(draft.saved(), count, now, deviceZone, judge)
     } catch (_: AlarmException) {
         emptyList()
+    } catch (_: IllegalArgumentException) {
+        emptyList()
     }
+
+    /**
+     * How many instances a holiday takes away between [now] and [next] (roadmap P8.6), or 0 when that cannot be computed.
+     * zh-CN: [now] 与 [next] 之间被节假日拿掉的次数 (路线图 P8.6), 无法计算时为 0.
+     */
+    fun holidaySkips(now: Long, next: Long, deviceZone: ZoneId, judge: HolidayJudge): Int = try {
+        NextOccurrence.holidaySkips(saved(), now, next, deviceZone, judge)
+    } catch (_: AlarmException) {
+        0
+    } catch (_: IllegalArgumentException) {
+        0
+    }
+
+    /**
+     * The rule the repeat dialog shows: `repeat`, or every day for a `workdays` alarm without one (T221).
+     * zh-CN: 重复对话框显示的规则: `repeat`, 没有 `repeat` 的 `workdays` 闹钟为每天 (T221).
+     */
+    val shownRepeat: String? get() = HolidayFilter.baseRule(spec)
 
     fun withTime(hour: Int, minute: Int, deviceZone: ZoneId): AlarmDraft = scheduled(deviceZone).let { base ->
         val old = base.spec.time
@@ -72,8 +102,46 @@ internal data class AlarmDraft(val spec: AlarmSpec, val dateAuto: Boolean) {
         else base.copy(spec = base.spec.copy(date = date.toString()), dateAuto = false)
     }
 
-    fun withRepeat(repeat: String?, deviceZone: ZoneId): AlarmDraft =
-        scheduled(deviceZone).let { it.rescheduled(it.spec.copy(repeat = repeat)) }
+    /**
+     * A new repeat rule. In `workdays` mode (T221): every day keeps the mode (`repeat` omitted), once drops the holiday
+     * filter, and any other rule `workdays` does not allow (T180) turns the mode into `skip`.
+     * zh-CN: 新的重复规则. `workdays` 模式下 (T221): 每天保持该模式 (省略 `repeat`), 一次删除节假日过滤, `workdays` 不允许的其他规则 (T180) 把模式改为 `skip`.
+     */
+    fun withRepeat(repeat: String?, deviceZone: ZoneId): AlarmDraft = scheduled(deviceZone).let { base ->
+        val filter = base.spec.holidays
+        if (filter?.mode != AlarmContract.HOLIDAY_MODE_WORKDAYS) return@let base.rescheduled(base.spec.copy(repeat = repeat))
+        val holidays = when {
+            repeat == null -> null
+            allowsWorkdays(repeat) -> filter
+            else -> filter.copy(mode = AlarmContract.HOLIDAY_MODE_SKIP)
+        }
+        val rule = if (holidays?.mode == AlarmContract.HOLIDAY_MODE_WORKDAYS && repeat == DAILY) null else repeat
+        base.rescheduled(base.spec.copy(repeat = rule, holidays = holidays))
+    }
+
+    /**
+     * The holiday filter (roadmap P8.6, T220); null removes it. The rule the dates come from stays: `workdays` keeps a
+     * rule it allows and drops any other (`repeat` omitted: every workday, T180), an `at` alarm becoming a `time` alarm;
+     * leaving `workdays` makes its every day explicit (`FREQ=DAILY`).
+     * zh-CN: 节假日过滤 (路线图 P8.6, T220); null 为删除. 日期所依据的规则保持不变: `workdays` 保留它允许的规则, 丢弃其他规则 (省略 `repeat`: 每个工作日,
+     * T180), `at` 闹钟转为 `time` 闹钟; 离开 `workdays` 时把它的每天写成显式的 `FREQ=DAILY`.
+     */
+    fun withHolidays(filter: AlarmHolidayFilter?, deviceZone: ZoneId): AlarmDraft {
+        val old = spec.holidays
+        if (filter == old) return this
+        val workdays = filter?.mode == AlarmContract.HOLIDAY_MODE_WORKDAYS
+        val wasWorkdays = old?.mode == AlarmContract.HOLIDAY_MODE_WORKDAYS
+        if (workdays == wasWorkdays) return copy(spec = spec.copy(holidays = filter))
+        return scheduled(deviceZone).let { base ->
+            val repeat = base.spec.repeat
+            val rule = when {
+                workdays -> repeat?.takeIf { allowsWorkdays(it) }
+                base.spec.time != null && repeat == null -> DAILY
+                else -> repeat
+            }
+            base.rescheduled(base.spec.copy(repeat = rule, holidays = filter))
+        }
+    }
 
     /** A null [id] follows the device zone; the wall-clock time stays. zh-CN: [id] 为 null 时跟随设备时区; 墙上时间不变. */
     fun withTimeZone(id: String?, deviceZone: ZoneId): AlarmDraft =
@@ -137,6 +205,7 @@ internal data class AlarmDraft(val spec: AlarmSpec, val dateAuto: Boolean) {
         if (new.repeat != old.repeat) patch[AlarmOptionKeys.REPEAT] = new.repeat
         if (new.exclude.orEmpty() != old.exclude.orEmpty()) patch[AlarmOptionKeys.EXCLUDE] = new.exclude?.ifEmpty { null }
         if (new.timeZone != old.timeZone) patch[AlarmOptionKeys.TIME_ZONE] = new.timeZone
+        if (new.holidays != old.holidays) patch[AlarmOptionKeys.HOLIDAYS] = new.holidays?.toValues()
         val schedule = patch.isNotEmpty() || implicitDate
         if (new.label != old.label) patch[AlarmOptionKeys.LABEL] = new.label
         if (new.sound != old.sound) patch[AlarmOptionKeys.SOUND] = new.sound?.toValues()
@@ -164,6 +233,10 @@ internal data class AlarmDraft(val spec: AlarmSpec, val dateAuto: Boolean) {
     private fun rescheduled(changed: AlarmSpec): AlarmDraft = copy(spec = if (dateAuto) changed.copy(date = null) else changed)
 
     companion object {
+
+        private const val DAILY = "FREQ=DAILY"
+
+        private fun allowsWorkdays(rule: String): Boolean = runCatching { HolidayFilter.allowsWorkdays(RecurrenceRule.parse(rule)) }.getOrDefault(false)
 
         fun of(record: AlarmRecord): AlarmDraft = AlarmDraft(record.spec, record.state.dateImplicit)
 
