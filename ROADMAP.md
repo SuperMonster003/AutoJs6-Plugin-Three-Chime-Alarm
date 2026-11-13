@@ -220,7 +220,7 @@ T1 - T18 来自设计稿 (2026-11-03), T19 - T25 为立项时补充, T26 起由�
 | T178 | 答复里的扩展键 (P8.2): `holidayRegions` 每项另带 `estimatedFrom` 与 `subdivisions`, `checkDate` 另带 `estimated` (该日落在推算年份) | 不改契约 (T25) 而让脚本拿到推算标记 (Q47 (a)) 与下级地区 | P8.5 (宿主 d.ts) |
 | T179 | 判定 (P8.3): 判定的日期是该次响铃在闹钟时区的本地日期; `skip` 在节假日不响, `only` 只在节假日响, `workdays` 按 Q46 (a); 地区未知, 数据打不开或年份缺失时一律当作非节假日 / 照星期规则, 推算年份照常判定 (Q47 (a)) | 过滤只能让闹钟少响, 不能因数据问题让闹钟消失 | 无 |
 | T180 | `workdays` 的规则限制 (P8.3): `repeat` 省略或 `FREQ=DAILY` 且间隔 1, 允许 `UNTIL`; `COUNT`, `BY*`, 间隔不为 1, 非 DAILY 与 `at` 均为 `INVALID_OPTIONS` | "工作日" 已经决定了哪些天响, 其他重复规则与它叠加后语义不清 | 有需求时放宽 |
-| T181 | 节假日 `skip` 事件 (P8.3): 只对被节假日过滤掉, 原本会响的那一次发 (`reason: 'holiday'`, 不触发 `beforeRing`); `workdays` 的普通周末不发, `only` 模式的非节假日不发 (Q50) | 事件表示 "本该响但因节假日没响", 否则每个周末与平日都会发一串事件 | Q50 |
+| T181 | 节假日 `skip` 事件 (P8.3): 只对被节假日过滤掉, 原本会响的那一次发 (`reason: 'holiday'`, 不触发 `beforeRing`); `workdays` 的普通周末不发, `only` 模式的非节假日不发 (Q50) | 事件表示 "本该响但因节假日没响", 否则每个周末与平日都会发一串事件; Q50 已决 (a) | 无 |
 | T182 | `region` 的存储 (P8.3): 显式写出的地区在 `add` / `update` / `preview` 时规范化 (T170) 后保存, 错误码同 T170; 省略时不保存默认地区, 每次判定时取当时的默认地区 | 改默认地区后所有省略地区的闹钟随之变化 (T176 重排) | P8.6 |
 | T183 | 一次性闹钟 (P8.3): 隐含日期 (只给 `hour` / `minute`) 不为避开节假日而顺延; 一次性闹钟那次被过滤时发 `skip` 后退役; `only` 模式的一次性闹钟落在非节假日时没有响铃 (`upcoming` 为空), 也不发事件 | 一次性闹钟的含义是 "那一次", 不应被推到另一天 | 无 |
 | T184 | `repeatText` (P8.3): `workdays` 显示 "工作日" (10 种界面语言), 带 `UNTIL` 时仍显示规则文字; `skip` / `only` 的说明留给界面 (P8.6) | 列表与工具输出能直接看出闹钟按工作日响 | P8.6 |
@@ -366,7 +366,7 @@ io.github.supermonster003.autojs6.plugin.three.chime.alarm
 | P5 | 1.0.0 | 验证: AVD 矩阵, 真机矩阵, 时间与系统事件场景, ColorOS 激活, 联动边界, 基线 | 完成 (chime-p5, 2026-11-07; 修复 T96 - T99, ColorOS 被杀进程不响见 Q23, 已决 (b)) |
 | P6 | 1.0.0 | 文档, 声明, 四仓库同步, README / changelog / 截图, 发布与索引登记 | 完成 (chime-p6, 2026-11-08; 含 Q23 (b) 实施; 1.0.0 与修复 Q25 / Q27 的 1.0.1 已发布并登记索引, 见附录 G) |
 | P7 | 1.1.0 | 计时器与秒表 | 完成 (chime-p7-core 做 P7.1 / P7.2 / P7.3 插件侧 / P7.6, chime-p7-host 做 P7.3 宿主侧, chime-p7-ui 做 P7.3 联调 / P7.4 / P7.5, chime-p7-release 做 P7.7, 2026-11-12; 1.1.0 已发布并登记索引, 见附录 G) |
-| P8 | 1.2.0 | 节假日与 `beforeRing` | 未开始 (P8.1 数据管线已提前完成: chime-p8-data, 2026-11-12, `holiday-calendars-v1` 已由维护者发布; 余 P8.2 - P8.8) |
+| P8 | 1.2.0 | 节假日与 `beforeRing` | 进行中 (P8.1 数据管线已提前完成: chime-p8-data, 2026-11-12, `holiday-calendars-v1` 已由维护者发布; chime-p8-plugin 做 P8.2 / P8.3 / P8.7 与 P8.4 插件侧, chime-p8-host 做 P8.5 与 P8.4 宿主侧, 2026-11-13; 余 P8.4 真机联调, P8.6, P8.8) |
 | P9 | 1.3.0 | 关闭挑战 | 未开始 |
 
 依赖顺序:
@@ -654,7 +654,7 @@ P0 (插件骨架, 含 P0.2 评估)          P1.1 - P1.3 (宿主契约, 桥接, �
 
 ### P8.2 插件节假日存储与刷新
 
-- [ ] (插件) 内置发布时的数据快照, 每周检查一次更新 (计量网络策略与开关同 Macaw 目录刷新), `holidays.info` / `refresh` / `refreshAsync` 与 `IAlarmProgressCallback`, 数据更新后重排 (T8 第六个时机); 当年数据缺失时该年只按星期规则响并在 `capabilities()` 给出警告 (不因缺数据而不响); 推算年份 (地区的 `estimatedFrom` 起, T162) 照常用于判定, `capabilities()` 与 `holidays.info` 标出哪些地区的哪些年份是 "推算", 并提示这些年份可能有调休或补班 (Q47 (a)). 证据: 提交 hash; JVM 测试 (快照解析, 缺年退化, 推算年份标记); 设备: 一次真实刷新.
+- [x] (插件) 内置发布时的数据快照, 每周检查一次更新 (计量网络策略与开关同 Macaw 目录刷新), `holidays.info` / `refresh` / `refreshAsync` 与 `IAlarmProgressCallback`, 数据更新后重排 (T8 第六个时机); 当年数据缺失时该年只按星期规则响并在 `capabilities()` 给出警告 (不因缺数据而不响); 推算年份 (地区的 `estimatedFrom` 起, T162) 照常用于判定, `capabilities()` 与 `holidays.info` 标出哪些地区的哪些年份是 "推算", 并提示这些年份可能有调休或补班 (Q47 (a)). 证据: 提交 hash; JVM 测试 (快照解析, 缺年退化, 推算年份标记); 设备: 一次真实刷新. 证据 (E1, 2026-11-13, chime-p8-plugin): 提交 `940db97` (T170 - T178), 设备探针 `e9cf5c7` 与其修正 (本次提交, `holidayInfo` 应答的信息在 `holidayInfo` 键下); JVM `HolidaySnapshotTest` 9 例 (内置快照验签与逐文件哈希, 换密钥拒收, 中国大陆 2026 调休表, 缺年既不算节假日也不算工作日, 推算年份照常判定并标出, 地区规范化, 按系统区域推断默认地区, 下级地区覆盖) 与 `HolidayStoreTest` 6 例 (新目录只下缺的文件且重启后保留, 同版本为最新而旧版本为回退, 复用当前集合的文件, 篡改或错签名保留在用数据, 取消保留在用数据, 损坏或过期的下载集合退回快照) 全部通过; 设备: G8441 (API 28) 上 `py .python/device_holidays.py BH900ASK9E` HOLIDAY REFRESH PASS: 经网络取签名目录 `catalog-v1.json` (raw.githubusercontent.com), `refreshHolidays` 1883 ms 完成, 目录未变不下载文件 (`holiday-calendars-v1`, python-holidays 0.108), 刷新前后 `holidayInfo` 与能力 `holidayDataVersion` 一致, 版本未回退. 均只本地提交.
 
 ### P8.3 过滤进规则引擎
 
@@ -674,7 +674,7 @@ P0 (插件骨架, 含 P0.2 评估)          P1.1 - P1.3 (宿主契约, 桥接, �
 
 ### P8.7 工具
 
-- [ ] (插件) `holiday_check` (日期, 地区 -> 是否节假日 / 工作日与名称). 证据: 提交 hash; 往返.
+- [x] (插件) `holiday_check` (日期, 地区 -> 是否节假日 / 工作日与名称). 证据: 提交 hash; 往返. 证据 (E1, 2026-11-13, chime-p8-plugin): 提交 `a5b6c0a` (T192 - T194: `holiday_check` 与 `alarm_add` / `alarm_update` 的 `holidays` 选项); JVM 全部单测 307 / 307 通过; 往返: G8441 (API 28, 宿主 6641) 上 `py .python/device_tools.py BH900ASK9E` TOOLS PASS 39 / 39, provider 模式 `ChimeToolServiceTest` 5 例 (含 `holidayToolsRoundTrip`: check 4 项, 选项 4 项; 目录 13 个工具), 宿主模式 `plugins.tools.call`: 13 个工具列出且 `holiday_check` 为 readonly, CN 2026-10-01 节假日带名称, 2026-10-10 补班日, 今天, CN 2019 报 `HOLIDAY_DATA_MISSING`, 9 字符日期被拒绝, `holidays` 地区规范化, 更新时整体替换与清除, `workdays` 带 `at` 报 `INVALID_OPTIONS`. 均只本地提交.
 
 ### P8.8 文档与 1.2.0 发布
 
@@ -1241,7 +1241,7 @@ Q1 - Q6 已于 2026-11-03 拍板为 D20 - D25 (原表见附录 F), 编号不复�
 | Q45 | 节假日目录的签名密钥由 chime-p8-data 生成 (2026-11-12 15:05, OpenSSL 3.2.1, keyId `p256-35ac0585129625d2`, 私钥离线在 `D:/offline-keys/holiday-calendars.private.pem`, 公钥已入库 Shared-Assets `a64529f`) | (a) 保持现状, 维护者用这把离线私钥签 `pending/v1` (推荐, 已实施); (b) 维护者自己重新生成密钥对 | P8.1 发布, P8.2 内置公钥, T164 | (b): 按 Shared-Assets `holiday-calendars/README.md` "Maintainer signing" 第 1 步生成, 替换 `keys/catalog-signing-public.pem`, 改 README 两处 keyId 与 SPKI 指纹, 跑 `check_docs`, 约 5 分钟; P8.2 尚未开始, 无其他返工 | P8.2 前 | 已决 (2026-11-12 16:30, 维护者选 (a); chime-p8-data 登记, chime-p7-release 写入本表): 沿用 keyId `p256-35ac0585129625d2` 的密钥; 维护者已用它签名并发布 `holiday-calendars-v1` (`fc61c47`, 见 P8.1) |
 | Q46 | "仅工作日" 模式的工作日定义: P8.3 原写 "无补班日地区退化为 '周一至周五且非节假日'", 但数据的周末按年份与下级地区变化 (沙特等 18 国周五六, AE 2022 前周五六, MY 部分州周五六, T165) | (a) 工作日 = 不在该地区数据 `weekend` 中且非节假日, 或是补班日 (推荐); (b) 照原文固定周一至周五, 只在有补班日的地区用补班日 | P8.3, P8.2 (`isWorkday`) | 约 0 (数据两种都支持, 只是插件实现与本文不同) | P8.3 前 | 已决 (2026-11-12 16:30, 维护者选 (a); chime-p8-data 登记, chime-p7-release 写入本表并改写 P8.3 原文) |
 | Q47 | `estimatedFrom` 起的推算年份如何使用 (例如 CN 2027 起只有按规则推算的节日, 没有补班日; 14 个有补班日的地区里 RU 2028 起, 其余 2027 起, T162) | (a) 照常用于判定, 在 `capabilities()` 与界面上标 "推算" 并提示可能有调休 (推荐); (b) 当作缺年, 只按星期规则响; (c) 照常用, 不提示 | P8.2, P8.3, P8.6, P8.8 (文档) | 只改插件逻辑, 数据不变 | P8.2 前 | 已决 (2026-11-12 16:30, 维护者选 (a); chime-p8-data 登记, chime-p7-release 写入本表与 P8.2 / P8.3 / P8.6 的条目文字) |
-| Q50 | `only` 模式与 `workdays` 模式中 "本来就不响" 的日子 (`only` 的非节假日, `workdays` 的普通周末) 是否发 `skip` 事件 | (a) 不发, 只有被节假日拿掉, 原本会响的那一次发 `skip` (`reason: 'holiday'`) (推荐, 已实施: 否则 `only` 闹钟每个平日都发一条事件, 绑定脚本被无意义地唤醒); (b) 都发, 原因同为 `holiday` | P8.3 (T181), P8.4, P8.5 文档 | 改选 (b): `HolidayFilter.verdict` 把这两类日子从 `NONE` 改为 `HOLIDAY`, 但 `nextHolidaySkip` 的跳过唤醒会变成每天一次, 需另加合并, 约半天 | P8.8 (文档) 前 | 待决 (chime-p8-plugin 登记, 2026-11-13; 按推荐先行) |
+| Q50 | `only` 模式与 `workdays` 模式中 "本来就不响" 的日子 (`only` 的非节假日, `workdays` 的普通周末) 是否发 `skip` 事件 | (a) 不发, 只有被节假日拿掉, 原本会响的那一次发 `skip` (`reason: 'holiday'`) (推荐, 已实施: 否则 `only` 闹钟每个平日都发一条事件, 绑定脚本被无意义地唤醒); (b) 都发, 原因同为 `holiday` | P8.3 (T181), P8.4, P8.5 文档 | 改选 (b): `HolidayFilter.verdict` 把这两类日子从 `NONE` 改为 `HOLIDAY`, 但 `nextHolidaySkip` 的跳过唤醒会变成每天一次, 需另加合并, 约半天 | P8.8 (文档) 前 | 已决 (2026-11-13 12:32, 维护者选 (a), 与已实施的一致, 无返工; chime-p8-plugin 登记) |
 
 ---
 

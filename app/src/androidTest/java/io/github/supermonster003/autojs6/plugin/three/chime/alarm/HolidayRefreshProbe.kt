@@ -104,7 +104,7 @@ class HolidayRefreshProbe {
     private fun info(plugin: IAlarmPlugin): Map<*, *> {
         val answer = plugin.holidayInfo(AlarmBundles.of(linkedMapOf<String, Any?>()))
         assertNull("holidayInfo answers", AlarmBundles.errorOf(answer))
-        return AlarmBundles.fromBundle(answer)
+        return AlarmBundles.fromBundle(answer)[AlarmResultKeys.HOLIDAY_INFO] as Map<*, *>
     }
 
     private fun describe(info: Map<*, *>?): String = if (info == null) "null" else listOf(AlarmResultKeys.VERSION, AlarmResultKeys.DATA_SOURCE, AlarmResultKeys.UPDATED_AT)
