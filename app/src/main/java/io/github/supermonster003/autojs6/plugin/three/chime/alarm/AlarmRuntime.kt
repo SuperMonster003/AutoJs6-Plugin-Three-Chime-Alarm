@@ -1,7 +1,10 @@
 package io.github.supermonster003.autojs6.plugin.three.chime.alarm
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
+import android.os.UserManager
 import android.provider.Settings
 import android.util.Log
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmException
@@ -12,6 +15,8 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.api.Alarm
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.api.BindingHints
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.api.HolidayApi
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.api.TimerApi
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.challenge.ScriptChallengeWatcher
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.challenge.ScriptCondition
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.event.AlarmEventBus
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.event.ChangeEvents
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.holiday.CatalogSignatureVerifier
@@ -59,11 +64,13 @@ import java.util.concurrent.Executors
  * the wake-ups a force stop cleared, then picks up the rounds a dead process left ringing (T67). The Binder service
  * (roadmap P2.5) adds the [hints] of the hosts, the imported [ringtones], the live [callbacks], the [triggers] of bound
  * scripts and the [api] its methods run on. Since 1.1.0 (roadmap P7.1 - P7.3) the [timers] ring through the same [rings],
- * and the [stopwatch] counts; [timerApi] serves their Binder methods.
+ * and the [stopwatch] counts; [timerApi] serves their Binder methods. Since 1.3.0 (roadmap P9.2) the [scriptChallenges]
+ * follow the rounds that wait for a script to dismiss them.
  * zh-CN: 插件进程的闹钟对象: 设备加密存储上的一个 [repository] (路线图 T7, 首次解锁前可用), 让系统闹钟与之保持一致的 [schedule], 接收到时响铃的 [rings]
  * (路线图 P2.4), 以及进程内的 [events]. 首次使用时对全部闹钟对账一次, 同时恢复被强行停止清掉的唤醒, 再接续进程死亡时留下的响铃 (T67). Binder 服务
  * (路线图 P2.5) 另加各宿主的 [hints], 导入的 [ringtones], 实时 [callbacks], 绑定脚本的 [triggers] 以及其方法所用的 [api]. 自 1.1.0 起 (路线图
- * P7.1 - P7.3) [timers] 经同一个 [rings] 响铃, 另有 [stopwatch]; [timerApi] 提供其 Binder 方法.
+ * P7.1 - P7.3) [timers] 经同一个 [rings] 响铃, 另有 [stopwatch]; [timerApi] 提供其 Binder 方法. 自 1.3.0 起 (路线图 P9.2) [scriptChallenges] 跟踪
+ * 等待脚本关闭的轮次.
  */
 class AlarmRuntime private constructor(context: Context) {
 
@@ -198,6 +205,45 @@ class AlarmRuntime private constructor(context: Context) {
     /** The `ALARM_TRIGGER` broadcasts of bound scripts (T11, T12). zh-CN: 绑定脚本的 `ALARM_TRIGGER` 广播 (T11, T12). */
     val triggers = AlarmTriggerSender(this.context, hints, events)
 
+    /**
+     * The rounds with the `script` dismiss challenge (roadmap P9.2, T284): the conditions of chime-p9-protocol.md section 4
+     * decide when a round falls back to its `script.fallback`; each fallback logs one line
+     * `script challenge <occurrence> fell back to <fallback>: <reason>` (`adb logcat -s ChimeTrigger`).
+     * zh-CN: 带关闭挑战 `script` 的轮次 (路线图 P9.2, T284): 由协议 chime-p9-protocol.md 第 4 节的条件决定何时退回 `script.fallback`; 每次退回记一行
+     * `script challenge <occurrence> fell back to <fallback>: <reason>` (`adb logcat -s ChimeTrigger`).
+     */
+    val scriptChallenges = ScriptChallengeWatcher(object : ScriptChallengeWatcher.Port {
+        private val main = Handler(Looper.getMainLooper())
+
+        override fun unlocked(): Boolean =
+            runCatching { this@AlarmRuntime.context.getSystemService(UserManager::class.java).isUserUnlocked }.getOrDefault(true)
+
+        override fun listening(): Boolean = callbacks.listens(AlarmContract.EVENT_RING)
+
+        override fun waiting(occurrence: String): Boolean =
+            rings.sounding?.let { it.occurrence == occurrence && it.challenge == AlarmContract.CHALLENGE_SCRIPT } == true
+
+        override fun poll(owners: List<String>, occurrence: String, alarmId: String, done: (Map<String, ScriptCondition.StatusAnswer?>) -> Unit) =
+            triggers.scriptStatus(owners, occurrence, alarmId, done)
+
+        override fun schedule(delayMillis: Long, task: () -> Unit): () -> Unit {
+            val runnable = Runnable(task)
+            main.postDelayed(runnable, delayMillis)
+            return { main.removeCallbacks(runnable) }
+        }
+
+        override fun fallBack(occurrence: String, reason: String) {
+            executor.execute {
+                val fallback = rings.sounding?.takeIf { it.occurrence == occurrence }?.settings?.dismiss?.scriptFallback ?: AlarmContract.CHALLENGE_NONE
+                if (rings.fallBack(occurrence)) {
+                    Log.i(AlarmTriggerSender.TAG, "script challenge $occurrence fell back to $fallback: $reason")
+                } else {
+                    Log.i(AlarmTriggerSender.TAG, "script challenge $occurrence no longer waits ($reason)")
+                }
+            }
+        }
+    })
+
     /** The `IAlarmPlugin` methods on value trees (roadmap P2.5). zh-CN: 以值树实现的 `IAlarmPlugin` 方法 (路线图 P2.5). */
     val api = AlarmApi(
         repository, rings, hints, ringtones, { SystemRingtones.list(this.context) }, validator = alarmValidator,
@@ -315,7 +361,13 @@ class AlarmRuntime private constructor(context: Context) {
         stopwatch.addListener { TimerNotifications.stopwatch(this.context, it) }
         // The beforeRing wake-ups follow who listens (roadmap P8.4). zh-CN: beforeRing 唤醒跟随监听者 (路线图 P8.4).
         hints.onBeforeRingChange = { ids -> executor.execute { schedule.beforeRingListenersChanged(ids) } }
-        callbacks.onListenedChange = { executor.execute { schedule.beforeRingListenersChanged() } }
+        callbacks.onListenedChange = {
+            executor.execute { schedule.beforeRingListenersChanged() }
+            scriptChallenges.listenersChanged()
+        }
+        // The script challenge follows the rounds and who listens (roadmap P9.2). zh-CN: script 挑战跟随轮次与监听者 (路线图 P9.2).
+        triggers.scriptWatcher = scriptChallenges
+        rings.addListener(scriptChallenges::roundChanged)
     }
 
     /** One thread for the scheduler work of receivers. zh-CN: 接收器的调度工作所用的单线程. */

@@ -36,6 +36,17 @@ object ScriptCondition {
     /** The value of `scriptSkipped` a host answers while the device is locked. zh-CN: 设备未解锁时宿主应答的 `scriptSkipped` 值. */
     private const val SKIPPED_LOCKED = "locked"
 
+    /**
+     * The `request` of the poll and the keys of its answer: literals of the plugin and the host, not in the contract
+     * library (T25, T312; chime-p9-protocol.md section 4.2).
+     * zh-CN: 轮询的 `request` 值与应答键: 插件与宿主各自的字面量, 不进契约库 (T25, T312; 协议第 4.2 节).
+     */
+    const val REQUEST_SCRIPT_STATUS = "scriptStatus"
+    const val KEY_TRACKED = "tracked"
+    const val KEY_RUNNING = "running"
+    const val KEY_STARTED = "started"
+    const val KEY_FAILED = "failed"
+
     sealed interface Verdict {
         /** Fall back now for [reason]. zh-CN: 因 [reason] 立即退回. */
         data class FallBack(val reason: String) : Verdict
