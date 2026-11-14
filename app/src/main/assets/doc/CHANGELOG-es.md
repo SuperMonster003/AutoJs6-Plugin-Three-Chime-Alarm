@@ -4,6 +4,19 @@
 
 ******
 
+# v1.3.0
+
+###### 2026/11/14
+
+* `Aviso` Los desafíos para descartar fijados en las pantallas del complemento no requieren AutoJs6; fijarlos en un script (la opción dismiss de las alarmas) y la condición de script requieren AutoJs6 6.8.1 (compilación interna 6641) o posterior y este complemento en la versión 1.3.0 o posterior; con el complemento 1.2.x o anterior, una llamada con la opción dismiss falla con un mensaje que pide actualizar el complemento
+* `Aviso` Una alarma con desafío para descartar siempre se puede terminar: la detención automática (al menos 30 minutos si no se ajusta en la alarma) y el descarte de emergencia (5 pulsaciones de un botón de volumen en 4 segundos en la pantalla de la alarma) están siempre disponibles; el descarte de emergencia se puede desactivar en los ajustes, y entonces solo la detención automática termina el aviso hasta completar el desafío
+* `Función` Desafíos para descartar: una alarma puede exigir resolver problemas de cálculo (dificultad fácil, media o difícil, 3 problemas por defecto), agitar el teléfono (30 sacudidas por defecto) o escribir una frase (la suya, o una frase integrada elegida al azar) antes de poder descartarla, y puede permitir o no posponer durante el desafío; se ajusta en la fila "Desafío para descartar" de la pantalla de edición, y el desafío ocupa el lugar del control deslizante en la pantalla de la alarma
+* `Función` Mientras un desafío está activo, el botón "Descartar" de la notificación y las solicitudes de descarte de otras aplicaciones ya no descartan la alarma directamente, sino que abren el desafío en la pantalla de la alarma; si no se permite posponer, la notificación no muestra el botón "Posponer"; en un dispositivo sin acelerómetro el desafío de agitar se convierte en problemas de cálculo
+* `Función` Válvulas de seguridad: cuando una alarma con desafío no ajusta la detención automática, esta toma la mayor entre el valor predeterminado de los ajustes y 30 minutos, y la pantalla de la alarma muestra el tiempo restante; 5 pulsaciones de un botón de volumen en 4 segundos mientras la pantalla de la alarma está en primer plano (también en la pantalla de bloqueo) descartan la alarma en caso de emergencia, y durante un desafío los botones de volumen solo cuentan las pulsaciones sin cambiar el volumen; el nuevo grupo "Desafíos para descartar" de los ajustes permite desactivar el descarte de emergencia (activado de forma predeterminada)
+* `Función` Condición de script: fijada por un script de AutoJs6, la alarma suena hasta que un script la descarta; cuando el dispositivo no se ha desbloqueado desde un reinicio, no hay ningún script, AutoJs6 no está disponible, o los scripts no pudieron iniciarse o ya terminaron, la alarma pasa de inmediato al desafío alternativo elegido (un descarte normal de forma predeterminada), y el motivo queda anotado en el registro del complemento
+* `Función` Novedades del módulo de scripts de AutoJs6: la opción dismiss de las alarmas (el tipo de desafío, la dificultad y el número de problemas de cálculo, el número de sacudidas, el texto que hay que escribir, el desafío que se usa cuando ningún script puede ejecutarse y si se permite posponer), el challenge de alarms.ringing() y de los eventos ring / dismiss, y by: 'challenge' en el evento dismiss (requiere AutoJs6 6.8.1; consulte la [documentación de AutoJs6](https://docs.autojs6.com/#/alarms))
+* `Función` Las herramientas del complemento alarm_add y alarm_update aceptan la opción dismiss y pueden fijar los desafíos de cálculo, agitar y escribir texto (salvo la condición de script)
+
 # v1.2.0
 
 ###### 2026/11/13

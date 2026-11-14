@@ -8,7 +8,7 @@
     </picture>
   </p>
 
-  <p>Alarma, temporizadores y cronómetro con reglas de repetición de calendario, festivos, lectura en voz alta y scripts al sonar la alarma</p>
+  <p>Alarma, temporizadores y cronómetro con reglas de repetición de calendario, festivos, desafíos para descartar, lectura en voz alta y scripts al sonar la alarma</p>
 
   <p>
     <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/releases"><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm?label=Release"/></a>
@@ -42,11 +42,11 @@ El README.md actual admite los siguientes idiomas:
 
 ******
 
-3-Chime Alarm es el complemento de alarmas de AutoJs6 y también una aplicación de alarmas que funciona por sí sola, sin AutoJs6. Las alarmas se repiten según las reglas de calendario RFC 5545 (por ejemplo, el último viernes de cada mes o cada 3 días a partir de una fecha); una alarma que suena puede leer un texto en voz alta, iniciar un script o avisar a un script en ejecución. Desde la versión 1.1.0 también ofrece varios temporizadores simultáneos y un cronómetro. Desde la versión 1.2.0 una alarma puede omitir los festivos, sonar solo en festivos o sonar todos los días laborables (incluidos los días laborables de recuperación), y un script puede decidir antes de sonar si esta vez suena. Los retos para apagar llegarán en una versión posterior.
+3-Chime Alarm es el complemento de alarmas de AutoJs6 y también una aplicación de alarmas que funciona por sí sola, sin AutoJs6. Las alarmas se repiten según las reglas de calendario RFC 5545 (por ejemplo, el último viernes de cada mes o cada 3 días a partir de una fecha); una alarma que suena puede leer un texto en voz alta, iniciar un script o avisar a un script en ejecución. Desde la versión 1.1.0 también ofrece varios temporizadores simultáneos y un cronómetro. Desde la versión 1.2.0 una alarma puede omitir los festivos, sonar solo en festivos o sonar todos los días laborables (incluidos los días laborables de recuperación), y un script puede decidir antes de sonar si esta vez suena. Desde la versión 1.3.0 una alarma puede exigir resolver problemas de cálculo, agitar el teléfono, escribir una frase o la confirmación de un script antes de poder descartarla, conservando siempre dos salidas: la detención automática y el descarte de emergencia.
 
 El complemento programa y hace sonar las alarmas por sí mismo con las alarmas exactas de Android, así que las alarmas suenan a tiempo aunque AutoJs6 no esté en ejecución. Los scripts de AutoJs6 consultan, crean, modifican y escuchan las alarmas del complemento mediante el módulo global `alarms`, y usan los temporizadores y el cronómetro mediante `alarms.timers` y `alarms.stopwatch`; el subespacio de nombres `alarms.system` se comunica directamente con la aplicación de reloj del sistema y funciona sin el complemento. El complemento también acepta solicitudes para configurar alarmas y temporizadores enviadas por otras aplicaciones.
 
-> La versión 1.2.0 ofrece las alarmas (con reglas de festivos y la decisión de un script antes de sonar), los temporizadores y el cronómetro, las pantallas del complemento, las herramientas del complemento y el módulo de scripts `alarms`. Activar el complemento en el centro de complementos, las herramientas del complemento y el módulo `alarms` requieren AutoJs6 6.8.1 (compilación interna 6641) o posterior; con versiones anteriores de AutoJs6 (incluida 6.8.0), el complemento solo se puede usar como aplicación de alarmas independiente. El avance de los retos para apagar se encuentra en la hoja de ruta.
+> La versión 1.3.0 ofrece las alarmas (con reglas de festivos, la decisión de un script antes de sonar y los desafíos para descartar), los temporizadores y el cronómetro, las pantallas del complemento, las herramientas del complemento y el módulo de scripts `alarms`. Activar el complemento en el centro de complementos, las herramientas del complemento y el módulo `alarms` requieren AutoJs6 6.8.1 (compilación interna 6641) o posterior; con versiones anteriores de AutoJs6 (incluida 6.8.0), el complemento solo se puede usar como aplicación de alarmas independiente.
 
 ******
 
@@ -58,13 +58,13 @@ El complemento programa y hace sonar las alarmas por sí mismo con las alarmas e
 - Sonido: tono del sistema o audio local importado, texto leído en voz alta, volumen independiente con aumento gradual, vibración personalizada, posponer y silencio automático, y pantalla de alarma a pantalla completa sobre la pantalla de bloqueo; las alarmas que coinciden suenan una tras otra.
 - Puntualidad: las alarmas se reprograman automáticamente tras un reinicio, un cambio de hora o de zona horaria y una actualización del complemento, y suenan incluso antes del primer desbloqueo; una alarma perdida con el dispositivo apagado suena en los 5 minutos siguientes, después solo deja una notificación.
 - Scripts vinculados: una alarma o un temporizador puede registrar archivos de script que AutoJs6 inicia al sonar, posponer, apagar y otros eventos, sin que tengan que seguir en ejecución; un script en ejecución también puede escuchar estos eventos en directo.
-- Herramientas del complemento: crear, consultar, modificar y eliminar alarmas, atender una alarma que suena, iniciar, listar y controlar temporizadores, y consultar festivos mediante el complemento MCP Server o `plugins.tools.call` (nueve herramientas `alarm_*`, tres herramientas `timer_*` y `holiday_check`).
+- Herramientas del complemento: crear, consultar, modificar y eliminar alarmas (incluidos los desafíos para descartar, salvo la condición de script), atender una alarma que suena, iniciar, listar y controlar temporizadores, y consultar festivos mediante el complemento MCP Server o `plugins.tools.call` (nueve herramientas `alarm_*`, tres herramientas `timer_*` y `holiday_check`).
 - Reloj del sistema: el complemento puede atender las solicitudes de configurar, mostrar, apagar y posponer alarmas, y de configurar, mostrar y apagar temporizadores, que envían otras aplicaciones.
-- Pantallas: el idioma, el modo nocturno y el color del tema siguen a AutoJs6 de forma predeterminada y se pueden ajustar por separado; el icono del lanzador se puede cambiar; la pantalla de ajustes fija el tono, la vibración, el aplazamiento y el silencio automático predeterminados.
+- Pantallas: el idioma, el modo nocturno y el color del tema siguen a AutoJs6 de forma predeterminada y se pueden ajustar por separado; el icono del lanzador se puede cambiar; la pantalla de ajustes fija el tono, la vibración, el aplazamiento y el silencio automático predeterminados, y si se permite el descarte de emergencia.
 - Temporizadores y cronómetro: hasta 20 temporizadores a la vez con pausa, reanudación, tiempo extra y restablecimiento; un temporizador en marcha muestra su cuenta atrás en el panel de notificaciones, desde donde se puede pausar, alargar 1 minuto o cancelar; los temporizadores siguen contando tras un reinicio y suenan como las alarmas. El cronómetro marca vueltas (hasta 100) y señala la más rápida y la más lenta. La barra de navegación inferior cambia entre alarmas, temporizadores y cronómetro.
 - Festivos: cada alarma se puede ajustar a "Omitir festivos", "Solo en festivos" o "Solo en días laborables" (suena todos los días laborables, incluidos los de recuperación, nunca en fines de semana ni festivos). Incluye datos de 250 países y regiones (con más de 600 subdivisiones) de 2020 a 2035, generados a partir del proyecto de código abierto python-holidays; las actualizaciones se buscan cada semana y se verifica la firma de los datos descargados. Los años aún no anunciados se estiman según las reglas y se marcan como "estimado"; en un año sin datos la alarma suena solo según su regla de repetición.
 - Decisión de un script antes de sonar: AutoJs6 inicia un script registrado antes de sonar (60 segundos de forma predeterminada, de 15 segundos a 5 minutos), que puede omitir esta vez o dejarla sonar con otra etiqueta, otro sonido, otro texto leído u otra vibración solo esta vez; si el script no decide a tiempo, falla o AutoJs6 no está disponible, la alarma suena como siempre.
-- Retos para apagar (previstos para 1.3.0): aritmética, agitar, escribir una frase o una condición de script, todos con una válvula de seguridad para que la alarma siempre se pueda apagar.
+- Desafíos para descartar: una alarma puede exigir resolver problemas de cálculo (dificultad fácil, media o difícil, 3 problemas por defecto), agitar el teléfono (30 sacudidas por defecto) o escribir una frase (la suya, o una frase integrada elegida al azar) antes de poder descartarla, y puede permitir o no posponer durante el desafío; mientras un desafío está activo, el botón "Descartar" de la notificación y las solicitudes de descarte de otras aplicaciones abren el desafío en la pantalla de la alarma. Cada desafío conserva dos salidas: la detención automática (si no se ajusta en la alarma, la mayor entre el valor predeterminado de los ajustes y 30 minutos, con el tiempo restante en la pantalla de la alarma) y el descarte de emergencia (5 pulsaciones de un botón de volumen en 4 segundos mientras la pantalla de la alarma está en primer plano, también en la pantalla de bloqueo; se puede desactivar en los ajustes). Los scripts de AutoJs6 también pueden fijar una condición de script: la alarma suena hasta que un script la descarta, y cuando ningún script puede ejecutarse (por ejemplo antes del primer desbloqueo tras un reinicio, o cuando el script ya terminó) pasa de inmediato al desafío alternativo elegido.
 
 ******
 
@@ -128,6 +128,7 @@ alarms.system.setAlarm({ hour: 6, minute: 50, label: "Flight" });
 - `alarms.timers.start(duration, options)` inicia un temporizador (en milisegundos o con una cadena como `"25m"` o `"1h 30m"`, de 1 segundo a 100 horas) y devuelve una instantánea del temporizador con los métodos `pause`, `resume`, `addTime`, `reset`, `cancel` y `bind`; `alarms.stopwatch` inicia, pausa, reanuda, marca vueltas y restablece el cronómetro. Ambos requieren el complemento 1.1.0 o posterior.
 - `alarms.holidays` consulta los datos de festivos (`regions`, `isHoliday`, `isWorkday`, `list`, `info`, `refresh`); la opción `holidays` de una alarma (por ejemplo `{ region: 'CN', mode: 'workdays' }`) fija su regla de festivos, y los `warnings` de `alarms.capabilities()` avisan de datos que faltan y de años estimados. Requiere el complemento 1.2.0 o posterior.
 - `alarms.bind(id, script, { events: ['beforeRing'], leadSeconds: 120 })` registra un script que se inicia antes de sonar; en él, `skip(reason)` de `alarms.currentEvent()` omite esta vez y `ring(overrides)` la hace sonar con otra etiqueta, otro sonido, otra lectura u otra vibración solo esta vez; `alarms.on('beforeRing', listener)` escucha en directo, con los mismos dos métodos en el evento. Requiere el complemento 1.2.0 o posterior.
+- La opción `dismiss` fija un desafío para descartar, por ejemplo `alarms.add({ time: '07:00', dismiss: { challenge: 'math', math: { difficulty: 3, count: 5 }, allowSnooze: false } })`; con `challenge: 'script'` un script descarta la alarma llamando a `alarms.dismiss(id)`, y `script.fallback` indica el desafío que se usa cuando ningún script puede ejecutarse. `alarms.ringing()` y los eventos `ring` y `dismiss` llevan el `challenge` vigente, y el `by` de un evento `dismiss` es `'challenge'` cuando se completó el desafío. Requiere el complemento 1.3.0 o posterior.
 - `alarms.system` llama directamente a la aplicación de reloj del sistema (`setAlarm`, `setTimer`, `showAlarms`, `dismissAlarm`, `next` y más) y no necesita el complemento.
 
 ******
@@ -155,7 +156,7 @@ El complemento puede actuar como aplicación de alarmas del sistema y atender la
 
 El complemento es compatible con Android 7.0 (API 24) y posteriores. Activarlo en el centro de complementos, las herramientas del complemento y el módulo `alarms` requieren AutoJs6 6.8.1 (compilación interna 6641) o posterior. Con versiones anteriores de AutoJs6 (por ejemplo 6.8.0, compilación interna 6640), el centro de complementos indica que se necesita un AutoJs6 más reciente y no puede activar el complemento, y las herramientas del complemento y el módulo `alarms` no están disponibles; el complemento sigue funcionando como aplicación de alarmas independiente y sigue atendiendo las solicitudes del reloj del sistema. El módulo `alarms` solo es compatible con el motor Rhino, y su `alarms.system` no necesita el complemento.
 
-Verificado en estos dispositivos antes de publicar la versión 1.0.0 (datos en el apéndice D de la hoja de ruta); los temporizadores y el cronómetro de la versión 1.1.0 también se verificaron en un Sony XQ-AT72 y un Sony G8441, incluidos los temporizadores que siguen contando tras un reinicio (ver P7 de la hoja de ruta); los festivos y la decisión de un script antes de sonar de la versión 1.2.0 se verificaron en un Sony XQ-AT72 junto con AutoJs6 (ver P8 de la hoja de ruta):
+Verificado en estos dispositivos antes de publicar la versión 1.0.0 (datos en el apéndice D de la hoja de ruta); los temporizadores y el cronómetro de la versión 1.1.0 también se verificaron en un Sony XQ-AT72 y un Sony G8441, incluidos los temporizadores que siguen contando tras un reinicio (ver P7 de la hoja de ruta); los festivos y la decisión de un script antes de sonar de la versión 1.2.0 se verificaron en un Sony XQ-AT72 junto con AutoJs6 (ver P8 de la hoja de ruta); los desafíos para descartar de la versión 1.3.0 se verificaron en un Sony XQ-AT72 junto con AutoJs6, incluido el descarte de emergencia en la pantalla de bloqueo y cada alternativa de la condición de script (ver P9 de la hoja de ruta):
 
 | Dispositivo | Android | Resultado |
 | --- | --- | --- |
@@ -207,7 +208,7 @@ En un dispositivo de prueba Redmi (MIUI), el sistema cerró varias veces el proc
 
 #### Suenan las alarmas tras un reinicio antes de desbloquear el dispositivo? Y los scripts vinculados?
 
-Las alarmas suenan, porque el complemento funciona antes del primer desbloqueo. Los scripts vinculados no se inician, porque AutoJs6 no puede ejecutar scripts antes del primer desbloqueo, y tampoco se inician después.
+Las alarmas suenan, porque el complemento funciona antes del primer desbloqueo. Los scripts vinculados no se inician, porque AutoJs6 no puede ejecutar scripts antes del primer desbloqueo, y tampoco se inician después; por eso una alarma cuyo desafío para descartar es una condición de script pasa de inmediato a su desafío alternativo.
 
 #### Qué pasa con los temporizadores y el cronómetro tras un reinicio?
 
@@ -220,6 +221,10 @@ Los festivos y los días laborables de recuperación son tan exactos como los da
 #### Qué pasa si el script `beforeRing` no decide a tiempo?
 
 La alarma suena como está configurada. El plazo es, de forma predeterminada, 5 segundos antes de la hora; si para entonces no hay decisión, el script falla, AutoJs6 no está disponible (por ejemplo, se forzó su detención) o el dispositivo no se ha desbloqueado desde un reinicio, la alarma suena como siempre. Si la regla de festivos ya omite esa vez, no se inicia ningún script `beforeRing`.
+
+#### Con un desafío para descartar, la alarma suena sin fin si no logro resolver los problemas o agitar con fuerza suficiente?
+
+No. Cada desafío conserva dos salidas: si la detención automática no se ajusta en la alarma, la alarma se detiene sola tras la mayor entre el valor predeterminado de los ajustes y 30 minutos, y la pantalla de la alarma muestra el tiempo restante; mientras la pantalla de la alarma está en primer plano (también en la pantalla de bloqueo), 5 pulsaciones de un botón de volumen (subir o bajar) en 4 segundos la descartan de inmediato. Durante un desafío los botones de volumen solo cuentan las pulsaciones y no cambian el volumen. El descarte de emergencia está activado de forma predeterminada y se puede desactivar en el grupo "Desafíos para descartar" de los ajustes; desactivado, solo la detención automática termina el aviso hasta completar el desafío.
 
 ******
 
@@ -283,6 +288,19 @@ Los planes, las decisiones de diseño y el progreso se registran como lista de v
 
 ******
 
+#### v1.3.0
+
+_2026/11/14_
+
+- `Aviso` Los desafíos para descartar fijados en las pantallas del complemento no requieren AutoJs6; fijarlos en un script (la opción dismiss de las alarmas) y la condición de script requieren AutoJs6 6.8.1 (compilación interna 6641) o posterior y este complemento en la versión 1.3.0 o posterior; con el complemento 1.2.x o anterior, una llamada con la opción dismiss falla con un mensaje que pide actualizar el complemento
+- `Aviso` Una alarma con desafío para descartar siempre se puede terminar: la detención automática (al menos 30 minutos si no se ajusta en la alarma) y el descarte de emergencia (5 pulsaciones de un botón de volumen en 4 segundos en la pantalla de la alarma) están siempre disponibles; el descarte de emergencia se puede desactivar en los ajustes, y entonces solo la detención automática termina el aviso hasta completar el desafío
+- `Función` Desafíos para descartar: una alarma puede exigir resolver problemas de cálculo (dificultad fácil, media o difícil, 3 problemas por defecto), agitar el teléfono (30 sacudidas por defecto) o escribir una frase (la suya, o una frase integrada elegida al azar) antes de poder descartarla, y puede permitir o no posponer durante el desafío; se ajusta en la fila "Desafío para descartar" de la pantalla de edición, y el desafío ocupa el lugar del control deslizante en la pantalla de la alarma
+- `Función` Mientras un desafío está activo, el botón "Descartar" de la notificación y las solicitudes de descarte de otras aplicaciones ya no descartan la alarma directamente, sino que abren el desafío en la pantalla de la alarma; si no se permite posponer, la notificación no muestra el botón "Posponer"; en un dispositivo sin acelerómetro el desafío de agitar se convierte en problemas de cálculo
+- `Función` Válvulas de seguridad: cuando una alarma con desafío no ajusta la detención automática, esta toma la mayor entre el valor predeterminado de los ajustes y 30 minutos, y la pantalla de la alarma muestra el tiempo restante; 5 pulsaciones de un botón de volumen en 4 segundos mientras la pantalla de la alarma está en primer plano (también en la pantalla de bloqueo) descartan la alarma en caso de emergencia, y durante un desafío los botones de volumen solo cuentan las pulsaciones sin cambiar el volumen; el nuevo grupo "Desafíos para descartar" de los ajustes permite desactivar el descarte de emergencia (activado de forma predeterminada)
+- `Función` Condición de script: fijada por un script de AutoJs6, la alarma suena hasta que un script la descarta; cuando el dispositivo no se ha desbloqueado desde un reinicio, no hay ningún script, AutoJs6 no está disponible, o los scripts no pudieron iniciarse o ya terminaron, la alarma pasa de inmediato al desafío alternativo elegido (un descarte normal de forma predeterminada), y el motivo queda anotado en el registro del complemento
+- `Función` Novedades del módulo de scripts de AutoJs6: la opción dismiss de las alarmas (el tipo de desafío, la dificultad y el número de problemas de cálculo, el número de sacudidas, el texto que hay que escribir, el desafío que se usa cuando ningún script puede ejecutarse y si se permite posponer), el challenge de alarms.ringing() y de los eventos ring / dismiss, y by: 'challenge' en el evento dismiss (requiere AutoJs6 6.8.1; consulte la [documentación de AutoJs6](https://docs.autojs6.com/#/alarms))
+- `Función` Las herramientas del complemento alarm_add y alarm_update aceptan la opción dismiss y pueden fijar los desafíos de cálculo, agitar y escribir texto (salvo la condición de script)
+
 #### v1.2.0
 
 _2026/11/13_
@@ -308,12 +326,6 @@ _2026/11/12_
 - `Función` Nuevos alarms.timers y alarms.stopwatch en el módulo de scripts de AutoJs6 (requiere AutoJs6 6.8.1): iniciar, consultar, pausar, reanudar, añadir o quitar tiempo, restablecer y cancelar temporizadores, scripts registrados en un temporizador que se inician al sonar y en otros eventos, y control del cronómetro con sus vueltas (consulte la [documentación de AutoJs6](https://docs.autojs6.com/#/alarms))
 - `Función` Nuevas herramientas del complemento timer_start, timer_list y timer_control para iniciar, listar, pausar, reanudar, alargar, restablecer y cancelar temporizadores mediante el complemento MCP Server o plugins.tools.call
 - `Función` Reloj del sistema: también atiende solicitudes de temporizador; otras aplicaciones pueden hacer que el complemento inicie un temporizador, abra la pantalla de temporizadores o apague un temporizador que suena
-
-#### v1.0.1
-
-_2026/11/08_
-
-- `Corrección` Cuando otra aplicación o un script de AutoJs6 enviaba seguidas dos solicitudes de alarma del mismo tipo (por ejemplo, dos alarmas nuevas una tras otra, o dos llamadas a alarms.system.setAlarm dirigidas a este complemento) sin ninguna pantalla del complemento abierta, la segunda solicitud se ignoraba sin ningún aviso y su alarma no se creaba; ahora se atiende cada solicitud; en Android 7.0 - 8.1 esto requiere el permiso "reordenar aplicaciones en ejecución" (concedido al instalar)
 
 ##### Para más historial de versiones
 

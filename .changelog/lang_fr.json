@@ -5,6 +5,21 @@
   "changelog_label_improvement": "Amélioration",
   "changelog_label_dependency": "Dépendance",
   "$data": {
+    "v1.3.0": {
+      "released_date": "2026/11/14",
+      "hint": [
+        "Les défis d'arrêt réglés dans les écrans du plugin ne demandent pas AutoJs6; les régler dans un script (l'option dismiss des alarmes) et la condition de script demandent AutoJs6 {{ required_host_version_name }} (version interne {{ required_host_version_code }}) ou ultérieure et ce plugin en version 1.3.0 ou ultérieure; avec le plugin 1.2.x ou antérieur, un appel avec l'option dismiss échoue avec un message invitant à mettre à jour le plugin",
+        "Une alarme avec un défi d'arrêt peut toujours être arrêtée: l'arrêt automatique (au moins 30 minutes s'il n'est pas réglé sur l'alarme) et l'arrêt d'urgence (5 appuis sur une touche de volume en 4 secondes sur l'écran de sonnerie) restent disponibles; l'arrêt d'urgence peut être désactivé dans les paramètres, et seul l'arrêt automatique met alors fin à la sonnerie tant que le défi n'est pas réussi"
+      ],
+      "feature": [
+        "Défis d'arrêt: une alarme peut exiger de résoudre des calculs (facile, moyen ou difficile, 3 calculs par défaut), de secouer le téléphone (30 secousses par défaut) ou de saisir une phrase (la vôtre, ou une phrase intégrée tirée au hasard) avant de pouvoir être arrêtée, et peut autoriser ou non le report pendant le défi; le réglage se fait sur la ligne \"Défi d'arrêt\" de l'écran de modification, et le défi remplace le curseur d'arrêt sur l'écran de sonnerie",
+        "Tant qu'un défi est actif, le bouton \"Arrêter\" de la notification et les demandes d'arrêt des autres applications n'arrêtent plus l'alarme directement mais ouvrent le défi sur l'écran de sonnerie; quand le report n'est pas autorisé, la notification n'affiche pas de bouton \"Répéter\"; sur un appareil sans accéléromètre, le défi de secousse devient un défi de calcul",
+        "Soupapes de sécurité: quand une alarme avec défi ne règle pas l'arrêt automatique, celui-ci prend la plus longue des deux durées entre la valeur par défaut des paramètres et 30 minutes, et l'écran de sonnerie affiche le temps restant; 5 appuis sur une touche de volume en 4 secondes tant que l'écran de sonnerie est au premier plan (y compris sur l'écran de verrouillage) arrêtent l'alarme en urgence, et pendant un défi les touches de volume ne servent qu'à compter les appuis sans changer le volume; le nouveau groupe \"Défis d'arrêt\" des paramètres permet de désactiver l'arrêt d'urgence (activé par défaut)",
+        "Condition de script: définie par un script AutoJs6, l'alarme sonne jusqu'à ce qu'un script l'arrête; quand l'appareil n'a pas été déverrouillé depuis un redémarrage, qu'il n'y a pas de script, qu'AutoJs6 n'est pas disponible, ou que les scripts n'ont pas pu démarrer ou sont terminés, l'alarme passe aussitôt au défi de repli choisi (un arrêt normal par défaut), et la raison est notée dans le journal du plugin",
+        "Nouveautés du module de script AutoJs6: l'option dismiss des alarmes (le type de défi, la difficulté et le nombre de calculs, le nombre de secousses, le texte à saisir, le défi utilisé quand aucun script ne peut s'exécuter et l'autorisation du report), le challenge de alarms.ringing() et des événements ring / dismiss, et by: 'challenge' dans l'événement dismiss (demande AutoJs6 {{ required_host_version_name }}; voir la [documentation d'AutoJs6](https://docs.autojs6.com/#/alarms))",
+        "Les outils du plugin alarm_add et alarm_update acceptent l'option dismiss et peuvent régler les défis de calcul, de secousse et de saisie (sauf la condition de script)"
+      ]
+    },
     "v1.2.0": {
       "released_date": "2026/11/13",
       "hint": [

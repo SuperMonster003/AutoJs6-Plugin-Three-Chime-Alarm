@@ -4,6 +4,19 @@
 
 ******
 
+# v1.3.0
+
+###### 2026/11/14
+
+* `Hint` Dismiss challenges set on the plugin screens need no AutoJs6; setting them in scripts (the dismiss option of alarms) and the script condition need AutoJs6 6.8.1 (internal build 6641) or later and this plugin 1.3.0 or later; with plugin 1.2.x or earlier, a call with the dismiss option fails with a message asking to update the plugin
+* `Hint` An alarm with a dismiss challenge can always be ended: auto stop (at least 30 minutes when not set on the alarm) and emergency dismiss (5 presses of a volume key within 4 seconds on the ringing screen) are always available; emergency dismiss can be turned off on the settings screen, and then only auto stop ends the ringing until the challenge is done
+* `Feature` Dismiss challenges: an alarm can require solving math problems (easy, medium or hard, 3 problems by default), shaking the phone (30 shakes by default) or typing a sentence (your own, or a random built-in one) before it can be dismissed, and can allow or forbid snoozing during the challenge; set it in the "Dismiss challenge" row of the edit screen, and the challenge takes the place of the dismiss slider on the ringing screen
+* `Feature` While a challenge is in effect, the "Dismiss" button of the notification and dismiss requests from other apps no longer dismiss the alarm directly but open the challenge on the ringing screen; when snoozing is not allowed the notification shows no "Snooze" button; on a device without an accelerometer the shake challenge becomes math problems
+* `Feature` Safety valves: when an alarm with a challenge does not set auto stop, auto stop takes the longer of the default on the settings screen and 30 minutes, and the ringing screen shows the time left; 5 presses of a volume key within 4 seconds while the ringing screen is in front (also on the lock screen) dismiss the alarm in an emergency, and during a challenge the volume keys only count presses and do not change the volume; the new "Dismiss challenges" group of the settings screen can turn emergency dismiss off (on by default)
+* `Feature` Script condition: set by an AutoJs6 script, the alarm rings until a script dismisses it; when the device has not been unlocked since a reboot, there is no script, AutoJs6 is unavailable, or the scripts failed to start or have ended, the alarm falls back at once to the chosen challenge (a normal dismiss by default), and the reason is recorded in the plugin log
+* `Feature` New in the AutoJs6 script module: the dismiss option of alarms (the kind of challenge, the difficulty and number of math problems, the number of shakes, the text to type, the challenge used when no script can run, and whether snoozing is allowed), the challenge in alarms.ringing() and in the ring / dismiss events, and by: 'challenge' in the dismiss event (needs AutoJs6 6.8.1; see the [AutoJs6 documentation](https://docs.autojs6.com/#/alarms))
+* `Feature` The plugin tools alarm_add and alarm_update accept the dismiss option and can set the math, shake and type challenges (the script condition excepted)
+
 # v1.2.0
 
 ###### 2026/11/13

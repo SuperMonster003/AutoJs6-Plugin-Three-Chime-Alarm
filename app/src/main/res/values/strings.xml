@@ -262,7 +262,7 @@
     <string name="permissions_title">Permissions and background</string>
     <string name="permissions_vendor_banner">Banner notifications</string>
     <string name="permissions_vendor_banner_guide">The system does not report this state. Turn on \"Banner\" in the notification settings of this plugin, otherwise the ringing screen does not open by itself on the lock screen unless display over other apps is allowed.</string>
-    <string name="plugin_description">Alarm clock, timers and stopwatch with calendar recurrence rules, holidays, spoken ringing and script hooks when an alarm rings</string>
+    <string name="plugin_description">Alarm clock, timers and stopwatch with calendar recurrence rules, holidays, dismiss challenges, spoken ringing and script hooks when an alarm rings</string>
     <string name="release_history_title">Version history</string>
     <string name="release_history_unavailable">Unable to load the version history</string>
     <string name="ring_action_dismiss">Dismiss</string>

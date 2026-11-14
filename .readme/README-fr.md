@@ -8,7 +8,7 @@
     </picture>
   </p>
 
-  <p>Réveil, minuteurs et chronomètre avec règles de répétition de calendrier, jours fériés, sonnerie parlée et scripts déclenchés à la sonnerie</p>
+  <p>Réveil, minuteurs et chronomètre avec règles de répétition de calendrier, jours fériés, défis d'arrêt, sonnerie parlée et scripts déclenchés à la sonnerie</p>
 
   <p>
     <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm/releases"><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm?label=Release"/></a>
@@ -42,11 +42,11 @@ Le README.md actuel prend en charge les langues suivantes:
 
 ******
 
-3-Chime Alarm est le plugin de réveil d'AutoJs6 et aussi une application de réveil qui fonctionne seule, sans AutoJs6. Les alarmes se répètent selon les règles de calendrier RFC 5545 (par exemple le dernier vendredi de chaque mois, ou tous les 3 jours à partir d'une date); une alarme qui sonne peut lire un texte à voix haute, lancer un script ou prévenir un script en cours d'exécution. Depuis la version 1.1.0, il propose aussi plusieurs minuteurs simultanés et un chronomètre. Depuis la version 1.2.0, une alarme peut sauter les jours fériés, ne sonner que les jours fériés ou sonner chaque jour ouvré (jours ouvrés de récupération compris), et un script peut décider avant la sonnerie si elle a lieu cette fois. Les défis d'arrêt arriveront dans une version ultérieure.
+3-Chime Alarm est le plugin de réveil d'AutoJs6 et aussi une application de réveil qui fonctionne seule, sans AutoJs6. Les alarmes se répètent selon les règles de calendrier RFC 5545 (par exemple le dernier vendredi de chaque mois, ou tous les 3 jours à partir d'une date); une alarme qui sonne peut lire un texte à voix haute, lancer un script ou prévenir un script en cours d'exécution. Depuis la version 1.1.0, il propose aussi plusieurs minuteurs simultanés et un chronomètre. Depuis la version 1.2.0, une alarme peut sauter les jours fériés, ne sonner que les jours fériés ou sonner chaque jour ouvré (jours ouvrés de récupération compris), et un script peut décider avant la sonnerie si elle a lieu cette fois. Depuis la version 1.3.0, une alarme peut exiger de résoudre des calculs, de secouer le téléphone, de saisir une phrase ou la confirmation d'un script avant de pouvoir être arrêtée, en gardant toujours deux issues: l'arrêt automatique et l'arrêt d'urgence.
 
 Le plugin programme et fait sonner les alarmes lui-même grâce aux alarmes exactes d'Android, si bien que les alarmes sonnent à l'heure même quand AutoJs6 n'est pas lancé. Les scripts AutoJs6 consultent, créent, modifient et écoutent les alarmes du plugin via le module global `alarms`, et utilisent les minuteurs et le chronomètre via `alarms.timers` et `alarms.stopwatch`; le sous-espace de noms `alarms.system` s'adresse directement à l'application d'horloge du système et fonctionne sans le plugin. Le plugin accepte aussi les demandes de réglage d'alarme et de minuteur envoyées par d'autres applications.
 
-> La version 1.2.0 fournit les alarmes (avec les règles de jours fériés et la décision d'un script avant la sonnerie), les minuteurs et le chronomètre, les écrans du plugin, les outils du plugin et le module de script `alarms`. L'activation dans le centre des plugins, les outils du plugin et le module `alarms` demandent AutoJs6 6.8.1 (version interne 6641) ou ultérieure; avec une version plus ancienne d'AutoJs6 (y compris 6.8.0), le plugin ne s'utilise que comme application de réveil autonome. L'avancement des défis d'arrêt figure dans la feuille de route.
+> La version 1.3.0 fournit les alarmes (avec les règles de jours fériés, la décision d'un script avant la sonnerie et les défis d'arrêt), les minuteurs et le chronomètre, les écrans du plugin, les outils du plugin et le module de script `alarms`. L'activation dans le centre des plugins, les outils du plugin et le module `alarms` demandent AutoJs6 6.8.1 (version interne 6641) ou ultérieure; avec une version plus ancienne d'AutoJs6 (y compris 6.8.0), le plugin ne s'utilise que comme application de réveil autonome.
 
 ******
 
@@ -58,13 +58,13 @@ Le plugin programme et fait sonner les alarmes lui-même grâce aux alarmes exac
 - Sonnerie: sonnerie du système ou audio local importé, texte lu à voix haute, volume indépendant avec montée progressive, vibration personnalisée, répétition et arrêt automatique, écran de sonnerie plein écran sur l'écran de verrouillage; les alarmes dues en même temps sonnent l'une après l'autre.
 - À l'heure: les alarmes sont replanifiées automatiquement après un redémarrage, un changement d'heure ou de fuseau horaire et une mise à jour du plugin, et sonnent même avant le premier déverrouillage; une alarme manquée appareil éteint sonne dans les 5 minutes, au-delà elle laisse seulement une notification.
 - Scripts liés: une alarme ou un minuteur peut enregistrer des fichiers de script qu'AutoJs6 lance lors de la sonnerie, de la répétition, de l'arrêt et d'autres événements, sans qu'ils restent en mémoire; un script en cours d'exécution peut aussi écouter ces événements en direct.
-- Outils du plugin: créer, consulter, modifier et supprimer des alarmes, gérer une alarme qui sonne, démarrer, lister et contrôler des minuteurs, et consulter les jours fériés via le plugin MCP Server ou `plugins.tools.call` (neuf outils `alarm_*`, trois outils `timer_*` et `holiday_check`).
+- Outils du plugin: créer, consulter, modifier et supprimer des alarmes (défis d'arrêt compris, sauf la condition de script), gérer une alarme qui sonne, démarrer, lister et contrôler des minuteurs, et consulter les jours fériés via le plugin MCP Server ou `plugins.tools.call` (neuf outils `alarm_*`, trois outils `timer_*` et `holiday_check`).
 - Horloge du système: le plugin peut traiter les demandes de réglage, d'affichage, d'arrêt et de répétition d'alarme, ainsi que de réglage, d'affichage et d'arrêt de minuteur, envoyées par d'autres applications.
-- Écrans: la langue, le mode nuit et la couleur du thème suivent AutoJs6 par défaut et peuvent être réglés séparément; l'icône du lanceur est interchangeable; l'écran des paramètres fixe la sonnerie, la vibration, la répétition et l'arrêt automatique par défaut.
+- Écrans: la langue, le mode nuit et la couleur du thème suivent AutoJs6 par défaut et peuvent être réglés séparément; l'icône du lanceur est interchangeable; l'écran des paramètres fixe la sonnerie, la vibration, la répétition et l'arrêt automatique par défaut, ainsi que l'autorisation de l'arrêt d'urgence.
 - Minuteurs et chronomètre: jusqu'à 20 minuteurs simultanés avec pause, reprise, temps supplémentaire et réinitialisation; un minuteur en cours affiche son compte à rebours dans le volet des notifications, d'où il peut être mis en pause, prolongé d'une minute ou annulé; les minuteurs continuent après un redémarrage et sonnent comme les alarmes. Le chronomètre enregistre des tours (jusqu'à 100) et signale le plus rapide et le plus lent. La barre de navigation du bas passe des alarmes aux minuteurs et au chronomètre.
 - Jours fériés: chaque alarme peut être réglée sur "Sauter les jours fériés", "Seulement les jours fériés" ou "Seulement les jours ouvrés" (sonne chaque jour ouvré, jours ouvrés de récupération compris, jamais le week-end ni les jours fériés). Les données de 250 pays et régions (dont plus de 600 subdivisions) de 2020 à 2035 sont intégrées, générées à partir du projet open source python-holidays; les mises à jour sont recherchées chaque semaine et la signature des données téléchargées est vérifiée. Les années pas encore annoncées sont estimées d'après les règles et marquées "estimé"; une année sans données, l'alarme suit seulement sa règle de répétition.
 - Décision d'un script avant la sonnerie: un script enregistré est lancé par AutoJs6 avant la sonnerie (60 secondes par défaut, de 15 secondes à 5 minutes) et peut sauter cette sonnerie, ou la laisser sonner avec un autre libellé, son, texte lu ou vibreur pour cette fois; si le script ne décide pas à temps, échoue ou si AutoJs6 n'est pas disponible, l'alarme sonne comme prévu.
-- Défis d'arrêt (prévus en 1.3.0): calcul, secousse, recopie d'une phrase ou condition de script, chacun avec une soupape de sécurité pour que l'alarme puisse toujours être arrêtée.
+- Défis d'arrêt: une alarme peut exiger de résoudre des calculs (facile, moyen ou difficile, 3 calculs par défaut), de secouer le téléphone (30 secousses par défaut) ou de saisir une phrase (la vôtre, ou une phrase intégrée tirée au hasard) avant de pouvoir être arrêtée, et peut autoriser ou non le report pendant le défi; tant qu'un défi est actif, le bouton "Arrêter" de la notification et les demandes d'arrêt des autres applications ouvrent le défi sur l'écran de sonnerie. Chaque défi garde deux issues: l'arrêt automatique (s'il n'est pas réglé sur l'alarme, la plus longue des deux durées entre la valeur par défaut des paramètres et 30 minutes, avec le temps restant affiché sur l'écran de sonnerie) et l'arrêt d'urgence (5 appuis sur une touche de volume en 4 secondes tant que l'écran de sonnerie est au premier plan, y compris sur l'écran de verrouillage; désactivable dans les paramètres). Les scripts AutoJs6 peuvent aussi définir une condition de script: l'alarme sonne jusqu'à ce qu'un script l'arrête, et quand aucun script ne peut s'exécuter (par exemple avant le premier déverrouillage après un redémarrage, ou une fois le script terminé), elle passe aussitôt au défi de repli choisi.
 
 ******
 
@@ -128,6 +128,7 @@ alarms.system.setAlarm({ hour: 6, minute: 50, label: "Flight" });
 - `alarms.timers.start(duration, options)` démarre un minuteur (en millisecondes ou avec une chaîne comme `"25m"` ou `"1h 30m"`, de 1 seconde à 100 heures) et renvoie un instantané de minuteur doté des méthodes `pause`, `resume`, `addTime`, `reset`, `cancel` et `bind`; `alarms.stopwatch` démarre, met en pause, reprend, enregistre les tours et réinitialise le chronomètre. Les deux demandent le plugin 1.1.0 ou ultérieur.
 - `alarms.holidays` lit les données des jours fériés (`regions`, `isHoliday`, `isWorkday`, `list`, `info`, `refresh`); l'option `holidays` d'une alarme (par exemple `{ region: 'CN', mode: 'workdays' }`) fixe sa règle de jours fériés, et les `warnings` de `alarms.capabilities()` signalent les données manquantes et les années estimées. Demande le plugin 1.2.0 ou ultérieur.
 - `alarms.bind(id, script, { events: ['beforeRing'], leadSeconds: 120 })` enregistre un script lancé avant la sonnerie; dans ce script, `skip(reason)` de `alarms.currentEvent()` saute cette sonnerie et `ring(overrides)` la fait sonner avec un autre libellé, son, texte lu ou vibreur pour cette fois; `alarms.on('beforeRing', listener)` écoute en direct, avec les deux mêmes méthodes sur l'événement. Demande le plugin 1.2.0 ou ultérieur.
+- L'option `dismiss` définit un défi d'arrêt, par exemple `alarms.add({ time: '07:00', dismiss: { challenge: 'math', math: { difficulty: 3, count: 5 }, allowSnooze: false } })`; avec `challenge: 'script'`, un script arrête l'alarme en appelant `alarms.dismiss(id)`, et `script.fallback` indique le défi utilisé quand aucun script ne peut s'exécuter. `alarms.ringing()` et les événements `ring` et `dismiss` portent le `challenge` en vigueur, et le `by` d'un événement `dismiss` vaut `'challenge'` quand le défi a été réussi. Demande le plugin 1.3.0 ou ultérieur.
 - `alarms.system` appelle directement l'application d'horloge du système (`setAlarm`, `setTimer`, `showAlarms`, `dismissAlarm`, `next`, etc.) et ne demande aucun plugin.
 
 ******
@@ -155,7 +156,7 @@ Le plugin peut servir d'application de réveil du système et traiter les demand
 
 Le plugin prend en charge Android 7.0 (API 24) et ultérieur. L'activation dans le centre des plugins, les outils du plugin et le module `alarms` demandent AutoJs6 6.8.1 (version interne 6641) ou ultérieure. Avec une version plus ancienne d'AutoJs6 (par exemple 6.8.0, version interne 6640), le centre des plugins indique qu'une version plus récente d'AutoJs6 est requise et ne peut pas activer le plugin, et les outils du plugin et le module `alarms` ne sont pas disponibles; le plugin reste utilisable comme application de réveil autonome et traite toujours les demandes de l'horloge du système. Le module `alarms` ne prend en charge que le moteur Rhino, et son `alarms.system` ne demande aucun plugin.
 
-Vérifié sur ces appareils avant la sortie de la version 1.0.0 (données dans l'annexe D de la feuille de route); les minuteurs et le chronomètre de la version 1.1.0 ont aussi été vérifiés sur un Sony XQ-AT72 et un Sony G8441, y compris les minuteurs qui continuent après un redémarrage (voir P7 de la feuille de route); les jours fériés et la décision d'un script avant la sonnerie de la version 1.2.0 ont été vérifiés sur un Sony XQ-AT72 avec AutoJs6 (voir P8 de la feuille de route):
+Vérifié sur ces appareils avant la sortie de la version 1.0.0 (données dans l'annexe D de la feuille de route); les minuteurs et le chronomètre de la version 1.1.0 ont aussi été vérifiés sur un Sony XQ-AT72 et un Sony G8441, y compris les minuteurs qui continuent après un redémarrage (voir P7 de la feuille de route); les jours fériés et la décision d'un script avant la sonnerie de la version 1.2.0 ont été vérifiés sur un Sony XQ-AT72 avec AutoJs6 (voir P8 de la feuille de route); les défis d'arrêt de la version 1.3.0 ont été vérifiés sur un Sony XQ-AT72 avec AutoJs6, y compris l'arrêt d'urgence sur l'écran de verrouillage et chaque repli de la condition de script (voir P9 de la feuille de route):
 
 | Appareil | Android | Résultat |
 | --- | --- | --- |
@@ -207,7 +208,7 @@ Sur un appareil de test Redmi (MIUI), le système a arrêté plusieurs fois le p
 
 #### Les alarmes sonnent-elles après un redémarrage avant le déverrouillage? Et les scripts liés?
 
-Les alarmes sonnent, car le plugin fonctionne avant le premier déverrouillage. Les scripts liés ne sont pas lancés, car AutoJs6 ne peut pas exécuter de scripts avant le premier déverrouillage, et ils ne sont pas lancés après coup non plus.
+Les alarmes sonnent, car le plugin fonctionne avant le premier déverrouillage. Les scripts liés ne sont pas lancés, car AutoJs6 ne peut pas exécuter de scripts avant le premier déverrouillage, et ils ne sont pas lancés après coup non plus; une alarme dont le défi d'arrêt est une condition de script passe donc aussitôt à son défi de repli.
 
 #### Que deviennent les minuteurs et le chronomètre après un redémarrage?
 
@@ -220,6 +221,10 @@ Les jours fériés et les jours ouvrés de récupération sont aussi exacts que 
 #### Que se passe-t-il si le script `beforeRing` ne décide pas à temps?
 
 L'alarme sonne comme elle est réglée. La limite est par défaut 5 secondes avant l'heure de sonnerie; sans décision à ce moment, si le script échoue, si AutoJs6 n'est pas disponible (par exemple arrêté de force) ou si l'appareil n'a pas été déverrouillé depuis un redémarrage, l'alarme sonne comme prévu. Une sonnerie déjà sautée par la règle des jours fériés ne lance aucun script `beforeRing`.
+
+#### Avec un défi d'arrêt, l'alarme sonne-t-elle sans fin si je n'arrive pas à résoudre les calculs ou à secouer assez fort?
+
+Non. Chaque défi garde deux issues: si l'arrêt automatique n'est pas réglé sur l'alarme, elle s'arrête d'elle-même après la plus longue des deux durées entre la valeur par défaut des paramètres et 30 minutes, et l'écran de sonnerie affiche le temps restant; tant que l'écran de sonnerie est au premier plan (y compris sur l'écran de verrouillage), 5 appuis sur une touche de volume (haut ou bas) en 4 secondes l'arrêtent aussitôt. Pendant un défi, les touches de volume ne servent qu'à compter les appuis et ne changent pas le volume. L'arrêt d'urgence est activé par défaut et se désactive dans le groupe "Défis d'arrêt" des paramètres; une fois désactivé, seul l'arrêt automatique met fin à la sonnerie tant que le défi n'est pas réussi.
 
 ******
 
@@ -283,6 +288,19 @@ Les plans, décisions de conception et l'avancement sont suivis sous forme de li
 
 ******
 
+#### v1.3.0
+
+_2026/11/14_
+
+- `Note` Les défis d'arrêt réglés dans les écrans du plugin ne demandent pas AutoJs6; les régler dans un script (l'option dismiss des alarmes) et la condition de script demandent AutoJs6 6.8.1 (version interne 6641) ou ultérieure et ce plugin en version 1.3.0 ou ultérieure; avec le plugin 1.2.x ou antérieur, un appel avec l'option dismiss échoue avec un message invitant à mettre à jour le plugin
+- `Note` Une alarme avec un défi d'arrêt peut toujours être arrêtée: l'arrêt automatique (au moins 30 minutes s'il n'est pas réglé sur l'alarme) et l'arrêt d'urgence (5 appuis sur une touche de volume en 4 secondes sur l'écran de sonnerie) restent disponibles; l'arrêt d'urgence peut être désactivé dans les paramètres, et seul l'arrêt automatique met alors fin à la sonnerie tant que le défi n'est pas réussi
+- `Fonctionnalité` Défis d'arrêt: une alarme peut exiger de résoudre des calculs (facile, moyen ou difficile, 3 calculs par défaut), de secouer le téléphone (30 secousses par défaut) ou de saisir une phrase (la vôtre, ou une phrase intégrée tirée au hasard) avant de pouvoir être arrêtée, et peut autoriser ou non le report pendant le défi; le réglage se fait sur la ligne "Défi d'arrêt" de l'écran de modification, et le défi remplace le curseur d'arrêt sur l'écran de sonnerie
+- `Fonctionnalité` Tant qu'un défi est actif, le bouton "Arrêter" de la notification et les demandes d'arrêt des autres applications n'arrêtent plus l'alarme directement mais ouvrent le défi sur l'écran de sonnerie; quand le report n'est pas autorisé, la notification n'affiche pas de bouton "Répéter"; sur un appareil sans accéléromètre, le défi de secousse devient un défi de calcul
+- `Fonctionnalité` Soupapes de sécurité: quand une alarme avec défi ne règle pas l'arrêt automatique, celui-ci prend la plus longue des deux durées entre la valeur par défaut des paramètres et 30 minutes, et l'écran de sonnerie affiche le temps restant; 5 appuis sur une touche de volume en 4 secondes tant que l'écran de sonnerie est au premier plan (y compris sur l'écran de verrouillage) arrêtent l'alarme en urgence, et pendant un défi les touches de volume ne servent qu'à compter les appuis sans changer le volume; le nouveau groupe "Défis d'arrêt" des paramètres permet de désactiver l'arrêt d'urgence (activé par défaut)
+- `Fonctionnalité` Condition de script: définie par un script AutoJs6, l'alarme sonne jusqu'à ce qu'un script l'arrête; quand l'appareil n'a pas été déverrouillé depuis un redémarrage, qu'il n'y a pas de script, qu'AutoJs6 n'est pas disponible, ou que les scripts n'ont pas pu démarrer ou sont terminés, l'alarme passe aussitôt au défi de repli choisi (un arrêt normal par défaut), et la raison est notée dans le journal du plugin
+- `Fonctionnalité` Nouveautés du module de script AutoJs6: l'option dismiss des alarmes (le type de défi, la difficulté et le nombre de calculs, le nombre de secousses, le texte à saisir, le défi utilisé quand aucun script ne peut s'exécuter et l'autorisation du report), le challenge de alarms.ringing() et des événements ring / dismiss, et by: 'challenge' dans l'événement dismiss (demande AutoJs6 6.8.1; voir la [documentation d'AutoJs6](https://docs.autojs6.com/#/alarms))
+- `Fonctionnalité` Les outils du plugin alarm_add et alarm_update acceptent l'option dismiss et peuvent régler les défis de calcul, de secousse et de saisie (sauf la condition de script)
+
 #### v1.2.0
 
 _2026/11/13_
@@ -308,12 +326,6 @@ _2026/11/12_
 - `Fonctionnalité` Nouveaux alarms.timers et alarms.stopwatch dans le module de script AutoJs6 (demande AutoJs6 6.8.1): démarrage, consultation, pause, reprise, ajout ou retrait de temps, réinitialisation et annulation des minuteurs, scripts enregistrés sur un minuteur et lancés à la sonnerie et à d'autres événements, et contrôle du chronomètre avec ses tours (voir la [documentation d'AutoJs6](https://docs.autojs6.com/#/alarms))
 - `Fonctionnalité` Nouveaux outils du plugin timer_start, timer_list et timer_control pour démarrer, lister, mettre en pause, reprendre, prolonger, réinitialiser et annuler des minuteurs via le plugin MCP Server ou plugins.tools.call
 - `Fonctionnalité` Horloge du système: les demandes de minuteur sont aussi traitées; d'autres applications peuvent faire démarrer un minuteur au plugin, ouvrir l'écran des minuteurs ou arrêter un minuteur qui sonne
-
-#### v1.0.1
-
-_2026/11/08_
-
-- `Correctif` Quand une autre application ou un script AutoJs6 envoyait coup sur coup deux demandes d'alarme du même type (par exemple deux nouvelles alarmes de suite, ou deux appels d'alarms.system.setAlarm visant ce plugin) alors qu'aucun écran du plugin n'était ouvert, la seconde demande était ignorée sans aucun message et son alarme n'était pas créée; chaque demande est désormais traitée; sous Android 7.0 - 8.1, cela nécessite l'autorisation "réorganiser les applications en cours d'exécution" (accordée à l'installation)
 
 ##### Pour plus d'historique des versions
 
