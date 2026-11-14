@@ -8,16 +8,16 @@ import org.autojs.plugin.alarm.api.AlarmLimits
  * and so on, since 1.1.0 the three timer tools `timer_start`, `timer_list` and `timer_control` (roadmap P7.6, T126 -
  * T128; the stopwatch is not offered, T17), and since 1.2.0 `holiday_check` (roadmap P8.7, T192). The parameters follow
  * `AlarmOptions` of appendix A section 4.2 within the host's schema subset (T90): no local audio file path (T91), the
- * `holidays` option since 1.2.0 (T193) and not yet the options of later features (`dismiss` joins with 1.3.0 without
- * `challenge: 'script'`); script bindings and `beforeRing` decisions are never offered (T17, T191). The document is static: the
+ * `holidays` option since 1.2.0 (T193) and the `dismiss` option since 1.3.0 without `challenge: 'script'` (T290); script
+ * bindings and `beforeRing` decisions are never offered (T17, T191). The document is static: the
  * host caches it per version code, and a missing exact alarm permission is reported by the call (`NOT_READY`), not by
  * dropping tools. The descriptions reach the context of AI models as written, so they stay English and ASCII and name
  * the error codes; there is nothing to localize (T89).
  * zh-CN: [ChimeToolService] 从 `IPluginToolProvider.getCatalog` 返回的目录 (AutoJs6 插件工具契约 v1, 路线图 P4.1, 附录 A 第 10 节): 短名
  * `chime` 下九个 1.0.0 工具, AutoJs6 列为 `chime_alarm_add` 等, 1.1.0 起另有三个计时器工具 `timer_start`, `timer_list`, `timer_control` (路线图
  * P7.6, T126 - T128; 不开放秒表, T17), 1.2.0 起另有 `holiday_check` (路线图 P8.7, T192). 参数在宿主的 schema 子集内沿用附录 A 第 4.2 节的
- * `AlarmOptions` (T90): 不含本地音频文件路径 (T91), 1.2.0 起含 `holidays` 选项 (T193), 暂不含之后功能的选项 (`dismiss` 随 1.3.0 加入且不含
- * `challenge: 'script'`); 从不开放脚本绑定与 `beforeRing` 决定 (T17, T191). 文档是静态的: 宿主按 versionCode 缓存, 缺少精确闹钟权限由调用报告 (`NOT_READY`), 不从目录里删工具. 说明原样进入 AI 模型的
+ * `AlarmOptions` (T90): 不含本地音频文件路径 (T91), 1.2.0 起含 `holidays` 选项 (T193), 1.3.0 起含不带 `challenge: 'script'` 的 `dismiss`
+ * 选项 (T290); 从不开放脚本绑定与 `beforeRing` 决定 (T17, T191). 文档是静态的: 宿主按 versionCode 缓存, 缺少精确闹钟权限由调用报告 (`NOT_READY`), 不从目录里删工具. 说明原样进入 AI 模型的
  * 上下文, 因此保持英文与 ASCII 并写明错误码; 没有需要本地化的文案 (T89).
  */
 internal object ChimeToolCatalog {
@@ -51,7 +51,7 @@ internal object ChimeToolCatalog {
     const val DEFAULT_UPCOMING_COUNT = 5
 
     /** T93: the option names `alarm_update` may clear. zh-CN: T93: `alarm_update` 可以清除的选项名. */
-    val CLEARABLE = listOf("repeat", "exclude", "holidays", "timeZone", "label", "tag", "sound", "speak", "snooze", "autoSilenceMinutes")
+    val CLEARABLE = listOf("repeat", "exclude", "holidays", "timeZone", "label", "tag", "sound", "speak", "snooze", "dismiss", "autoSilenceMinutes")
 
     /** T127: the actions of `timer_control`; `add` is `addTime` of the contract. zh-CN: T127: `timer_control` 的动作; `add` 即契约的 `addTime`. */
     val TIMER_ACTIONS = listOf("pause", "resume", "add", "reset", "cancel")
@@ -101,6 +101,24 @@ internal object ChimeToolCatalog {
 
     private val AUTO_SILENCE = """"autoSilenceMinutes": {"type": "integer", "minimum": ${AlarmLimits.MIN_AUTO_SILENCE_MINUTES}, "maximum": ${AlarmLimits.MAX_AUTO_SILENCE_MINUTES}, "description": "Stop ringing after this many minutes without an answer; omitted, the 3-Chime Alarm setting (10)."}"""
 
+    private val ALARM_AUTO_SILENCE = """"autoSilenceMinutes": {"type": "integer", "minimum": ${AlarmLimits.MIN_AUTO_SILENCE_MINUTES}, "maximum": ${AlarmLimits.MAX_AUTO_SILENCE_MINUTES}, "description": "Stop ringing after this many minutes without an answer; omitted, the 3-Chime Alarm setting (10), at least ${AlarmLimits.DEFAULT_CHALLENGE_AUTO_SILENCE_MINUTES} with a dismiss challenge."}"""
+
+    /** T290: `dismiss` of appendix A section 8 without `script` (T17). zh-CN: T290: 附录 A 第 8 节的 `dismiss`, 不含 `script` (T17). */
+    private val DISMISS = """"dismiss": {"type": "object", "properties": {
+            "challenge": {"type": "string", "enum": [${ChimeToolArguments.TOOL_CHALLENGES.joinToString(", ") { "\"$it\"" }}], "description": "What the user must do on the ringing screen to dismiss the alarm: none (default), math (solve arithmetic problems), shake (shake the phone), type (type a text). The alarm keeps ringing during the challenge; chime_alarm_dismiss still dismisses it at once."},
+            "math": {"type": "object", "properties": {
+              "difficulty": {"type": "integer", "minimum": ${AlarmLimits.MIN_MATH_DIFFICULTY}, "maximum": ${AlarmLimits.MAX_MATH_DIFFICULTY}, "description": "1 easy, 2 (default) medium, 3 hard."},
+              "count": {"type": "integer", "minimum": 1, "maximum": ${AlarmLimits.MAX_MATH_COUNT}, "description": "Problems to solve, ${AlarmLimits.DEFAULT_MATH_COUNT} by default."}
+            }, "additionalProperties": false, "description": "For challenge math."},
+            "shake": {"type": "object", "properties": {
+              "count": {"type": "integer", "minimum": 1, "maximum": ${AlarmLimits.MAX_SHAKE_COUNT}, "description": "Shakes, ${AlarmLimits.DEFAULT_SHAKE_COUNT} by default."}
+            }, "additionalProperties": false, "description": "For challenge shake. A phone without an accelerometer asks math problems instead."},
+            "type": {"type": "object", "properties": {
+              "text": {"type": "string", "maxLength": ${AlarmLimits.MAX_TYPE_TEXT_CHARS}, "description": "Text to type; case and spaces around it do not matter. Omitted, a random sentence."}
+            }, "additionalProperties": false, "description": "For challenge type."},
+            "allowSnooze": {"type": "boolean", "description": "Whether the user may snooze during the challenge, true by default."}
+          }, "additionalProperties": false, "description": "Dismiss challenge (3-Chime Alarm 1.3.0). Safety valves: with a challenge the ring stops by itself after autoSilenceMinutes (at least ${AlarmLimits.DEFAULT_CHALLENGE_AUTO_SILENCE_MINUTES} when omitted), and pressing a volume key 5 times dismisses it (emergency dismiss, on unless turned off in the settings). Alarms of AutoJs6 scripts may come back with challenge script (rings until a script dismisses it), which tools cannot set (INVALID_OPTIONS); changing other members keeps it."}"""
+
     private val OPTIONS = """
           "time": {"oneOf": [
             {"type": "string", "minLength": 4, "maxLength": 8, "description": "24-hour wall-clock time HH:mm or HH:mm:ss, such as 07:30."},
@@ -144,7 +162,8 @@ internal object ChimeToolCatalog {
             {"type": "boolean", "description": "false: the alarm cannot be snoozed; true: the 3-Chime Alarm settings."},
             {"type": "object", "properties": {"minutes": {"type": "integer", "minimum": ${AlarmLimits.MIN_SNOOZE_MINUTES}, "maximum": ${AlarmLimits.MAX_SNOOZE_MINUTES}}, "max": {"type": "integer", "minimum": 1, "maximum": ${AlarmLimits.MAX_SNOOZE_MAX}, "description": "Snoozes per ring."}}, "additionalProperties": false}
           ], "description": "Snooze; omitted members use the 3-Chime Alarm settings (10 minutes, 3 times by default)."},
-          $AUTO_SILENCE"""
+          $DISMISS,
+          $ALARM_AUTO_SILENCE"""
 
     private const val ALARM_RESULT = "Each alarm comes back with its id, its options as set (time as HH:mm or HH:mm:ss, repeat as a normalized RRULE with repeatText, a readable description), enabled, source and updatedBy (user / script / tool / intent), createdAt / updatedAt, nextTrigger (Unix milliseconds, absent when it will not ring again) with nextTriggerTime (ISO 8601 in the alarm's zone; an alarm set with at also has atTime), skipping (the next ring is skipped) and hasBindings (AutoJs6 scripts are bound to it)."
 
@@ -202,7 +221,7 @@ internal object ChimeToolCatalog {
     {
       "name": "$TOOL_UPDATE",
       "title": "Change an alarm (3-Chime Alarm)",
-      "description": "Changes options of an alarm of 3-Chime Alarm; options left out keep their value. time replaces the time and drops at, at drops time and date (a repeating alarm then also needs repeat in clear). sound, speak and snooze objects change only the members given; holidays replaces the whole filter. clear resets the named options to their defaults (no repeat, no holiday filter, the phone's zone, the 3-Chime Alarm settings, ...). The alarm is marked as last changed by a tool. Returns {alarm}. $ALARM_RESULT Errors: $OPTION_ERRORS; INVALID_ARGUMENTS with NOT_FOUND for an unknown id; INVALID_ARGUMENTS when nothing would change.",
+      "description": "Changes options of an alarm of 3-Chime Alarm; options left out keep their value. time replaces the time and drops at, at drops time and date (a repeating alarm then also needs repeat in clear). sound, speak, snooze and dismiss objects change only the members given; holidays replaces the whole filter. clear resets the named options to their defaults (no repeat, no holiday filter, the phone's zone, the 3-Chime Alarm settings, ...). The alarm is marked as last changed by a tool. Returns {alarm}. $ALARM_RESULT Errors: $OPTION_ERRORS; INVALID_ARGUMENTS with NOT_FOUND for an unknown id; INVALID_ARGUMENTS when nothing would change.",
       "inputSchema": {
         "type": "object",
         "properties": {

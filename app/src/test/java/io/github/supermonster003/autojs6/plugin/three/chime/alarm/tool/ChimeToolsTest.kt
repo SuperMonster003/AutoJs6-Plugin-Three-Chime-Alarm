@@ -29,6 +29,7 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.timer.Tim
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.timer.TimerRecord
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.timer.TimerStore
 import org.autojs.plugin.alarm.api.AlarmContract
+import org.autojs.plugin.alarm.api.AlarmOptionKeys
 import org.autojs.plugin.alarm.api.AlarmErrorCodes
 import org.autojs.plugin.alarm.api.AlarmEvent
 import org.autojs.plugin.alarm.api.AlarmFeatures
@@ -49,13 +50,14 @@ import java.time.ZoneId
 import java.util.Locale
 
 /**
- * Roadmap P4.1 (T18, T89 - T95), P7.6 (T126 - T129) and P8.7 (T192 - T195): every tool on the real repository,
+ * Roadmap P4.1 (T18, T89 - T95), P7.6 (T126 - T129), P8.7 (T192 - T195) and P9.4 (T290): every tool on the real repository,
  * scheduler, timer engine, ring state and bundled holiday data through the JSON a provider receives and answers: the
  * `AlarmOptions` shapes, the source `tool`, filters and limits, the update merge and `clear`, rings handled by `tool`,
- * the timer durations and actions, `holiday_check` and the `holidays` option, and the alarm errors as tool errors.
- * zh-CN: 路线图 P4.1 (T18, T89 - T95), P7.6 (T126 - T129) 与 P8.7 (T192 - T195): 在真实仓库, 调度器, 计时器引擎, 响铃状态与内置节假日数据上,
+ * the timer durations and actions, `holiday_check` and the `holidays` option, the `dismiss` option without `script`, and
+ * the alarm errors as tool errors.
+ * zh-CN: 路线图 P4.1 (T18, T89 - T95), P7.6 (T126 - T129), P8.7 (T192 - T195) 与 P9.4 (T290): 在真实仓库, 调度器, 计时器引擎, 响铃状态与内置节假日数据上,
  * 经提供方收发的 JSON 测试每个工具: `AlarmOptions` 的各种写法, 来源 `tool`, 筛选与上限, 修改的合并与 `clear`, 以 `tool` 处理响铃, 计时器的时长与动作,
- * `holiday_check` 与 `holidays` 选项, 以及闹钟错误到工具错误的转换.
+ * `holiday_check` 与 `holidays` 选项, 不含 `script` 的 `dismiss` 选项, 以及闹钟错误到工具错误的转换.
  */
 class ChimeToolsTest {
 
@@ -67,6 +69,7 @@ class ChimeToolsTest {
     private var exactAllowed = true
     private val events = ArrayList<AlarmEvent>()
 
+    private lateinit var repository: AlarmRepository
     private lateinit var schedule: AlarmSchedule
     private lateinit var rings: RingCoordinator
     private lateinit var timers: TimerEngine
@@ -81,9 +84,9 @@ class ChimeToolsTest {
         val data = HolidayData(set) { "CN" }
         val judge = HolidayJudge { date, region -> data.day(date, region) }
         val region: (String) -> String = { set.region(it).code }
-        val validator = AlarmOptionsValidator(features = setOf(AlarmFeatures.ALARMS, AlarmFeatures.HOLIDAYS))
+        val validator = AlarmOptionsValidator(features = setOf(AlarmFeatures.ALARMS, AlarmFeatures.HOLIDAYS, AlarmFeatures.CHALLENGES))
         lateinit var created: AlarmSchedule
-        val repository = AlarmRepository(
+        repository = AlarmRepository(
             store = AlarmStore(File(temp.root, "alarms"), clock = { now }),
             validator = validator,
             clock = { now },
@@ -222,7 +225,7 @@ class ChimeToolsTest {
         failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "hour must be in 0 - 23") { call(ChimeToolCatalog.TOOL_ADD, """{"time": "24:00"}""") }
         failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "INVALID_RULE: ") { call(ChimeToolCatalog.TOOL_ADD, """{"time": "07:00", "repeat": "FREQ=HOURLY"}""") }
         failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "INVALID_RULE: ") { call(ChimeToolCatalog.TOOL_ADD, """{"time": "07:00", "repeat": [7]}""") }
-        failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "unknown argument dismiss") { call(ChimeToolCatalog.TOOL_ADD, """{"time": "07:00", "dismiss": {"challenge": "math"}}""") }
+        failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "unknown argument beforeRing") { call(ChimeToolCatalog.TOOL_ADD, """{"time": "07:00", "beforeRing": {"minutes": 5}}""") }
         failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "at must be an ISO 8601") { call(ChimeToolCatalog.TOOL_ADD, """{"at": "tomorrow morning"}""") }
         failure(PluginToolErrorCodes.LIMIT_EXCEEDED, "LIMIT_EXCEEDED: label has 101 characters") { call(ChimeToolCatalog.TOOL_ADD, """{"time": "07:00", "label": "${"x".repeat(101)}"}""") }
         assertTrue("nothing was added", events.isEmpty())
@@ -424,6 +427,76 @@ class ChimeToolsTest {
             call(ChimeToolCatalog.TOOL_ADD, """{"at": "2026-10-09T07:00", "holidays": {"mode": "workdays"}}""")
         }
         failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "HOLIDAY_DATA_MISSING: ") { call(ChimeToolCatalog.TOOL_ADD, """{"time": "07:00", "holidays": {"mode": "skip", "region": "ZZ"}}""") }
+    }
+
+    @Test
+    fun `the dismiss option takes the built-in challenges, merges on update and is cleared (T290)`() {
+        val math = add("""{"time": "07:00", "repeat": "FREQ=DAILY", "dismiss": {"challenge": "math", "math": {"difficulty": 3, "count": 5}, "allowSnooze": false}}""")
+        val id = math["id"] as String
+        assertEquals(mapOf("challenge" to "math", "math" to mapOf("difficulty" to 3L, "count" to 5L), "allowSnooze" to false), math["dismiss"])
+
+        val merged = alarm(call(ChimeToolCatalog.TOOL_UPDATE, """{"id": "$id", "dismiss": {"allowSnooze": true}}"""))
+        assertEquals("members left out keep their value", mapOf("challenge" to "math", "math" to mapOf("difficulty" to 3L, "count" to 5L), "allowSnooze" to true), merged["dismiss"])
+        val typed = alarm(call(ChimeToolCatalog.TOOL_UPDATE, """{"id": "$id", "dismiss": {"challenge": "type", "type": {"text": "Good morning"}}}"""))
+        assertEquals(
+            mapOf("challenge" to "type", "math" to mapOf("difficulty" to 3L, "count" to 5L), "type" to mapOf("text" to "Good morning"), "allowSnooze" to true),
+            typed["dismiss"],
+        )
+        val cleared = alarm(call(ChimeToolCatalog.TOOL_UPDATE, """{"id": "$id", "clear": ["dismiss"]}"""))
+        assertFalse("no challenge", cleared.containsKey("dismiss"))
+
+        val shake = add("""{"time": "07:00", "dismiss": {"challenge": "shake", "shake": {"count": 60}}, "autoSilenceMinutes": 45}""")
+        assertEquals(mapOf("challenge" to "shake", "shake" to mapOf("count" to 60L)), shake["dismiss"])
+        assertEquals(45L, shake["autoSilenceMinutes"])
+
+        failure(PluginToolErrorCodes.INVALID_ARGUMENTS, ChimeToolArguments.SCRIPT_NOT_FOR_TOOLS) {
+            call(ChimeToolCatalog.TOOL_ADD, """{"time": "07:00", "dismiss": {"challenge": "script"}}""")
+        }
+        failure(PluginToolErrorCodes.INVALID_ARGUMENTS, ChimeToolArguments.SCRIPT_NOT_FOR_TOOLS) {
+            call(ChimeToolCatalog.TOOL_UPDATE, """{"id": "$id", "dismiss": {"script": {"fallback": "math"}}}""")
+        }
+        failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "dismiss.challenge must be one of none / math / shake / type") {
+            call(ChimeToolCatalog.TOOL_ADD, """{"time": "07:00", "dismiss": {"challenge": "puzzle"}}""")
+        }
+        failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "unknown argument dismiss.math.level") {
+            call(ChimeToolCatalog.TOOL_ADD, """{"time": "07:00", "dismiss": {"challenge": "math", "math": {"level": 2}}}""")
+        }
+        failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "dismiss must be an object") { call(ChimeToolCatalog.TOOL_ADD, """{"time": "07:00", "dismiss": "math"}""") }
+        failure(PluginToolErrorCodes.INVALID_ARGUMENTS, "INVALID_OPTIONS: ") {
+            call(ChimeToolCatalog.TOOL_ADD, """{"time": "07:00", "dismiss": {"challenge": "math", "math": {"difficulty": 4}}}""")
+        }
+        failure(PluginToolErrorCodes.LIMIT_EXCEEDED, "LIMIT_EXCEEDED: ") {
+            call(ChimeToolCatalog.TOOL_ADD, """{"time": "07:00", "dismiss": {"challenge": "type", "type": {"text": "${"x".repeat(201)}"}}}""")
+        }
+    }
+
+    @Test
+    fun `a script challenge of a script shows, survives a partial update and is dismissed by tool (T290)`() {
+        val id = repository.add(
+            mapOf(
+                AlarmOptionKeys.HOUR to 9, AlarmOptionKeys.MINUTE to 0, AlarmOptionKeys.REPEAT to "FREQ=DAILY",
+                AlarmOptionKeys.DISMISS to mapOf(AlarmOptionKeys.CHALLENGE to AlarmContract.CHALLENGE_SCRIPT, AlarmOptionKeys.SCRIPT_FALLBACK to AlarmContract.CHALLENGE_MATH),
+            ),
+            AlarmContract.SOURCE_SCRIPT,
+        ).id
+        @Suppress("UNCHECKED_CAST")
+        val listed = (call(ChimeToolCatalog.TOOL_LIST)["alarms"] as List<Map<String, Any?>>).single { it["id"] == id }
+        assertEquals(mapOf("challenge" to "script", "script" to mapOf("fallback" to "math")), listed["dismiss"])
+
+        val kept = alarm(call(ChimeToolCatalog.TOOL_UPDATE, """{"id": "$id", "dismiss": {"allowSnooze": false}}"""))
+        assertEquals("the script challenge stays", mapOf("challenge" to "script", "script" to mapOf("fallback" to "math"), "allowSnooze" to false), kept["dismiss"])
+
+        now = at("2026-11-05T09:00")
+        schedule.reconcile(AlarmPlanner.Cause.TRIGGER, listOf(id))
+        assertEquals(AlarmContract.EVENT_RING, events.last().type)
+        assertEquals(AlarmContract.CHALLENGE_SCRIPT, events.last().challenge)
+        assertEquals(mapOf("handled" to true), call(ChimeToolCatalog.TOOL_DISMISS, """{"id": "$id"}"""))
+        assertEquals(AlarmContract.EVENT_DISMISS, events.last().type)
+        assertEquals(AlarmContract.BY_TOOL, events.last().by)
+        assertEquals("the event names the challenge in effect", AlarmContract.CHALLENGE_SCRIPT, events.last().challenge)
+
+        val switched = alarm(call(ChimeToolCatalog.TOOL_UPDATE, """{"id": "$id", "dismiss": {"challenge": "shake"}}"""))
+        assertEquals("the fallback goes with the script challenge", mapOf("challenge" to "shake", "allowSnooze" to false), switched["dismiss"])
     }
 
     @Test

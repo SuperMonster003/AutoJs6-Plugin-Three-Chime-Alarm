@@ -1,6 +1,7 @@
 package io.github.supermonster003.autojs6.plugin.three.chime.alarm.tool
 
 import org.autojs.plugin.alarm.api.AlarmContract
+import org.autojs.plugin.alarm.api.AlarmLimits
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -12,11 +13,12 @@ import org.junit.Test
  * catalog (host `docs/dev/plugin-tool-protocol-v1.md`, "Catalog" and "Schema subset"), so no tool is dropped on a
  * device: names and lengths, risks, time limits and concurrency, closed objects, the keywords of each node type,
  * `oneOf` and array items, enums and defaults that match their node. It also pins the tool set, the AlarmOptions
- * parameters without local files and with the `holidays` option of 1.2.0 (roadmap P8.7, T192, T193) but without later
- * features, `holiday_check`, and English ASCII descriptions.
+ * parameters without local files, with the `holidays` option of 1.2.0 (roadmap P8.7, T192, T193) and the `dismiss`
+ * option of 1.3.0 without `script` (roadmap P9.4, T17, T290), `holiday_check`, and English ASCII descriptions.
  * zh-CN: 路线图 P4.1 (附录 A 第 10 节, T17, T89 - T93): 目录遵守宿主加载目录时的规则 (宿主协议文档 "Catalog" 与 "Schema subset"), 设备上不会有工具
  * 被丢弃: 名称与长度, 风险, 时限与并发, 封闭对象, 各类节点的关键字, `oneOf` 与数组元素, 与节点相符的枚举和默认值. 同时固定工具集合, 不含本地文件,
- * 含 1.2.0 的 `holidays` 选项 (路线图 P8.7, T192, T193) 但不含之后功能的 AlarmOptions 参数, `holiday_check`, 以及英文 ASCII 说明.
+ * 含 1.2.0 的 `holidays` 选项 (路线图 P8.7, T192, T193) 与 1.3.0 不含 `script` 的 `dismiss` 选项 (路线图 P9.4, T17, T290) 的 AlarmOptions 参数,
+ * `holiday_check`, 以及英文 ASCII 说明.
  */
 class ChimeToolCatalogTest {
 
@@ -70,12 +72,12 @@ class ChimeToolCatalogTest {
     }
 
     @Test
-    fun `the option parameters follow AlarmOptions without local files and later features`() {
+    fun `the option parameters follow AlarmOptions without local files and script features`() {
         assertEquals(ChimeToolArguments.OPTION_KEYS, properties("alarm_add").keys)
         assertEquals(setOf("id") + ChimeToolArguments.OPTION_KEYS + "clear", properties("alarm_update").keys)
         val text = ChimeToolCatalog.JSON
         assertFalse("no special file parameters (T91)", text.contains("x-autojs6-type"))
-        listOf("dismiss", "challenge", "beforeRing", "bind", "script\"").forEach { assertFalse("$it is not offered (T17)", properties("alarm_add").containsKey(it)) }
+        listOf("challenge", "beforeRing", "bind", "script\"").forEach { assertFalse("$it is not offered (T17)", properties("alarm_add").containsKey(it)) }
         assertFalse(text.contains("\"beforeRing\""))
         assertEquals(setOf("source", "tag", "enabled", "label", "limit"), properties("alarm_list").keys)
         assertEquals(setOf("count", "source", "tag", "enabled", "label"), properties("alarm_upcoming").keys)
@@ -109,6 +111,32 @@ class ChimeToolCatalogTest {
         assertEquals(members.getValue("region") - "description", properties("holiday_check").getValue("region") - "description")
         val description = tool("holiday_check")["description"] as String
         listOf("isHoliday", "isWorkday", "estimated", "HOLIDAY_DATA_MISSING", "INVALID_ARGUMENTS").forEach { assertTrue(it, description.contains(it)) }
+    }
+
+    @Test
+    fun `the dismiss option offers the built-in challenges but not script (T17, T290)`() {
+        val dismiss = properties("alarm_add").getValue("dismiss")
+        assertEquals(dismiss, properties("alarm_update").getValue("dismiss"))
+        assertEquals(false, dismiss["additionalProperties"])
+        @Suppress("UNCHECKED_CAST")
+        val members = dismiss["properties"] as Map<String, Map<String, Any?>>
+        assertEquals(setOf("challenge", "math", "shake", "type", "allowSnooze"), members.keys)
+        val challenges = members.getValue("challenge")["enum"] as List<*>
+        assertEquals(ChimeToolArguments.TOOL_CHALLENGES, challenges)
+        assertFalse("script is for AutoJs6 scripts only (T17)", AlarmContract.CHALLENGE_SCRIPT in challenges)
+        assertEquals((AlarmContract.CHALLENGES - AlarmContract.CHALLENGE_SCRIPT).toSet(), challenges.toSet())
+
+        @Suppress("UNCHECKED_CAST")
+        fun member(group: String, name: String): Map<String, Any?> = (members.getValue(group)["properties"] as Map<String, Map<String, Any?>>).getValue(name)
+        assertEquals(AlarmLimits.MIN_MATH_DIFFICULTY.toLong(), member("math", "difficulty")["minimum"])
+        assertEquals(AlarmLimits.MAX_MATH_DIFFICULTY.toLong(), member("math", "difficulty")["maximum"])
+        assertEquals(AlarmLimits.MAX_MATH_COUNT.toLong(), member("math", "count")["maximum"])
+        assertEquals(AlarmLimits.MAX_SHAKE_COUNT.toLong(), member("shake", "count")["maximum"])
+        assertEquals(AlarmLimits.MAX_TYPE_TEXT_CHARS.toLong(), member("type", "text")["maxLength"])
+        assertTrue("dismiss can be cleared", "dismiss" in ChimeToolCatalog.CLEARABLE)
+        val description = dismiss["description"] as String
+        listOf("autoSilenceMinutes", "volume key", "challenge script", "INVALID_OPTIONS").forEach { assertTrue(it, description.contains(it)) }
+        assertTrue((properties("alarm_add").getValue("autoSilenceMinutes")["description"] as String).contains("dismiss challenge"))
     }
 
     @Test

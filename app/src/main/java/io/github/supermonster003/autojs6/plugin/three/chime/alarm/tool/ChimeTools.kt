@@ -6,6 +6,7 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.api.Holid
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.api.TimerApi
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.timer.TimerDurations
 import org.autojs.plugin.alarm.api.AlarmContract
+import org.autojs.plugin.alarm.api.AlarmDismiss
 import org.autojs.plugin.alarm.api.AlarmErrorCodes
 import org.autojs.plugin.alarm.api.AlarmLimits
 import org.autojs.plugin.alarm.api.AlarmOptionKeys
@@ -27,13 +28,15 @@ import java.time.format.DateTimeFormatter
  * `snooze` as false or its members, members never set left out, and the moments `nextTrigger` / `at` also as ISO 8601 text
  * in the alarm's zone. Since 1.1.0 the timer tools run on a [TimerApi] that records the source `tool` and cancels
  * ringing timers `by` `tool` (roadmap P7.6, T126 - T129). Since 1.2.0 `holiday_check` answers from a [HolidayApi] and
- * the alarm tools take and return the `holidays` option (roadmap P8.7, T192 - T195). Pure Kotlin: the JVM tests run
+ * the alarm tools take and return the `holidays` option (roadmap P8.7, T192 - T195). Since 1.3.0 they take the `dismiss`
+ * option without `script` and return it in the shape of appendix A section 8, `script` included (roadmap P9.4, T290). Pure Kotlin: the JVM tests run
  * every tool on the real repository, timer engine and bundled holiday data.
  * zh-CN: 路线图 P4.1 的九个 1.0.0 工具, 基于记来源 `tool` 与关闭者 `tool` 的 [AlarmApi] (T18, T78): [call] 接收去掉短名的工具名与已校验的参数,
  * 返回结果对象. 闹钟错误转为工具错误 ([error], T94), 消息前保留闹钟错误码. 结果以 `AlarmOptions` 的形式描述闹钟 (T95): `time` 为 `HH:mm`
  * (有秒时为 `HH:mm:ss`), `vibrate` 为布尔或节奏, `snooze` 为 false 或其成员, 未设置的成员略去, 时刻 `nextTrigger` / `at` 另给出闹钟时区的
  * ISO 8601 文本. 1.1.0 起计时器工具基于记来源 `tool`, 以 `tool` 关闭响铃中计时器的 [TimerApi] (路线图 P7.6, T126 - T129). 1.2.0 起
- * `holiday_check` 由 [HolidayApi] 应答, 闹钟工具接受并返回 `holidays` 选项 (路线图 P8.7, T192 - T195). 纯 Kotlin: JVM 测试在真实仓库, 计时器引擎与
+ * `holiday_check` 由 [HolidayApi] 应答, 闹钟工具接受并返回 `holidays` 选项 (路线图 P8.7, T192 - T195). 1.3.0 起接受不含 `script` 的 `dismiss` 选项, 并以
+ * 附录 A 第 8 节的形式返回 (含 `script`, 路线图 P9.4, T290). 纯 Kotlin: JVM 测试在真实仓库, 计时器引擎与
  * 内置节假日数据上运行每个工具.
  */
 internal class ChimeTools(
@@ -256,6 +259,7 @@ internal class ChimeTools(
                     snooze.max?.let { put("max", it) }
                 })
             }
+            spec.dismiss?.let { dismiss(it) }?.let { put("dismiss", it) }
             spec.autoSilenceMinutes?.let { put("autoSilenceMinutes", it) }
             put("source", snapshot.source)
             put("updatedBy", snapshot.updatedBy)
@@ -269,6 +273,23 @@ internal class ChimeTools(
             put("hasBindings", snapshot.hasBindings)
         }
     }
+
+    /**
+     * T290: the `dismiss` group in the shape of appendix A section 8; null when no member is set.
+     * zh-CN: T290: 以附录 A 第 8 节形式表示的 `dismiss` 分组; 没有成员时为 null.
+     */
+    private fun dismiss(dismiss: AlarmDismiss): Map<String, Any?>? = LinkedHashMap<String, Any?>().apply {
+        dismiss.challenge?.let { put("challenge", it) }
+        val math = LinkedHashMap<String, Any?>().apply {
+            dismiss.mathDifficulty?.let { put("difficulty", it) }
+            dismiss.mathCount?.let { put("count", it) }
+        }
+        if (math.isNotEmpty()) put("math", math)
+        dismiss.shakeCount?.let { put("shake", mapOf("count" to it)) }
+        dismiss.typeText?.let { put("type", mapOf("text" to it)) }
+        dismiss.scriptFallback?.let { put("script", mapOf("fallback" to it)) }
+        dismiss.allowSnooze?.let { put("allowSnooze", it) }
+    }.takeIf { it.isNotEmpty() }
 
     private fun isoTime(millis: Long, zone: ZoneId): String = ISO.format(Instant.ofEpochMilli(millis).atZone(zone))
 

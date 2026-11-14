@@ -22,7 +22,9 @@ import java.time.format.DateTimeParseException
  * takes `default`, `silent` or a URI other than `file:` (T91). For `alarm_update` the partial groups `sound`, `speak` and
  * `snooze` are merged over the stored group (T29 as the host does it) and `clear` names options to send as null (T93).
  * Since 1.2.0 the `holidays` group (`mode`, optional `region`) is sent as given and replaces the stored one as a whole,
- * so an omitted region keeps following the default region of the settings (roadmap P8.7, T193).
+ * so an omitted region keeps following the default region of the settings (roadmap P8.7, T193). Since 1.3.0 the `dismiss`
+ * group of appendix A section 8 is taken without `script` (T17, T290): `challenge` `none` / `math` / `shake` / `type`
+ * with `math` / `shake` / `type` and `allowSnooze`, sent as the flat wire group and merged over the stored group on update.
  * Type and range problems the host's schema check lets through fail with `INVALID_OPTIONS` naming the argument; the
  * validator checks the rest. Pure Kotlin.
  * zh-CN: 把工具参数转为契约的闹钟选项 (路线图 P4.1, T90): 附录 A 第 4.2 节 `AlarmOptions` 的形式 (`time` 文本或对象, `date` 文本或时间戳, `at`
@@ -31,7 +33,8 @@ import java.time.format.DateTimeParseException
  * 由时间戳得到的日期与不带偏移的 `at` 文本按 `timeZone`, 闹钟已存的时区 (修改时) 或手机时区解读. `sound.source` 接受 `default`, `silent` 或
  * `file:` 以外的 URI (T91). `alarm_update` 中不完整的 `sound`, `speak`, `snooze` 分组与已存分组合并 (同宿主的 T29 做法), `clear` 列出以 null
  * 发送的选项 (T93). 1.2.0 起 `holidays` 分组 (`mode`, 可选 `region`) 原样发送并整体替换已存分组, 因此省略的地区继续随设置中的默认地区 (路线图 P8.7,
- * T193). 宿主 schema 检查放过的类型与范围问题以 `INVALID_OPTIONS` 失败并写明参数名, 其余由校验器检查. 纯 Kotlin.
+ * T193). 1.3.0 起接受附录 A 第 8 节的 `dismiss` 分组但不含 `script` (T17, T290): `challenge` 为 `none` / `math` / `shake` / `type`, 另有 `math` /
+ * `shake` / `type` 与 `allowSnooze`, 以扁平的线上分组发送, 修改时与已存分组合并. 宿主 schema 检查放过的类型与范围问题以 `INVALID_OPTIONS` 失败并写明参数名, 其余由校验器检查. 纯 Kotlin.
  */
 internal class ChimeToolArguments(private val deviceZone: () -> ZoneId = ZoneId::systemDefault) {
 
@@ -184,8 +187,44 @@ internal class ChimeToolArguments(private val deviceZone: () -> ZoneId = ZoneId:
             wire[AlarmOptionKeys.SPEAK] = merged
         }
         args["snooze"]?.let { wire[AlarmOptionKeys.SNOOZE] = merge(AlarmOptionKeys.SNOOZE, snooze(it), SNOOZE_GROUP, stored) }
+        args["dismiss"]?.let { wire[AlarmOptionKeys.DISMISS] = dismiss(it, stored) }
         args["autoSilenceMinutes"]?.let { wire[AlarmOptionKeys.AUTO_SILENCE_MINUTES] = integral("autoSilenceMinutes", it) }
         return wire
+    }
+
+    /**
+     * T290: the `dismiss` group of appendix A section 8 without `script` (T17) as the flat wire group of the contract
+     * (`challenge`, `mathDifficulty`, `mathCount`, `shakeCount`, `typeText`, `allowSnooze`); the ranges are the validator's.
+     * For `alarm_update` the members left out keep their stored value like `sound` and `snooze`, so a `script` challenge an
+     * AutoJs6 script set stays until the tool names another challenge; its `scriptFallback` goes with it.
+     * zh-CN: T290: 把附录 A 第 8 节去掉 `script` (T17) 的 `dismiss` 分组转为契约的扁平线上分组 (`challenge`, `mathDifficulty`, `mathCount`,
+     * `shakeCount`, `typeText`, `allowSnooze`); 范围由校验器检查. `alarm_update` 中省略的成员像 `sound` 与 `snooze` 一样保留已存值, 因此 AutoJs6 脚本设置的
+     * `script` 挑战一直保留到工具指定别的挑战为止; 其 `scriptFallback` 随之去掉.
+     */
+    private fun dismiss(value: Any, stored: Lazy<Map<String, Any?>>?): Map<String, Any?> {
+        val given = group("dismiss", value, DISMISS_KEYS + "script")
+        if (given.containsKey("script") || given["challenge"] == AlarmContract.CHALLENGE_SCRIPT) throw invalid("dismiss: $SCRIPT_NOT_FOR_TOOLS (only AutoJs6 scripts set it)")
+        val wire = LinkedHashMap<String, Any?>()
+        given["challenge"]?.let { challenge ->
+            val name = string("dismiss.challenge", challenge)
+            if (name !in TOOL_CHALLENGES) throw invalid("dismiss.challenge must be one of ${TOOL_CHALLENGES.joinToString(" / ")}, got ${describe(name)}")
+            wire[AlarmOptionKeys.CHALLENGE] = name
+        }
+        given["math"]?.let { math ->
+            val members = group("dismiss.math", math, MATH_KEYS)
+            members["difficulty"]?.let { wire[AlarmOptionKeys.MATH_DIFFICULTY] = integral("dismiss.math.difficulty", it) }
+            members["count"]?.let { wire[AlarmOptionKeys.MATH_COUNT] = integral("dismiss.math.count", it) }
+        }
+        given["shake"]?.let { shake ->
+            group("dismiss.shake", shake, COUNT_KEYS)["count"]?.let { wire[AlarmOptionKeys.SHAKE_COUNT] = integral("dismiss.shake.count", it) }
+        }
+        given["type"]?.let { type ->
+            group("dismiss.type", type, TEXT_KEYS)["text"]?.let { wire[AlarmOptionKeys.TYPE_TEXT] = string("dismiss.type.text", it) }
+        }
+        given["allowSnooze"]?.let { wire[AlarmOptionKeys.ALLOW_SNOOZE] = bool("dismiss.allowSnooze", it) }
+        val merged = LinkedHashMap(merge(AlarmOptionKeys.DISMISS, wire, DISMISS_GROUP, stored))
+        if (merged[AlarmOptionKeys.CHALLENGE] != AlarmContract.CHALLENGE_SCRIPT) merged.remove(AlarmOptionKeys.SCRIPT_FALLBACK)
+        return merged
     }
 
     /**
@@ -362,13 +401,20 @@ internal class ChimeToolArguments(private val deviceZone: () -> ZoneId = ZoneId:
     companion object {
 
         /**
-         * The `AlarmOptions` keys the tools take (appendix A 4.2 without `dismiss`; `holidays` since 1.2.0, T193).
-         * zh-CN: 工具接受的选项键 (附录 A 4.2 去掉 `dismiss`; `holidays` 自 1.2.0 起, T193).
+         * The `AlarmOptions` keys the tools take (appendix A 4.2; `holidays` since 1.2.0, T193; `dismiss` without `script`
+         * since 1.3.0, T290).
+         * zh-CN: 工具接受的选项键 (附录 A 4.2; `holidays` 自 1.2.0 起, T193; 不含 `script` 的 `dismiss` 自 1.3.0 起, T290).
          */
         val OPTION_KEYS: Set<String> = linkedSetOf(
             "time", "date", "at", "repeat", "exclude", "holidays", "timeZone", "label", "enabled", "tag", "sound", "vibrate", "speak", "snooze",
-            "autoSilenceMinutes",
+            "dismiss", "autoSilenceMinutes",
         )
+
+        /** T290: the challenges a tool may set; `script` is for AutoJs6 scripts only (T17). zh-CN: T290: 工具可设置的挑战; `script` 只供 AutoJs6 脚本 (T17). */
+        val TOOL_CHALLENGES: List<String> = listOf(AlarmContract.CHALLENGE_NONE, AlarmContract.CHALLENGE_MATH, AlarmContract.CHALLENGE_SHAKE, AlarmContract.CHALLENGE_TYPE)
+
+        /** The message of a `script` challenge from a tool (chime-p9-protocol.md section 6). zh-CN: 工具传入 `script` 挑战时的消息 (协议第 6 节). */
+        const val SCRIPT_NOT_FOR_TOOLS = "challenge 'script' is not available to tools"
 
         /** T126: the arguments of `timer_start`. zh-CN: T126: `timer_start` 的参数. */
         val TIMER_KEYS: Set<String> = linkedSetOf("duration", "label", "sound", "vibrate", "speak", "autoSilenceMinutes")
@@ -383,6 +429,14 @@ internal class ChimeToolArguments(private val deviceZone: () -> ZoneId = ZoneId:
         private val SPEAK_GROUP = SPEAK_KEYS
         private val HOLIDAY_KEYS = setOf(AlarmOptionKeys.HOLIDAY_MODE, AlarmOptionKeys.HOLIDAY_REGION)
         private val SNOOZE_GROUP = setOf(AlarmOptionKeys.SNOOZE_ENABLED, AlarmOptionKeys.SNOOZE_MINUTES, AlarmOptionKeys.SNOOZE_MAX)
+        private val DISMISS_KEYS = setOf("challenge", "math", "shake", "type", "allowSnooze")
+        private val MATH_KEYS = setOf("difficulty", "count")
+        private val COUNT_KEYS = setOf("count")
+        private val TEXT_KEYS = setOf("text")
+        private val DISMISS_GROUP = setOf(
+            AlarmOptionKeys.CHALLENGE, AlarmOptionKeys.MATH_DIFFICULTY, AlarmOptionKeys.MATH_COUNT, AlarmOptionKeys.SHAKE_COUNT,
+            AlarmOptionKeys.TYPE_TEXT, AlarmOptionKeys.SCRIPT_FALLBACK, AlarmOptionKeys.ALLOW_SNOOZE,
+        )
 
         private val STRUCTURED_PARTS = linkedMapOf(
             "freq" to "FREQ", "interval" to "INTERVAL", "count" to "COUNT", "until" to "UNTIL", "byMonth" to "BYMONTH", "byWeekNo" to "BYWEEKNO",
