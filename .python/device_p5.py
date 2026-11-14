@@ -10,6 +10,7 @@ P5.6 baselines). The host must be a build with the alarm contract (versionCode 6
     py .python/device_p5.py <serial> due [--lead 240] [--tag p5-reboot]      (adds a bound alarm and exits)
     py .python/device_p5.py <serial> rebootcheck [--tag p5-reboot]          (after the reboot: did it ring, was the script started)
     py .python/device_p5.py <serial> coldstart [--count 3] [--kill am|force-stop] [--screen off|on] [--keep-alive on|off] [--no-screen-check]
+                                            [--challenge math|shake|type] [--holidays CN]
     py .python/device_p5.py <serial> fgs
     py .python/device_p5.py <serial> keepalive
     py .python/device_p5.py <serial> cleanup
@@ -41,7 +42,10 @@ P5.6 baselines). The host must be a build with the alarm contract (versionCode 6
   running in background" (roadmap Q23 (b), T100) for the run and puts the previous value back afterwards: the process
   then survives `am kill` (no kill -9 fallback) and the probe must ring in it; `--keep-alive off` turns it off for the
   run. `--no-screen-check` passes on the ring session alone (the ringing screen opening by itself depends on other
-  settings, such as the ColorOS banner notifications of roadmap Q20).
+  settings, such as the ColorOS banner notifications of roadmap Q20). `--challenge math|shake|type` gives the probe
+  that dismiss challenge (the ring screen then draws the challenge, roadmap P9); `--holidays <region>` makes the probe
+  a daily alarm at the same second with `holidays: { region, mode: 'skip' }` (the holiday data is read on the ring
+  path, roadmap T253), so pick a day that is not a holiday there.
 - fgs: a silent probe of the debug hook rings; the foreground service type of the ring service is read from
   `dumpsys activity services` (roadmap T6: `systemExempted`, 0x400, from API 34; no type below API 34).
 - keepalive (roadmap Q23 (b), T100): with "Keep running in background" on, the keep-alive service runs in the foreground
@@ -712,7 +716,9 @@ def coldstart(serial, args, report):
     `force-stop`: no ring while the package is stopped (the system drops its alarms, roadmap T60); started again within
     the 5 minute window, the plugin rings late (T16)."""
     results = []
-    options = __import__("base64").b64encode(json.dumps({"sound": {"source": "silent"}, "vibrate": False}).encode()).decode()
+    options = {"sound": {"source": "silent"}, "vibrate": False}
+    if args.challenge:
+        options["dismiss"] = {"challenge": args.challenge}
     before = keep_alive_state(serial)[0] if args.keep_alive else None
     if args.keep_alive:
         hook(serial, "keepalive", value=args.keep_alive)
@@ -728,11 +734,22 @@ def coldstart(serial, args, report):
 def coldstart_rounds(serial, args, report, options, results):
     keep_alive = args.keep_alive == "on"
     for i in range(args.count):
-        answer = hook(serial, "add", label=f"p24-probe-cold-{i}", inSeconds=args.lead, options64=options)
+        extra, target = dict(options), None
+        if args.holidays:
+            # A daily alarm at the local wall time of a whole second `lead` seconds ahead; the hook's `at` is dropped.
+            # zh-CN: `lead` 秒后某个整秒的本地时刻的每日闹钟; 去掉调试钩子给的 `at`.
+            target = (device_ms(serial) // 1000 + args.lead) * 1000
+            offset = adb(serial, "shell", "date", "+%z").strip()
+            sign = -1 if offset.startswith("-") else 1
+            local = target // 1000 + sign * (int(offset[1:3]) * 3600 + int(offset[3:5]) * 60)
+            extra.update({"at": None, "hour": local // 3600 % 24, "minute": local // 60 % 60, "second": local % 60,
+                          "repeat": "FREQ=DAILY", "holidays": {"region": args.holidays, "mode": "skip"}})
+        encoded = __import__("base64").b64encode(json.dumps(extra).encode()).decode()
+        answer = hook(serial, "add", label=f"p24-probe-cold-{i}", inSeconds=args.lead, options64=encoded)
         if "added" not in answer:
             report.line(f"cold start {i}: probe", "FAIL", str(answer)[:120])
             continue
-        at = int(answer["at"])
+        at = target or int(answer["at"])
         alarm = answer["added"]
         time.sleep(3)
         if keep_alive:
@@ -834,6 +851,8 @@ def main(argv=None):
     parser.add_argument("--screen", choices=["off", "on"], default="off")
     parser.add_argument("--no-screen-check", dest="screen_check", action="store_false", help="coldstart: pass on the ring session alone")
     parser.add_argument("--keep-alive", choices=["on", "off"], default=None, help="coldstart: set Keep running in background for the run")
+    parser.add_argument("--challenge", choices=["math", "shake", "type"], default=None, help="coldstart: give the probe this dismiss challenge")
+    parser.add_argument("--holidays", metavar="REGION", default=None, help="coldstart: a daily probe with a skip holiday filter of REGION")
     parser.add_argument("--locked-only", action="store_true", help="rebootcheck: only read the logs (the device is still locked)")
     args = parser.parse_args(argv)
     report = Report()

@@ -274,7 +274,10 @@ HOSTSTOP = {"fallback": None, "binds": [("brief.js", ["ring"])], "remove": [], "
             "polls": [], "window": (0, 3)}
 OLDHOST = {"fallback": None, "binds": [("long.js", ["ring"])], "remove": [], "reason": "unavailable", "answer": "launched=1 duplicates=0 missing=0",
            "polls": ["no answer"], "window": (4, 9)}
-LOCKED = {"fallback": None, "binds": [("brief.js", ["ring"])], "remove": [], "reason": "locked", "answer": None, "polls": [], "window": (0, 2)}
+# Before the first unlock the host answers the ring with `scriptSkipped=locked` (it runs no script), which is what falls
+# back (ScriptCondition, roadmap P9.2). zh-CN: 首次解锁前宿主以 `scriptSkipped=locked` 应答响铃 (不运行脚本), 退回由它触发.
+LOCKED = {"fallback": None, "binds": [("brief.js", ["ring"])], "remove": [], "reason": "locked", "answer": "scriptSkipped=locked", "polls": [],
+          "window": (0, 2)}
 
 
 def now_ms():
