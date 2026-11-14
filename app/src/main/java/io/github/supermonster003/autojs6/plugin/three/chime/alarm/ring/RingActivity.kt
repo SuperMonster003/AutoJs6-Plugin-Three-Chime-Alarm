@@ -1,5 +1,6 @@
 package io.github.supermonster003.autojs6.plugin.three.chime.alarm.ring
 
+import android.annotation.SuppressLint
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -178,7 +179,13 @@ class RingActivity : StandaloneActivity() {
     /**
      * The volume keys while a challenge is in effect: never change the volume, count toward the emergency dismiss when
      * the setting is on (auto repeats do not count). zh-CN: 挑战生效时的音量键: 不调节音量, 设置开启时计入紧急关闭 (长按的自动重复不计).
+     *
+     * This overrides the public `Activity.dispatchKeyEvent`; lint reports RestrictedApi only because `androidx.core`'s
+     * `ComponentActivity` overrides it with a library group restriction.
+     * zh-CN: 这里覆盖的是公开的 `Activity.dispatchKeyEvent`; lint 报 RestrictedApi 只是因为 `androidx.core` 的
+     * `ComponentActivity` 以库组限制覆盖了它.
      */
+    @SuppressLint("RestrictedApi")
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         val current = shown
         val volume = event.keyCode == KeyEvent.KEYCODE_VOLUME_UP || event.keyCode == KeyEvent.KEYCODE_VOLUME_DOWN
