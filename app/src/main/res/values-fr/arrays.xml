@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="ring_challenge_type_sentences">
+        <item>Je suis réveillé et prêt pour la journée</item>
+        <item>Bonjour, il est temps de se lever</item>
+        <item>Le monde appartient à ceux qui se lèvent tôt</item>
+        <item>Aujourd\'hui sera une bonne journée</item>
+        <item>Je ne vais pas me rendormir</item>
+        <item>On s\'étire, on respire et on se lance</item>
+        <item>Un verre d\'eau dès le réveil</item>
+        <item>Chaque matin, un petit pas de plus</item>
+    </string-array>
+</resources>

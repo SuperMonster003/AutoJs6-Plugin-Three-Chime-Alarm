@@ -3,6 +3,7 @@
     <string name="alarm_default_label">알람</string>
     <string name="clock_choose_dismiss_title">어떤 알람을 해제할까요?</string>
     <string name="clock_toast_alarm_set">알람이 %1$s(으)로 설정되었습니다</string>
+    <string name="clock_toast_challenge">알람을 해제하려면 알람 화면에서 챌린지를 완료하세요</string>
     <string name="clock_toast_dismissed">알람 해제됨: %1$s</string>
     <string name="clock_toast_failed">요청을 처리하지 못했습니다: %1$s</string>
     <string name="clock_toast_no_match">일치하는 알람이 없습니다</string>
@@ -238,6 +239,19 @@
     <string name="release_history_unavailable">버전 기록을 불러올 수 없습니다</string>
     <string name="ring_action_dismiss">해제</string>
     <string name="ring_action_snooze">다시 알림</string>
+    <string name="ring_challenge_auto_stop">%1$d:%2$02d 후 자동 중지</string>
+    <string name="ring_challenge_check">확인</string>
+    <string name="ring_challenge_emergency_hint">긴급 시 볼륨 버튼을 빠르게 5번 누르면 해제됩니다</string>
+    <string name="ring_challenge_math_answer">답</string>
+    <string name="ring_challenge_math_title">문제를 풀어 해제 (%1$d/%2$d)</string>
+    <string name="ring_challenge_math_wrong">오답입니다, 다시 시도하세요</string>
+    <string name="ring_challenge_script_waiting">스크립트가 해제하기를 기다리는 중</string>
+    <string name="ring_challenge_shake_no_sensor">이 기기에는 가속도 센서가 없으므로 대신 문제를 푸세요</string>
+    <string name="ring_challenge_shake_progress">%1$d / %2$d</string>
+    <string name="ring_challenge_shake_title">휴대폰을 흔들어 해제</string>
+    <string name="ring_challenge_type_input">텍스트</string>
+    <string name="ring_challenge_type_title">텍스트를 입력하여 해제</string>
+    <string name="ring_challenge_type_wrong">텍스트가 일치하지 않습니다</string>
     <string name="ring_dismiss_hint">밀어서 해제</string>
     <string name="ring_snooze_status">%1$s, %2$s</string>
     <string name="ring_snooze_used_up">다시 알림을 더 할 수 없음</string>

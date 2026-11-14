@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="ring_challenge_type_sentences">
+        <item>أنا مستيقظ ومستعد لهذا اليوم</item>
+        <item>صباح الخير, حان وقت النهوض</item>
+        <item>من جد وجد</item>
+        <item>سيكون اليوم يوما جميلا</item>
+        <item>لن أعود إلى النوم</item>
+        <item>تمدد وتنفس وابدأ الحركة</item>
+        <item>كوب من الماء أول شيء</item>
+        <item>خطوات صغيرة كل صباح تصنع الفرق</item>
+    </string-array>
+</resources>

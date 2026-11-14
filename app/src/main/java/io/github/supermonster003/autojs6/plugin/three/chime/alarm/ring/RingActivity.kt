@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.view.KeyEvent
 import android.view.WindowManager
 import androidx.activity.compose.BackHandler
 import androidx.core.view.OneShotPreDrawListener
@@ -19,17 +20,19 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -71,6 +74,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.AlarmRuntime
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.R
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.challenge.EmergencyPresses
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.ring.RingCoordinator
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.StandaloneActivity
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.format.TimeFormats
@@ -87,14 +91,22 @@ import kotlin.math.roundToInt
  * again (T35). The appearance follows the plugin's other screens, from the first frame and also before the first unlock:
  * the plugin's appearance settings and the remembered host appearance live in device protected storage (T88).
  *
+ * With a dismiss challenge in effect (roadmap P9, T286 - T289) the [ChallengeLayer] takes the place of the slider and
+ * finishing it dismisses the round `by: 'challenge'`; the snooze button follows `allowSnooze`. The volume keys then no
+ * longer change the volume (turning the alarm down would get round the challenge); with the emergency dismiss setting on,
+ * five presses within four seconds dismiss the round `by: 'user'` (chime-p9-protocol.md section 5).
+ *
  * zh-CN: 响铃界面 (路线图 T5, P2.4, P3.2, T86), 显示在锁屏之上, 点亮屏幕并保持常亮: 大字的当前时间, 标签, 已贪睡与剩余次数, 朗读时的 "正在朗读"
  * 标记, 有其他闹钟排队时的 "还有 N 个闹钟". 贪睡是按钮, 关闭是滑块 (无障碍服务点按滑块即关闭); 返回键不起作用, 与系统时钟一致. 它跟随响铃状态,
  * 一个闹钟结束时显示队列中的下一个, 没有闹钟发声时关闭. 到前台时让响铃再次申请音频焦点 (T35). 外观与插件其他界面一致, 首帧与首次解锁前也是如此:
  * 插件的外观设置与记住的宿主外观都在设备加密存储中 (T88).
+ *
+ * 有生效的关闭挑战时 (路线图 P9, T286 - T289), [ChallengeLayer] 取代滑块, 完成挑战以 `by: 'challenge'` 关闭本轮; 贪睡按钮遵循 `allowSnooze`. 此时音量键
+ * 不再调节音量 (调低音量会绕过挑战); 紧急关闭设置开启时, 4 秒内按 5 次以 `by: 'user'` 关闭本轮 (chime-p9-protocol.md 第 5 节).
  */
 class RingActivity : StandaloneActivity() {
 
-    private class Shown(val ring: RingCoordinator.Ring, val queued: Int, val snoozeSchedulable: Boolean)
+    private class Shown(val ring: RingCoordinator.Ring, val queued: Int, val snoozeSchedulable: Boolean, val emergency: Boolean)
 
     private val main = Handler(Looper.getMainLooper())
 
@@ -103,6 +115,11 @@ class RingActivity : StandaloneActivity() {
     private var shown by mutableStateOf<Shown?>(null)
 
     private val listener: () -> Unit = { main.post(::render) }
+
+    /** The volume key presses of the round [pressesOf]. zh-CN: [pressesOf] 这一轮的音量键按压. */
+    private var presses = EmergencyPresses()
+
+    private var pressesOf: String? = null
 
     override val normalizesLauncherIcons: Boolean get() = false
 
@@ -141,15 +158,40 @@ class RingActivity : StandaloneActivity() {
     override fun Content() {
         val current = shown ?: return
         val speaking by RingIndicators.speaking.collectAsState()
-        val view = RingView.of(current.ring, current.queued, speaking, current.snoozeSchedulable)
+        val view = RingView.of(current.ring, current.queued, speaking, current.snoozeSchedulable, current.emergency)
         // The ring goes on without the screen, so back must not hide it by accident (as in the system clock).
         // zh-CN: 离开界面响铃也不会停, 因此返回键不能误把它隐藏 (与系统时钟一致).
         BackHandler { Log.i(RingService.TAG, "back ignored on the ring screen") }
+        val challenge = view.challenge
         RingScreen(
             view = view,
             onSnooze = { act("snooze", view.alarmId) { runtime.rings.snooze(it, null, AlarmContract.BY_USER) } },
-            onDismiss = { act("dismiss", view.alarmId) { runtime.rings.dismiss(it, AlarmContract.BY_USER) } },
+            onDismiss = if (challenge == null) {
+                { act("dismiss", view.alarmId) { runtime.rings.dismiss(it, AlarmContract.BY_USER) } }
+            } else {
+                { act("challenge $challenge solved", view.alarmId) { runtime.rings.solve(view.occurrence) } }
+            },
+            challenge = if (challenge == null) null else { solved -> ChallengeLayer(view, solved) },
         )
+    }
+
+    /**
+     * The volume keys while a challenge is in effect: never change the volume, count toward the emergency dismiss when
+     * the setting is on (auto repeats do not count). zh-CN: 挑战生效时的音量键: 不调节音量, 设置开启时计入紧急关闭 (长按的自动重复不计).
+     */
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val current = shown
+        val volume = event.keyCode == KeyEvent.KEYCODE_VOLUME_UP || event.keyCode == KeyEvent.KEYCODE_VOLUME_DOWN
+        if (!volume || current?.ring?.challenge == null) return super.dispatchKeyEvent(event)
+        if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0 && current.emergency) {
+            val occurrence = current.ring.occurrence
+            if (pressesOf != occurrence) {
+                pressesOf = occurrence
+                presses = EmergencyPresses()
+            }
+            if (presses.press(event.eventTime)) act("emergency dismiss", current.ring.alarmId) { runtime.rings.emergencyDismiss(occurrence) }
+        }
+        return true
     }
 
     private fun render() {
@@ -158,7 +200,7 @@ class RingActivity : StandaloneActivity() {
             finish()
             return
         }
-        shown = Shown(ring, runtime.rings.queued.size, runtime.schedule.canSnooze())
+        shown = Shown(ring, runtime.rings.queued.size, runtime.schedule.canSnooze(), runtime.defaults.get().emergencyDismiss)
     }
 
     private fun act(what: String, alarmId: String, block: (String) -> Boolean) {
@@ -179,13 +221,23 @@ class RingActivity : StandaloneActivity() {
         const val TAG_QUEUE = "chime.ring.queue"
         const val TAG_SNOOZE = "chime.ring.snooze"
         const val TAG_DISMISS = "chime.ring.dismiss"
+        const val TAG_CHALLENGE = "chime.ring.challenge"
+        const val TAG_CHALLENGE_PROBLEM = "chime.ring.challenge.problem"
+        const val TAG_CHALLENGE_INPUT = "chime.ring.challenge.input"
+        const val TAG_CHALLENGE_CHECK = "chime.ring.challenge.check"
+        const val TAG_CHALLENGE_PROGRESS = "chime.ring.challenge.progress"
+        const val TAG_CHALLENGE_SCRIPT = "chime.ring.challenge.script"
+        const val TAG_CHALLENGE_AUTO_STOP = "chime.ring.challenge.autoStop"
+        const val TAG_CHALLENGE_EMERGENCY = "chime.ring.challenge.emergency"
     }
 }
 
 /**
- * The layout of the ringing screen for [view]. [challenge] is the slot of the dismiss challenges of roadmap 1.3.0: when
- * set it takes the place of the slider and calls its `onSolved` to dismiss; 1.0.0 passes none.
- * zh-CN: [view] 的响铃界面布局. [challenge] 是路线图 1.3.0 关闭挑战的插槽: 设置时取代滑块, 通过其 `onSolved` 关闭; 1.0.0 不传.
+ * The layout of the ringing screen for [view]. [challenge] is the slot of the dismiss challenges (roadmap 1.3.0): when
+ * set it takes the place of the slider and calls its `onSolved` to dismiss. The content scrolls when it does not fit,
+ * for example above the keyboard of a challenge (T288).
+ * zh-CN: [view] 的响铃界面布局. [challenge] 是关闭挑战的插槽 (路线图 1.3.0): 设置时取代滑块, 通过其 `onSolved` 关闭. 内容放不下时可以滚动,
+ * 例如挑战的键盘弹出时 (T288).
  */
 @Composable
 internal fun RingScreen(
@@ -208,9 +260,13 @@ internal fun RingScreen(
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         BoxWithConstraints(Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal = 24.dp, vertical = 16.dp), contentAlignment = Alignment.Center) {
             val compact = maxHeight < COMPACT_HEIGHT
-            // widthIn before fillMax*: the content keeps a readable width on tablets in landscape.
-            // zh-CN: 先 widthIn 再 fillMax*: 横屏平板上内容保持易读的宽度.
-            Column(Modifier.fillMaxHeight().widthIn(max = 480.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            // widthIn before fillMax*: the content keeps a readable width on tablets in landscape. At least the screen height
+            // in a scroll: the weights center the content while it fits. zh-CN: 先 widthIn 再 fillMax*: 横屏平板上内容保持易读的宽度.
+            // 滚动容器内至少一屏高: 内容放得下时由权重居中.
+            Column(
+                Modifier.verticalScroll(rememberScrollState()).heightIn(min = maxHeight).widthIn(max = 480.dp).fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
                 Spacer(Modifier.weight(1f))
                 Text(
                     TimeFormats.minuteOf(context, now),

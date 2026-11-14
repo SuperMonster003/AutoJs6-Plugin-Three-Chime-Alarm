@@ -1,6 +1,7 @@
 package io.github.supermonster003.autojs6.plugin.three.chime.alarm.intent
 
 import android.content.Context
+import android.content.Intent
 import androidx.annotation.VisibleForTesting
 import android.text.format.DateFormat
 import android.text.format.DateUtils
@@ -10,6 +11,7 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.AlarmRuntime
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.R
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmException
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.AlarmRecord
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ring.RingActivity
 import org.autojs.plugin.alarm.api.AlarmContract
 import java.time.ZoneId
 import java.util.Calendar
@@ -81,11 +83,19 @@ internal object ClockActions {
         val now = System.currentTimeMillis()
         val done = ArrayList<String>()
         val early = ArrayList<String>()
+        var challenged = false
         val parts = ArrayList<String>()
         for (record in records) {
             try {
                 when (val plan = ClockRequests.dismissPlan(record, record.id in ringing, now, ZoneId.systemDefault(), runtime.holidayJudge)) {
-                    ClockRequests.DismissPlan.EndRound -> {
+                    // Under a dismiss challenge the request opens the challenge layer instead (chime-p9-protocol.md section 3,
+                    // T289). zh-CN: 关闭挑战下改为打开挑战层 (chime-p9-protocol.md 第 3 节, T289).
+                    ClockRequests.DismissPlan.EndRound -> if (runtime.rings.challenged(record.id)) {
+                        challenged = true
+                        val sounding = runtime.rings.sounding?.alarmId == record.id
+                        if (sounding) context.startActivity(Intent(context, RingActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                        parts += "${record.id}:challenge${if (sounding) "Opened" else ""}"
+                    } else {
                         val handled = runtime.rings.dismiss(record.id, AlarmContract.BY_USER)
                         if (handled) done += timeOf(context, record)
                         parts += "${record.id}:${if (handled) "ended" else "notRinging"}"
@@ -111,6 +121,7 @@ internal object ClockActions {
         }
         val text = when {
             done.isNotEmpty() -> context.getString(R.string.clock_toast_dismissed, done.joinToString(", "))
+            challenged -> context.getString(R.string.clock_toast_challenge)
             early.isNotEmpty() -> context.getString(R.string.clock_toast_too_early, early.first())
             else -> context.getString(R.string.clock_toast_no_match)
         }

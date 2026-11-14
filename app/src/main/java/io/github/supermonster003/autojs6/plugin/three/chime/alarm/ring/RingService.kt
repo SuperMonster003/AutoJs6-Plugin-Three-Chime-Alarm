@@ -185,7 +185,7 @@ class RingService : Service() {
         val label = ring.label?.takeIf { it.isNotBlank() } ?: texts.getString(if (ring.isTimer) R.string.timer_default_label else R.string.alarm_default_label)
         val screen = ringScreen()
         val fullScreen = fullScreenAllowed(this)
-        val snooze = ring.canSnooze && runtime.schedule.canSnooze()
+        val snooze = ring.userCanSnooze && runtime.schedule.canSnooze()
         val queued = runtime.rings.queued.size
         builder.setContentTitle(label)
             .setContentText(TimeFormats.minuteOf(texts, ring.request.scheduledAt))
@@ -193,10 +193,12 @@ class RingService : Service() {
         if (queued > 0) builder.setSubText(texts.resources.getQuantityString(R.plurals.ring_queue, queued, queued))
         if (fullScreen) builder.setFullScreenIntent(screen, true)
         if (snooze) builder.addAction(0, texts.getString(R.string.ring_action_snooze), action(ACTION_SNOOZE, ring.alarmId))
-        builder.addAction(0, texts.getString(R.string.ring_action_dismiss), action(ACTION_DISMISS, ring.alarmId))
+        // Under a dismiss challenge "Dismiss" opens the challenge layer (chime-p9-protocol.md section 3, T289).
+        // zh-CN: 关闭挑战下 "关闭" 打开挑战层 (chime-p9-protocol.md 第 3 节, T289).
+        builder.addAction(0, texts.getString(R.string.ring_action_dismiss), if (ring.challenge != null) screen else action(ACTION_DISMISS, ring.alarmId))
         if (ring.occurrence != shown) {
             shown = ring.occurrence
-            Log.i(TAG, "ring notification ${ring.alarmId} posted=${NotificationManagerCompat.from(this).areNotificationsEnabled()} fullScreen=$fullScreen snooze=$snooze")
+            Log.i(TAG, "ring notification ${ring.alarmId} posted=${NotificationManagerCompat.from(this).areNotificationsEnabled()} fullScreen=$fullScreen snooze=$snooze challenge=${ring.challenge ?: "none"}")
         }
         return builder.build()
     }

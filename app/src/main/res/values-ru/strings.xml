@@ -3,6 +3,7 @@
     <string name="alarm_default_label">Будильник</string>
     <string name="clock_choose_dismiss_title">Какой будильник выключить?</string>
     <string name="clock_toast_alarm_set">Будильник установлен на %1$s</string>
+    <string name="clock_toast_challenge">Чтобы выключить будильник, выполните задание на экране сигнала</string>
     <string name="clock_toast_dismissed">Будильник выключен: %1$s</string>
     <string name="clock_toast_failed">Не удалось выполнить запрос: %1$s</string>
     <string name="clock_toast_no_match">Нет подходящего будильника</string>
@@ -238,6 +239,19 @@
     <string name="release_history_unavailable">Не удалось загрузить историю версий</string>
     <string name="ring_action_dismiss">Выключить</string>
     <string name="ring_action_snooze">Отложить</string>
+    <string name="ring_challenge_auto_stop">Автовыключение через %1$d:%2$02d</string>
+    <string name="ring_challenge_check">Проверить</string>
+    <string name="ring_challenge_emergency_hint">В экстренном случае быстро нажмите кнопку громкости 5 раз, чтобы выключить</string>
+    <string name="ring_challenge_math_answer">Ответ</string>
+    <string name="ring_challenge_math_title">Решите, чтобы выключить (%1$d из %2$d)</string>
+    <string name="ring_challenge_math_wrong">Неверный ответ, попробуйте ещё раз</string>
+    <string name="ring_challenge_script_waiting">Ожидание выключения скриптом</string>
+    <string name="ring_challenge_shake_no_sensor">На устройстве нет акселерометра, решите вместо этого примеры</string>
+    <string name="ring_challenge_shake_progress">%1$d / %2$d</string>
+    <string name="ring_challenge_shake_title">Встряхните телефон, чтобы выключить</string>
+    <string name="ring_challenge_type_input">Текст</string>
+    <string name="ring_challenge_type_title">Введите текст, чтобы выключить</string>
+    <string name="ring_challenge_type_wrong">Текст не совпадает</string>
     <string name="ring_dismiss_hint">Проведите, чтобы выключить</string>
     <string name="ring_snooze_status">%1$s, %2$s</string>
     <string name="ring_snooze_used_up">Больше отложить нельзя</string>

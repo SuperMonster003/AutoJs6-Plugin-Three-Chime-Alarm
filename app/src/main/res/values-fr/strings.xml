@@ -3,6 +3,7 @@
     <string name="alarm_default_label">Alarme</string>
     <string name="clock_choose_dismiss_title">Quelle alarme arrêter ?</string>
     <string name="clock_toast_alarm_set">Alarme réglée pour %1$s</string>
+    <string name="clock_toast_challenge">Relevez le défi sur l\'écran de sonnerie pour arrêter l\'alarme</string>
     <string name="clock_toast_dismissed">Alarme arrêtée : %1$s</string>
     <string name="clock_toast_failed">Demande non traitée : %1$s</string>
     <string name="clock_toast_no_match">Aucune alarme correspondante</string>
@@ -238,6 +239,19 @@
     <string name="release_history_unavailable">Impossible de charger l\'historique des versions</string>
     <string name="ring_action_dismiss">Arrêter</string>
     <string name="ring_action_snooze">Répéter</string>
+    <string name="ring_challenge_auto_stop">Arrêt automatique dans %1$d:%2$02d</string>
+    <string name="ring_challenge_check">Vérifier</string>
+    <string name="ring_challenge_emergency_hint">En cas d\'urgence, appuyez 5 fois rapidement sur une touche de volume pour arrêter</string>
+    <string name="ring_challenge_math_answer">Réponse</string>
+    <string name="ring_challenge_math_title">Résolvez pour arrêter (%1$d sur %2$d)</string>
+    <string name="ring_challenge_math_wrong">Mauvaise réponse, réessayez</string>
+    <string name="ring_challenge_script_waiting">En attente d\'un script pour l\'arrêter</string>
+    <string name="ring_challenge_shake_no_sensor">Cet appareil n\'a pas d\'accéléromètre, résolvez plutôt les calculs</string>
+    <string name="ring_challenge_shake_progress">%1$d / %2$d</string>
+    <string name="ring_challenge_shake_title">Secouez le téléphone pour arrêter</string>
+    <string name="ring_challenge_type_input">Texte</string>
+    <string name="ring_challenge_type_title">Saisissez le texte pour arrêter</string>
+    <string name="ring_challenge_type_wrong">Le texte ne correspond pas</string>
     <string name="ring_dismiss_hint">Glisser pour arrêter</string>
     <string name="ring_snooze_status">%1$s, %2$s</string>
     <string name="ring_snooze_used_up">Plus aucune répétition possible</string>

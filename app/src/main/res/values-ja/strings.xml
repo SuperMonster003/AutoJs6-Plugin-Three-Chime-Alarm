@@ -3,6 +3,7 @@
     <string name="alarm_default_label">アラーム</string>
     <string name="clock_choose_dismiss_title">どのアラームを停止しますか?</string>
     <string name="clock_toast_alarm_set">アラームを %1$s に設定しました</string>
+    <string name="clock_toast_challenge">アラームを停止するには鳴動画面でチャレンジを完了してください</string>
     <string name="clock_toast_dismissed">アラームを停止しました: %1$s</string>
     <string name="clock_toast_failed">リクエストを処理できませんでした: %1$s</string>
     <string name="clock_toast_no_match">一致するアラームがありません</string>
@@ -238,6 +239,19 @@
     <string name="release_history_unavailable">バージョン履歴を読み込めませんでした</string>
     <string name="ring_action_dismiss">停止</string>
     <string name="ring_action_snooze">スヌーズ</string>
+    <string name="ring_challenge_auto_stop">あと %1$d:%2$02d で自動停止</string>
+    <string name="ring_challenge_check">確認</string>
+    <string name="ring_challenge_emergency_hint">緊急時は音量ボタンを素早く 5 回押すと停止します</string>
+    <string name="ring_challenge_math_answer">答え</string>
+    <string name="ring_challenge_math_title">計算して停止 (%1$d / %2$d 問)</string>
+    <string name="ring_challenge_math_wrong">不正解です, もう一度入力してください</string>
+    <string name="ring_challenge_script_waiting">スクリプトによる停止を待っています</string>
+    <string name="ring_challenge_shake_no_sensor">この端末には加速度センサーがないため, 代わりに計算問題を解いてください</string>
+    <string name="ring_challenge_shake_progress">%1$d / %2$d</string>
+    <string name="ring_challenge_shake_title">端末を振って停止</string>
+    <string name="ring_challenge_type_input">テキスト</string>
+    <string name="ring_challenge_type_title">テキストを入力して停止</string>
+    <string name="ring_challenge_type_wrong">テキストが一致しません</string>
     <string name="ring_dismiss_hint">スライドして停止</string>
     <string name="ring_snooze_status">%1$s, %2$s</string>
     <string name="ring_snooze_used_up">これ以上スヌーズできません</string>

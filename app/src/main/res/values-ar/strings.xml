@@ -3,6 +3,7 @@
     <string name="alarm_default_label">منبه</string>
     <string name="clock_choose_dismiss_title">أي منبه تريد إيقافه?</string>
     <string name="clock_toast_alarm_set">تم ضبط المنبه على %1$s</string>
+    <string name="clock_toast_challenge">أكمل التحدي على شاشة الرنين لإيقاف المنبه</string>
     <string name="clock_toast_dismissed">تم إيقاف المنبه: %1$s</string>
     <string name="clock_toast_failed">تعذر تنفيذ الطلب: %1$s</string>
     <string name="clock_toast_no_match">لا يوجد منبه مطابق</string>
@@ -238,6 +239,19 @@
     <string name="release_history_unavailable">تعذر تحميل سجل الإصدارات</string>
     <string name="ring_action_dismiss">إيقاف</string>
     <string name="ring_action_snooze">غفوة</string>
+    <string name="ring_challenge_auto_stop">يتوقف تلقائيا بعد %1$d:%2$02d</string>
+    <string name="ring_challenge_check">تحقق</string>
+    <string name="ring_challenge_emergency_hint">في حالة الطوارئ, اضغط زر الصوت 5 مرات بسرعة للإيقاف</string>
+    <string name="ring_challenge_math_answer">الإجابة</string>
+    <string name="ring_challenge_math_title">حل المسائل للإيقاف (%1$d من %2$d)</string>
+    <string name="ring_challenge_math_wrong">إجابة خاطئة, حاول مرة أخرى</string>
+    <string name="ring_challenge_script_waiting">في انتظار أن يوقفه أحد السكربتات</string>
+    <string name="ring_challenge_shake_no_sensor">لا يحتوي هذا الجهاز على مقياس تسارع, حل المسائل بدلا من ذلك</string>
+    <string name="ring_challenge_shake_progress">%1$d / %2$d</string>
+    <string name="ring_challenge_shake_title">هز الهاتف للإيقاف</string>
+    <string name="ring_challenge_type_input">النص</string>
+    <string name="ring_challenge_type_title">اكتب النص للإيقاف</string>
+    <string name="ring_challenge_type_wrong">النص غير مطابق</string>
     <string name="ring_dismiss_hint">اسحب للإيقاف</string>
     <string name="ring_snooze_status">%1$s, %2$s</string>
     <string name="ring_snooze_used_up">لا يمكن الغفوة مرة أخرى</string>

@@ -4,25 +4,27 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.alarm.Ala
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.ring.RingCoordinator
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.ring.RingSettings
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.schedule.AlarmPlanner
+import org.autojs.plugin.alarm.api.AlarmDismiss
 import org.autojs.plugin.alarm.api.AlarmSpec
 import org.autojs.plugin.alarm.api.AlarmTime
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Roadmap P3.2 (T86): what the ringing screen shows for a ring: the label, the snooze button and its length, the
- * snoozes so far and left, the speaking mark and the queue.
- * zh-CN: 路线图 P3.2 (T86): 响铃界面为一次响铃显示的内容: 标签, 贪睡按钮及其时长, 已贪睡与剩余次数, 朗读标记与排队数.
+ * Roadmap P3.2 (T86), P9.5 (T285, T286): what the ringing screen shows for a ring: the label, the snooze button and its
+ * length, the snoozes so far and left, the speaking mark, the queue and the dismiss challenge in effect.
+ * zh-CN: 路线图 P3.2 (T86), P9.5 (T285, T286): 响铃界面为一次响铃显示的内容: 标签, 贪睡按钮及其时长, 已贪睡与剩余次数, 朗读标记, 排队数与生效的关闭挑战.
  */
 class RingViewTest {
 
-    private fun ring(label: String? = null, snoozed: Int = 0, settings: RingSettings = RingSettings()): RingCoordinator.Ring {
+    private fun ring(label: String? = null, snoozed: Int = 0, settings: RingSettings = RingSettings(), startedAt: Long? = null): RingCoordinator.Ring {
         val record = AlarmRecord("a1", "script", "script", 0L, 0L, AlarmSpec(time = AlarmTime(7, 0, 0), label = label))
         val request = AlarmPlanner.RingRequest("a1", 1_000L, 1_000L, "a1@1000", snoozed)
-        return RingCoordinator.Ring(record, request, settings, since = 1_000L)
+        return RingCoordinator.Ring(record, request, settings, since = 1_000L, startedAt = startedAt)
     }
 
     @Test
@@ -85,6 +87,39 @@ class RingViewTest {
     fun `the queue counts the alarms waiting behind`() {
         assertEquals(2, RingView.of(ring(), 2, null, true).queued)
         assertEquals(0, RingView.of(ring(), -1, null, true).queued)
+    }
+
+    @Test
+    fun `a challenge round carries its challenge, options, auto silence and emergency setting (T286)`() {
+        val dismiss = AlarmDismiss(challenge = "math", mathDifficulty = 3, mathCount = 5)
+        val settings = RingSettings(autoSilenceMinutes = 30, dismiss = dismiss)
+        val view = RingView.of(ring(settings = settings, startedAt = 2_000L), 0, null, true, emergency = true)
+        assertEquals("math", view.challenge)
+        assertEquals(dismiss, view.dismiss)
+        assertEquals(2_000L + 30 * 60_000L, view.silenceAt)
+        assertTrue(view.emergency)
+        assertEquals(RingView.seedOf("a1@1000", 2_000L), view.seed)
+        // The same round keeps its problems, the next one gets new ones. zh-CN: 同一轮题目不变, 下一轮换新题.
+        assertNotEquals(view.seed, RingView.seedOf("a1@1300000", 2_000L))
+        assertNotEquals(view.seed, RingView.seedOf("a1@1000", 9_000L))
+
+        val plain = RingView.of(ring(), 0, null, true)
+        assertNull(plain.challenge)
+        assertNull(plain.dismiss)
+        assertFalse(plain.emergency)
+    }
+
+    @Test
+    fun `allowSnooze false hides the snooze button of a challenge but keeps the count (T285)`() {
+        val settings = RingSettings(dismiss = AlarmDismiss(challenge = "shake", allowSnooze = false))
+        val view = RingView.of(ring(settings = settings), 0, null, true)
+        assertNull(view.snoozeMinutes)
+        assertEquals(RingSettings().snoozeMax, view.snoozesLeft)
+        val allowed = RingView.of(ring(settings = RingSettings(dismiss = AlarmDismiss(challenge = "shake"))), 0, null, true)
+        assertEquals(RingSettings().snoozeMinutes, allowed.snoozeMinutes)
+        // The script fallback to none lifts the challenge and its snooze limit. zh-CN: script 退回 none 后挑战与贪睡限制都解除.
+        val fellBack = ring(settings = RingSettings(dismiss = AlarmDismiss(challenge = "script", allowSnooze = false))).copy(challenge = null)
+        assertEquals(RingSettings().snoozeMinutes, RingView.of(fellBack, 0, null, true).snoozeMinutes)
     }
 
     @Test

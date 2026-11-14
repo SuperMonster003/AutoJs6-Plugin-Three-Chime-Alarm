@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="ring_challenge_type_sentences">
+        <item>目が覚めた, 今日も一日がんばろう</item>
+        <item>おはよう, 起きる時間だ</item>
+        <item>早起きは三文の徳</item>
+        <item>今日はきっといい日になる</item>
+        <item>二度寝はしない</item>
+        <item>伸びをして深呼吸, さあ動こう</item>
+        <item>起きたらまず水を一杯</item>
+        <item>毎朝の小さな一歩が大切</item>
+    </string-array>
+</resources>

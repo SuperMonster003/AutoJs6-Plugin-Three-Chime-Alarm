@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="ring_challenge_type_sentences">
+        <item>I am awake and ready for the day</item>
+        <item>Good morning, time to get up</item>
+        <item>The early bird catches the worm</item>
+        <item>Today is going to be a good day</item>
+        <item>I will not go back to sleep</item>
+        <item>Stretch, breathe and start moving</item>
+        <item>A glass of water first thing</item>
+        <item>Small steps every morning add up</item>
+    </string-array>
+</resources>

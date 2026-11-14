@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="ring_challenge_type_sentences">
+        <item>Я проснулся и готов к новому дню</item>
+        <item>Доброе утро, пора вставать</item>
+        <item>Кто рано встаёт, тому Бог подаёт</item>
+        <item>Сегодня будет хороший день</item>
+        <item>Я не буду снова засыпать</item>
+        <item>Потянись, вдохни и начинай двигаться</item>
+        <item>Первым делом стакан воды</item>
+        <item>Маленькие шаги каждое утро складываются</item>
+    </string-array>
+</resources>

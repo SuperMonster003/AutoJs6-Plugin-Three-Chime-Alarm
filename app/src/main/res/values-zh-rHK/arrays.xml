@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="ring_challenge_type_sentences">
+        <item>我已經醒了, 準備好迎接新的一天</item>
+        <item>早晨, 該起床了</item>
+        <item>早起的鳥兒有蟲吃</item>
+        <item>今天會是美好的一天</item>
+        <item>我不會再睡回籠覺</item>
+        <item>伸個懶腰, 深呼吸, 動起來</item>
+        <item>起床先喝一杯水</item>
+        <item>每天早上進步一點點</item>
+    </string-array>
+</resources>

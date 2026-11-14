@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="ring_challenge_type_sentences">
+        <item>나는 깨어 있고 오늘을 맞을 준비가 됐다</item>
+        <item>좋은 아침, 일어날 시간이야</item>
+        <item>일찍 일어나는 새가 벌레를 잡는다</item>
+        <item>오늘은 좋은 하루가 될 거야</item>
+        <item>다시 잠들지 않겠다</item>
+        <item>기지개 켜고 심호흡하고 움직이자</item>
+        <item>일어나면 먼저 물 한 잔</item>
+        <item>매일 아침 작은 걸음이 모인다</item>
+    </string-array>
+</resources>

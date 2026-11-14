@@ -94,7 +94,7 @@ class ChallengesTest {
         assertTrue(MathChallenge.check(problem, "+46"))
         // Arabic-Indic and full width digits. zh-CN: 阿拉伯-印度数字与全角数字.
         assertTrue(MathChallenge.check(problem, "٤٦"))
-        assertTrue(MathChallenge.check(problem, "４６"))
+        assertTrue(MathChallenge.check(problem, "\uFF14\uFF16"))
         assertFalse(MathChallenge.check(problem, "47"))
         assertFalse(MathChallenge.check(problem, "4 6"))
         assertFalse(MathChallenge.check(problem, ""))

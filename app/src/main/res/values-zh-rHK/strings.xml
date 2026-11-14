@@ -3,6 +3,7 @@
     <string name="alarm_default_label">鬧鐘</string>
     <string name="clock_choose_dismiss_title">關閉哪個鬧鐘?</string>
     <string name="clock_toast_alarm_set">鬧鐘已設為 %1$s</string>
+    <string name="clock_toast_challenge">請在響鈴畫面完成挑戰來關閉鬧鐘</string>
     <string name="clock_toast_dismissed">已關閉鬧鐘: %1$s</string>
     <string name="clock_toast_failed">無法處理請求: %1$s</string>
     <string name="clock_toast_no_match">沒有相符的鬧鐘</string>
@@ -238,6 +239,19 @@
     <string name="release_history_unavailable">無法載入版本記錄</string>
     <string name="ring_action_dismiss">關閉</string>
     <string name="ring_action_snooze">貪睡</string>
+    <string name="ring_challenge_auto_stop">%1$d:%2$02d 後自動停止</string>
+    <string name="ring_challenge_check">確認</string>
+    <string name="ring_challenge_emergency_hint">緊急情況下, 快速按 5 次音量鍵即可關閉</string>
+    <string name="ring_challenge_math_answer">答案</string>
+    <string name="ring_challenge_math_title">答題關閉 (第 %1$d 題, 共 %2$d 題)</string>
+    <string name="ring_challenge_math_wrong">答案不對, 請再試一次</string>
+    <string name="ring_challenge_script_waiting">正在等待腳本關閉</string>
+    <string name="ring_challenge_shake_no_sensor">此裝置沒有加速度感應器, 請改為答題</string>
+    <string name="ring_challenge_shake_progress">%1$d / %2$d</string>
+    <string name="ring_challenge_shake_title">搖動手機來關閉</string>
+    <string name="ring_challenge_type_input">文字</string>
+    <string name="ring_challenge_type_title">輸入下面的文字來關閉</string>
+    <string name="ring_challenge_type_wrong">文字不一致</string>
     <string name="ring_dismiss_hint">滑動關閉</string>
     <string name="ring_snooze_status">%1$s, %2$s</string>
     <string name="ring_snooze_used_up">不能再貪睡</string>

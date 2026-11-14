@@ -3,6 +3,7 @@
     <string name="alarm_default_label">Alarm</string>
     <string name="clock_choose_dismiss_title">Dismiss which alarm?</string>
     <string name="clock_toast_alarm_set">Alarm set for %1$s</string>
+    <string name="clock_toast_challenge">Finish the challenge on the ringing screen to dismiss the alarm</string>
     <string name="clock_toast_dismissed">Alarm dismissed: %1$s</string>
     <string name="clock_toast_failed">Request not handled: %1$s</string>
     <string name="clock_toast_no_match">No matching alarm</string>
@@ -238,6 +239,19 @@
     <string name="release_history_unavailable">Unable to load the version history</string>
     <string name="ring_action_dismiss">Dismiss</string>
     <string name="ring_action_snooze">Snooze</string>
+    <string name="ring_challenge_auto_stop">Stops automatically in %1$d:%2$02d</string>
+    <string name="ring_challenge_check">Check</string>
+    <string name="ring_challenge_emergency_hint">In an emergency, press a volume key 5 times quickly to dismiss</string>
+    <string name="ring_challenge_math_answer">Answer</string>
+    <string name="ring_challenge_math_title">Solve to dismiss (%1$d of %2$d)</string>
+    <string name="ring_challenge_math_wrong">Wrong answer, try again</string>
+    <string name="ring_challenge_script_waiting">Waiting for a script to dismiss</string>
+    <string name="ring_challenge_shake_no_sensor">This device has no accelerometer, solve the problems instead</string>
+    <string name="ring_challenge_shake_progress">%1$d / %2$d</string>
+    <string name="ring_challenge_shake_title">Shake the phone to dismiss</string>
+    <string name="ring_challenge_type_input">Text</string>
+    <string name="ring_challenge_type_title">Type the text to dismiss</string>
+    <string name="ring_challenge_type_wrong">The text does not match</string>
     <string name="ring_dismiss_hint">Slide to dismiss</string>
     <string name="ring_snooze_status">%1$s, %2$s</string>
     <string name="ring_snooze_used_up">No snoozes left</string>

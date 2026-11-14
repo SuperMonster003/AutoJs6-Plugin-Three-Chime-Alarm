@@ -3,6 +3,7 @@
     <string name="alarm_default_label">Alarma</string>
     <string name="clock_choose_dismiss_title">Elige la alarma que quieres descartar</string>
     <string name="clock_toast_alarm_set">Alarma programada para las %1$s</string>
+    <string name="clock_toast_challenge">Completa el desafío en la pantalla de la alarma para descartarla</string>
     <string name="clock_toast_dismissed">Alarma descartada: %1$s</string>
     <string name="clock_toast_failed">No se pudo atender la solicitud: %1$s</string>
     <string name="clock_toast_no_match">Ninguna alarma coincide</string>
@@ -238,6 +239,19 @@
     <string name="release_history_unavailable">No se pudo cargar el historial de versiones</string>
     <string name="ring_action_dismiss">Descartar</string>
     <string name="ring_action_snooze">Posponer</string>
+    <string name="ring_challenge_auto_stop">Se detendrá automáticamente en %1$d:%2$02d</string>
+    <string name="ring_challenge_check">Comprobar</string>
+    <string name="ring_challenge_emergency_hint">En caso de emergencia, pulsa un botón de volumen 5 veces seguidas para descartar</string>
+    <string name="ring_challenge_math_answer">Respuesta</string>
+    <string name="ring_challenge_math_title">Resuelve para descartar (%1$d de %2$d)</string>
+    <string name="ring_challenge_math_wrong">Respuesta incorrecta, inténtalo de nuevo</string>
+    <string name="ring_challenge_script_waiting">Esperando a que un script la descarte</string>
+    <string name="ring_challenge_shake_no_sensor">Este dispositivo no tiene acelerómetro, resuelve los problemas en su lugar</string>
+    <string name="ring_challenge_shake_progress">%1$d / %2$d</string>
+    <string name="ring_challenge_shake_title">Agita el teléfono para descartar</string>
+    <string name="ring_challenge_type_input">Texto</string>
+    <string name="ring_challenge_type_title">Escribe el texto para descartar</string>
+    <string name="ring_challenge_type_wrong">El texto no coincide</string>
     <string name="ring_dismiss_hint">Desliza para descartar</string>
     <string name="ring_snooze_status">%1$s, %2$s</string>
     <string name="ring_snooze_used_up">Ya no se puede posponer</string>

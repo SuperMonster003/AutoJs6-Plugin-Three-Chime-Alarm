@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="ring_challenge_type_sentences">
+        <item>Estoy despierto y listo para el día</item>
+        <item>Buenos días, es hora de levantarse</item>
+        <item>A quien madruga, Dios le ayuda</item>
+        <item>Hoy va a ser un buen día</item>
+        <item>No voy a volver a dormirme</item>
+        <item>Estírate, respira y ponte en marcha</item>
+        <item>Un vaso de agua al despertar</item>
+        <item>Pequeños pasos cada mañana suman</item>
+    </string-array>
+</resources>
