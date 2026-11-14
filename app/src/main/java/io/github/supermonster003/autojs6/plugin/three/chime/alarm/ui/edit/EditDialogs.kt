@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.R
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.ring.RingDefaults
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.RepeatText
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.components.CheckRow
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.components.ChimeDialog
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.components.Choice
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.components.ChoiceDialog
@@ -67,6 +68,7 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.components.
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.components.MultiChoiceDialog
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.format.TimeFormats
 import org.autojs.plugin.alarm.api.AlarmContract
+import org.autojs.plugin.alarm.api.AlarmDismiss
 import org.autojs.plugin.alarm.api.AlarmLimits
 import org.autojs.plugin.alarm.api.AlarmSnooze
 import org.autojs.plugin.alarm.api.AlarmSpeak
@@ -578,6 +580,149 @@ internal fun AutoSilenceDialog(
     }
 }
 
+/** The name of a challenge (`none` is "None"). zh-CN: 挑战的名称 (`none` 为 "无"). */
+internal fun challengeLabel(challenge: String?): Int = when (challenge) {
+    AlarmContract.CHALLENGE_MATH -> R.string.edit_challenge_math
+    AlarmContract.CHALLENGE_SHAKE -> R.string.edit_challenge_shake
+    AlarmContract.CHALLENGE_TYPE -> R.string.edit_challenge_type
+    AlarmContract.CHALLENGE_SCRIPT -> R.string.edit_challenge_script
+    else -> R.string.edit_none
+}
+
+private fun challengeNote(challenge: String): Int = when (challenge) {
+    AlarmContract.CHALLENGE_MATH -> R.string.edit_challenge_math_note
+    AlarmContract.CHALLENGE_SHAKE -> R.string.edit_challenge_shake_note
+    AlarmContract.CHALLENGE_TYPE -> R.string.edit_challenge_type_note
+    AlarmContract.CHALLENGE_SCRIPT -> R.string.edit_challenge_script_note
+    else -> R.string.edit_challenge_none_note
+}
+
+/** What a `script` challenge falls back to: a normal alarm or a built-in challenge. zh-CN: `script` 挑战退回的结果: 普通闹钟或内置挑战. */
+internal fun fallbackLabel(fallback: String?): Int =
+    if (fallback == null || fallback == AlarmContract.CHALLENGE_NONE) R.string.edit_challenge_fallback_none else challengeLabel(fallback)
+
+internal fun difficultyLabel(difficulty: Int): Int = when (difficulty) {
+    1 -> R.string.edit_challenge_difficulty_easy
+    3 -> R.string.edit_challenge_difficulty_hard
+    else -> R.string.edit_challenge_difficulty_medium
+}
+
+/**
+ * The challenge row: "None", "Math problems: 3 (Medium)", "Shakes: 30", "Type text: ..." or "Script (fallback: ...)",
+ * the omitted values shown with their protocol defaults.
+ * zh-CN: 挑战一行: "无", "算术题: 3 道 (中等)", "摇动: 30 次", "输入文字: ..." 或 "脚本 (退回: ...)", 省略的值按协议默认值显示.
+ */
+@Composable
+internal fun challengeText(dismiss: AlarmDismiss?): String = when (dismiss?.challenge) {
+    AlarmContract.CHALLENGE_MATH -> stringResource(
+        R.string.edit_challenge_math_summary,
+        dismiss?.mathCount ?: AlarmLimits.DEFAULT_MATH_COUNT,
+        stringResource(difficultyLabel(dismiss?.mathDifficulty ?: AlarmLimits.DEFAULT_MATH_DIFFICULTY)),
+    )
+    AlarmContract.CHALLENGE_SHAKE -> stringResource(R.string.edit_challenge_shake_summary, dismiss?.shakeCount ?: AlarmLimits.DEFAULT_SHAKE_COUNT)
+    AlarmContract.CHALLENGE_TYPE -> dismiss?.typeText?.trim()?.takeIf { it.isNotEmpty() }?.let { stringResource(R.string.edit_challenge_type_summary, it) }
+        ?: stringResource(R.string.edit_challenge_type_random)
+    AlarmContract.CHALLENGE_SCRIPT -> stringResource(R.string.edit_challenge_script_summary, stringResource(fallbackLabel(dismiss?.scriptFallback)))
+    else -> stringResource(R.string.edit_none)
+}
+
+/**
+ * The dismiss challenge (roadmap P9.5, T291): none, math problems (difficulty and count), shaking (count) or typing (a
+ * given text, or a random sentence when empty), plus `script` while a script set it (its settings are kept and its
+ * fallback is explained); whether the snooze button stays; and the safety valves that always end the ringing (the auto
+ * stop, and the emergency dismiss unless [emergencyOn] is false, which the dialog then points out).
+ * zh-CN: 关闭挑战 (路线图 P9.5, T291): 无, 算术题 (难度与题数), 摇动 (次数) 或输入文字 (给定文字, 为空时随机句子), 以及脚本设置时才出现的 `script`
+ * (保留其设置并说明退回方式); 是否保留贪睡按钮; 以及总能结束响铃的安全阀 (自动停止, 以及紧急关闭; [emergencyOn] 为 false 时对话框会指出它已关闭).
+ */
+@Composable
+internal fun ChallengeDialog(dismiss: AlarmDismiss?, emergencyOn: Boolean, onDismiss: () -> Unit, onConfirm: (AlarmDismiss?) -> Unit) {
+    val tag = "chime.edit.challengeDialog"
+    val initial = remember(dismiss) { ChallengeForm.of(dismiss) }
+    var challenge by rememberSaveable { mutableStateOf(initial.challenge) }
+    var difficulty by rememberSaveable { mutableFloatStateOf(initial.mathDifficulty.toFloat()) }
+    var mathCount by rememberSaveable { mutableFloatStateOf(initial.mathCount.toFloat()) }
+    var shakeCount by rememberSaveable { mutableFloatStateOf(initial.shakeCount.toFloat()) }
+    var text by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue(initial.typeText, TextRange(initial.typeText.length))) }
+    var allowSnooze by rememberSaveable { mutableStateOf(initial.allowSnooze) }
+    fun result(): AlarmDismiss? = ChallengeForm(
+        challenge = challenge,
+        mathDifficulty = difficulty.roundToInt(),
+        mathCount = mathCount.roundToInt(),
+        shakeCount = shakeCount.roundToInt(),
+        typeText = text.text,
+        allowSnooze = allowSnooze,
+    ).toDismiss(dismiss)
+    ChimeDialog(
+        title = stringResource(R.string.edit_challenge),
+        onDismissRequest = onDismiss,
+        confirmText = stringResource(R.string.ui_dialog_confirm),
+        onConfirm = { onConfirm(result()) },
+        dismissText = stringResource(R.string.ui_dialog_cancel),
+        tag = tag,
+    ) {
+        ChallengeForm.choices(dismiss).forEach { c ->
+            ChoiceRow(Choice(stringResource(challengeLabel(c)), note = stringResource(challengeNote(c))), challenge == c, { challenge = c }, Modifier.testTag("$tag.$c"))
+        }
+        when (challenge) {
+            AlarmContract.CHALLENGE_MATH -> {
+                LabeledSlider(
+                    title = stringResource(R.string.edit_challenge_difficulty),
+                    value = difficulty,
+                    valueText = stringResource(difficultyLabel(difficulty.roundToInt())),
+                    range = AlarmLimits.MIN_MATH_DIFFICULTY..AlarmLimits.MAX_MATH_DIFFICULTY,
+                    onValueChange = { difficulty = it },
+                    tag = "$tag.difficulty",
+                )
+                LabeledSlider(
+                    title = stringResource(R.string.edit_challenge_math_count),
+                    value = mathCount,
+                    valueText = mathCount.roundToInt().toString(),
+                    range = 1..AlarmLimits.MAX_MATH_COUNT,
+                    onValueChange = { mathCount = it },
+                    tag = "$tag.mathCount",
+                )
+            }
+            AlarmContract.CHALLENGE_SHAKE -> LabeledSlider(
+                title = stringResource(R.string.edit_challenge_shake_count),
+                value = shakeCount,
+                valueText = shakeCount.roundToInt().toString(),
+                range = ChallengeForm.SHAKE_STEP..AlarmLimits.MAX_SHAKE_COUNT,
+                step = ChallengeForm.SHAKE_STEP,
+                onValueChange = { shakeCount = it },
+                tag = "$tag.shakeCount",
+            )
+            AlarmContract.CHALLENGE_TYPE -> {
+                Spacer(Modifier.height(8.dp))
+                LimitedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    limit = AlarmLimits.MAX_TYPE_TEXT_CHARS,
+                    singleLine = false,
+                    label = stringResource(R.string.edit_challenge_type_text),
+                    modifier = Modifier.testTag("$tag.text"),
+                )
+            }
+            AlarmContract.CHALLENGE_SCRIPT -> DialogNote(
+                stringResource(R.string.edit_challenge_script_fallback, stringResource(fallbackLabel(dismiss?.scriptFallback))),
+                Modifier.testTag("$tag.fallback"),
+            )
+        }
+        if (challenge != AlarmContract.CHALLENGE_NONE) {
+            CheckRow(
+                Choice(stringResource(R.string.edit_challenge_allow_snooze), note = stringResource(R.string.edit_challenge_allow_snooze_note)),
+                allowSnooze,
+                { allowSnooze = it },
+                Modifier.testTag("$tag.allowSnooze"),
+            )
+            DialogNote(stringResource(R.string.edit_challenge_safety), Modifier.testTag("$tag.safety"))
+            if (!emergencyOn) {
+                DialogNote(stringResource(R.string.edit_challenge_emergency_off), Modifier.testTag("$tag.emergencyOff"), MaterialTheme.colorScheme.error)
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+    }
+}
+
 /** A text field that refuses input beyond [limit] code points and shows the count. zh-CN: 超过 [limit] 个码点即拒绝输入并显示计数的文本框. */
 @Composable
 private fun LimitedTextField(
@@ -614,9 +759,23 @@ private fun DialogSubheader(text: String) {
     )
 }
 
-/** A slider over whole numbers with its title and value. zh-CN: 整数滑块, 带标题与当前值. */
+/** A small explanation in a dialog. zh-CN: 对话框中的简短说明. */
 @Composable
-private fun ColumnScope.LabeledSlider(title: String, value: Float, valueText: String, range: IntRange, onValueChange: (Float) -> Unit, tag: String) {
+private fun DialogNote(text: String, modifier: Modifier = Modifier, color: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurfaceVariant) {
+    Text(
+        text,
+        style = MaterialTheme.typography.bodySmall,
+        color = color,
+        modifier = modifier.padding(start = DialogDefaults.contentPadding, end = DialogDefaults.contentPadding, top = 8.dp),
+    )
+}
+
+/**
+ * A slider over whole numbers (multiples of [step] from the start of [range]) with its title and value.
+ * zh-CN: 整数滑块 (从 [range] 起点按 [step] 递增), 带标题与当前值.
+ */
+@Composable
+private fun ColumnScope.LabeledSlider(title: String, value: Float, valueText: String, range: IntRange, onValueChange: (Float) -> Unit, tag: String, step: Int = 1) {
     Column(Modifier.fillMaxWidth().padding(horizontal = DialogDefaults.contentPadding, vertical = 4.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
@@ -625,9 +784,9 @@ private fun ColumnScope.LabeledSlider(title: String, value: Float, valueText: St
         }
         Slider(
             value = value,
-            onValueChange = { onValueChange(it.roundToInt().toFloat()) },
+            onValueChange = { onValueChange((range.first + ((it - range.first) / step).roundToInt() * step).toFloat()) },
             valueRange = range.first.toFloat()..range.last.toFloat(),
-            steps = (range.last - range.first - 1).coerceAtLeast(0),
+            steps = ((range.last - range.first) / step - 1).coerceAtLeast(0),
             modifier = Modifier.testTag(tag),
         )
     }

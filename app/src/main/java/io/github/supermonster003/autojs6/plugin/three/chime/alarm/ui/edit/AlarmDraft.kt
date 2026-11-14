@@ -11,6 +11,7 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.Recu
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.RecurrenceRule.WeekdayNum
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.TimeZonePolicy
 import org.autojs.plugin.alarm.api.AlarmContract
+import org.autojs.plugin.alarm.api.AlarmDismiss
 import org.autojs.plugin.alarm.api.AlarmHolidayFilter
 import org.autojs.plugin.alarm.api.AlarmOptionKeys
 import org.autojs.plugin.alarm.api.AlarmSnooze
@@ -38,13 +39,14 @@ import java.time.temporal.ChronoUnit
  */
 internal data class AlarmDraft(val spec: AlarmSpec, val dateAuto: Boolean) {
 
-    /** The time shown on the page; an `at` alarm shows its instant in its zone. zh-CN: 页面显示的时刻; `at` 闹钟显示其时刻在其时区的时间. */
     /**
-     * The alarm has a dismiss challenge (1.3.0; set by a script for now), which lengthens the default auto silence.
-     * zh-CN: 闹钟带关闭挑战 (1.3.0; 目前只能由脚本设置), 它会延长默认的自动停止时长.
+     * The alarm has a dismiss challenge (1.3.0, roadmap P9.5: chosen on this page, or `script` set by a script), which
+     * lengthens the default auto silence.
+     * zh-CN: 闹钟带关闭挑战 (1.3.0, 路线图 P9.5: 在本页选择, 或由脚本设置的 `script`), 它会延长默认的自动停止时长.
      */
     val hasChallenge: Boolean get() = spec.dismiss?.challenge.let { it != null && it != AlarmContract.CHALLENGE_NONE }
 
+    /** The time shown on the page; an `at` alarm shows its instant in its zone. zh-CN: 页面显示的时刻; `at` 闹钟显示其时刻在其时区的时间. */
     fun timeOf(deviceZone: ZoneId): AlarmTime = spec.time ?: localOfAt(deviceZone)!!.let { AlarmTime(it.hour, it.minute, it.second) }
 
     /**
@@ -168,6 +170,9 @@ internal data class AlarmDraft(val spec: AlarmSpec, val dateAuto: Boolean) {
 
     fun withAutoSilence(minutes: Int?): AlarmDraft = copy(spec = spec.copy(autoSilenceMinutes = minutes))
 
+    /** The dismiss challenge (roadmap P9.5, T291); null drops it. zh-CN: 关闭挑战 (路线图 P9.5, T291); null 表示移除. */
+    fun withDismiss(dismiss: AlarmDismiss?): AlarmDraft = copy(spec = spec.copy(dismiss = dismiss))
+
     /** The options of a new alarm. zh-CN: 新建闹钟的选项. */
     fun toOptions(): Map<String, Any?> = saved().toValues()
 
@@ -212,6 +217,7 @@ internal data class AlarmDraft(val spec: AlarmSpec, val dateAuto: Boolean) {
         if ((new.vibrate ?: true) != (old.vibrate ?: true)) patch[AlarmOptionKeys.VIBRATE] = new.vibrate ?: true
         if (new.speak != old.speak) patch[AlarmOptionKeys.SPEAK] = new.speak?.toValues()
         if (new.snooze != old.snooze) patch[AlarmOptionKeys.SNOOZE] = new.snooze?.toValues()
+        if (new.dismiss != old.dismiss) patch[AlarmOptionKeys.DISMISS] = new.dismiss?.toValues()
         if (new.autoSilenceMinutes != old.autoSilenceMinutes) patch[AlarmOptionKeys.AUTO_SILENCE_MINUTES] = new.autoSilenceMinutes
         if (schedule && !record.enabled) patch[AlarmOptionKeys.ENABLED] = true
         return EditUpdate(patch, implicitDate)

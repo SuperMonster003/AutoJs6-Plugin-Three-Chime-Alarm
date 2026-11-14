@@ -89,11 +89,11 @@ import java.util.Locale
  * format (the clock format of the screens, the default holiday region); holiday data (the weekly update check, its
  * metered network choice, the data status and a manual check); and about (version, release history, the update check with
  * its automatic frequency and metered network choice, ignored versions, notices). Every choice dialog edits a draft and
- * saves once on confirm. The emergency dismiss joins the defaults with 1.3.0.
+ * saves once on confirm. Since 1.3.0 a dismiss challenges group follows the defaults with the emergency dismiss switch.
  * zh-CN: 设置页 (路线图 P3.5, T84, 独立设置规范), 改编自 3-Macaw Speech: 外观 (语言, 夜间模式, 主题色, 启动器图标; 前三项默认跟随 AutoJs6); 闹钟默认值
  * (铃声, 振动, 贪睡, 自动停止), 每个把选项留在 "默认" 的闹钟响铃时都使用它们; 区域与格式 (界面的时钟格式, 默认节假日地区); 节假日数据 (每周更新检查,
  * 其计量网络选项, 数据状态与手动检查); 以及关于 (版本, 发行历史, 更新检查及其自动检查频率与计量网络选项, 已忽略的版本, 声明). 每个选择对话框编辑草稿,
- * 确定时保存一次. 紧急解除随 1.3.0 加入默认值分组.
+ * 确定时保存一次. 自 1.3.0 起默认值之后是关闭挑战分组, 含紧急关闭开关.
  */
 class SettingsActivity : StandaloneActivity() {
 
@@ -188,6 +188,7 @@ class SettingsActivity : StandaloneActivity() {
                 Column(modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(scroll).testTag("chime.settings")) {
                     AppearanceGroup()
                     DefaultsGroup()
+                    ChallengesGroup()
                     TimersGroup()
                     BackgroundGroup()
                     FormatGroup()
@@ -240,13 +241,27 @@ class SettingsActivity : StandaloneActivity() {
         Hairline()
         SettingsRow(stringResource(R.string.edit_auto_silence), summary = autoSilenceText(current.autoSilenceMinutes), icon = R.drawable.ic_timer_24,
             enabled = loaded != null, onClick = { dialog = Dialog.AUTO_SILENCE }, modifier = Modifier.testTag("chime.settings.autoSilence"))
-        // The emergency dismiss joins here with 1.3.0. zh-CN: 紧急解除随 1.3.0 加入此处.
         Text(
             stringResource(R.string.settings_defaults_note),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = RowDefaults.textStart, end = RowDefaults.horizontalPadding, top = 4.dp),
         )
+    }
+
+    /**
+     * "Dismiss challenges" (roadmap P9.3 / P9.5, T283): the emergency dismiss, on by default; it applies to every alarm
+     * with a challenge, kept in the plugin defaults.
+     * zh-CN: "关闭挑战" (路线图 P9.3 / P9.5, T283): 紧急关闭, 默认开启; 适用于所有带挑战的闹钟, 存于插件默认值.
+     */
+    @Composable
+    private fun ChallengesGroup() {
+        val loaded = defaults
+        val current = loaded ?: RingDefaults.PROTOCOL
+        SectionHeader(stringResource(R.string.settings_challenges))
+        SwitchRow(stringResource(R.string.settings_emergency_dismiss), current.emergencyDismiss, { saveDefaults(current.copy(emergencyDismiss = it)) },
+            summary = stringResource(R.string.settings_emergency_dismiss_summary), icon = R.drawable.ic_volume_up_24,
+            enabled = loaded != null, modifier = Modifier.testTag("chime.settings.emergencyDismiss"))
     }
 
     /**

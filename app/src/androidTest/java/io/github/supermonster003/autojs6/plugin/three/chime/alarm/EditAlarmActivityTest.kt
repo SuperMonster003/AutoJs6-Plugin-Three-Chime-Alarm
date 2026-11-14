@@ -26,10 +26,13 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.Recu
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.rule.RepeatText
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.edit.EditAlarmActivity
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.edit.RepeatPreset
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ring.RingDefaultsStore
 import org.autojs.plugin.alarm.api.AlarmContract
+import org.autojs.plugin.alarm.api.AlarmDismiss
 import org.autojs.plugin.alarm.api.AlarmHolidayFilter
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -44,14 +47,17 @@ import java.util.UUID
  * editor, whose description equals `RepeatText` of the rule in the RRULE field, whose preview lists the next five
  * rings, whose form follows the typed rule and writes it back, and whose rule is what the page saves; and the holiday
  * option of 1.2.0 (roadmap P8.6): mode and region saved, the next ring with the holidays skipped before it and the hint
- * of an estimated year, and `workdays` shown in the repeat row with the text of the script API (T184).
+ * of an estimated year, and `workdays` shown in the repeat row with the text of the script API (T184); and the dismiss
+ * challenge of 1.3.0 (roadmap P9.5, T291): chosen in its dialog, saved, the warning shown while emergency dismiss is off,
+ * and cleared again.
  *
  * The alarms here start disabled and carry the label prefix `p31-probe`; changing the repeat turns them on (a schedule
  * change enables a disabled alarm, T83), for a time that does not come during the test, and [cleanUp] removes them.
  *
  * zh-CN: 已安装插件的编辑页 (路线图 P3.1, T83): 编辑往返 (标签, 振动, "工作日" 预设; 以来源 `user` 保存, 重新打开时显示, 未改动的页面不保存任何内容),
  * 以及高级规则编辑器: 说明与 RRULE 字段中规则的 `RepeatText` 一致, 预览列出接下来 5 次响铃, 表单跟随输入的规则并写回, 页面保存的正是该规则; 以及 1.2.0
- * 的节假日选项 (路线图 P8.6): 保存模式与地区, 下一次响铃及其之前跳过的节假日, 推算年份的提示, 重复行以脚本 API 的文案显示 `workdays` (T184). 这里的闹钟
+ * 的节假日选项 (路线图 P8.6): 保存模式与地区, 下一次响铃及其之前跳过的节假日, 推算年份的提示, 重复行以脚本 API 的文案显示 `workdays` (T184); 以及 1.3.0
+ * 的关闭挑战 (路线图 P9.5, T291): 在对话框中选择并保存, 紧急关闭关闭时显示提示, 再清除. 这里的闹钟
  * 起初都处于关闭状态, 带标签前缀 `p31-probe`; 修改重复规则会启用它们 (日程有修改的已禁用闹钟会被启用, T83), 其时刻不在测试期间, [cleanUp] 删除它们.
  */
 @RunWith(AndroidJUnit4::class)
@@ -190,6 +196,50 @@ class EditAlarmActivityTest {
         val workdays = runtime.repository.get(record.id)!!.spec
         assertEquals(AlarmContract.HOLIDAY_MODE_WORKDAYS, workdays.holidays?.mode)
         assertEquals(RepeatText.workdays(locale), RepeatText.ofAlarm(workdays, locale))
+    }
+
+    @Test
+    fun challengeRoundTrip() {
+        val record = runtime.repository.add(
+            mapOf("hour" to 8, "minute" to 0, "label" to label, "enabled" to false, "sound" to mapOf("source" to "silent", "volume" to 0)),
+            AlarmContract.SOURCE_TOOL,
+        )
+        val store = RingDefaultsStore(context)
+        val defaults = store.get()
+        try {
+            store.set(defaults.copy(emergencyDismiss = true))
+            open(record.id)
+            row("chime.edit.challenge").assert(hasText(context.getString(R.string.edit_none), substring = true))
+            row("chime.edit.challenge").performClick()
+            val dialog = "chime.edit.challengeDialog"
+            compose.waitUntil(WAIT_MILLIS) { compose.onAllNodesWithTag(dialog).fetchSemanticsNodes().isNotEmpty() }
+            assertTrue("script is only offered when a script set it", compose.onAllNodesWithTag("$dialog.${AlarmContract.CHALLENGE_SCRIPT}").fetchSemanticsNodes().isEmpty())
+            compose.onNodeWithTag("$dialog.${AlarmContract.CHALLENGE_SHAKE}").performClick()
+            compose.onNodeWithTag("$dialog.safety").performScrollTo()
+            assertTrue("no warning while emergency dismiss is on", compose.onAllNodesWithTag("$dialog.emergencyOff").fetchSemanticsNodes().isEmpty())
+            compose.onNodeWithTag("$dialog.confirm").performClick()
+            row("chime.edit.challenge").assert(hasText(context.getString(R.string.edit_challenge_shake_summary, 30), substring = true))
+            compose.onNodeWithTag("chime.edit.save").performClick()
+            waitForClosed()
+            val saved = runtime.repository.get(record.id)!!
+            assertEquals(AlarmDismiss(challenge = AlarmContract.CHALLENGE_SHAKE), saved.spec.dismiss)
+            assertFalse("a challenge is not a schedule change", saved.enabled)
+
+            // With emergency dismiss off the dialog warns that only auto stop is left.
+            // zh-CN: 紧急关闭关闭时, 对话框提示只剩自动停止.
+            store.set(defaults.copy(emergencyDismiss = false))
+            open(record.id)
+            row("chime.edit.challenge").performClick()
+            compose.waitUntil(WAIT_MILLIS) { compose.onAllNodesWithTag(dialog).fetchSemanticsNodes().isNotEmpty() }
+            compose.onNodeWithTag("$dialog.emergencyOff").performScrollTo()
+            compose.onNodeWithTag("$dialog.${AlarmContract.CHALLENGE_NONE}").performClick()
+            compose.onNodeWithTag("$dialog.confirm").performClick()
+            compose.onNodeWithTag("chime.edit.save").performClick()
+            waitForClosed()
+            assertEquals(null, runtime.repository.get(record.id)!!.spec.dismiss)
+        } finally {
+            store.set(defaults)
+        }
     }
 
     private fun text(tag: String): String =

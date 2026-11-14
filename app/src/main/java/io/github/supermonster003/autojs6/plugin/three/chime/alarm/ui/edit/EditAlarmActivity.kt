@@ -94,13 +94,13 @@ import java.time.ZoneId
 /**
  * The alarm edit page (roadmap P3.1, T83): the time on top with the next ring below it, then the schedule (repeat
  * presets and the advanced rule editor, the date, the skipped dates, the time zone) and the ringing (label, ringtone,
- * vibration, speech, snooze, auto stop). It edits a new alarm (the add button of the list), a stored one (a tap on a
+ * vibration, speech, snooze, the dismiss challenge of 1.3.0, auto stop). It edits a new alarm (the add button of the list), a stored one (a tap on a
  * list row) or the draft of a system clock `SET_ALARM` intent ([ClockDraftActivity], source `intent`, T79). Options the
  * page leaves at "Default" are not written, so the plugin defaults apply (P3.5). Saving writes only what changed; a
  * changed schedule also enables a disabled alarm. A banner opens the permissions page while the exact alarm,
  * notification or full screen permission is missing (P3.4). The page never plays a ringtone or speaks.
  * zh-CN: 闹钟编辑页 (路线图 P3.1, T83): 顶部是时间与下次响铃, 下面是日程 (重复预设与高级规则编辑器, 日期, 排除日期, 时区) 与响铃 (标签, 铃声, 振动,
- * 朗读, 贪睡, 自动停止). 可编辑新闹钟 (列表的新建按钮), 已保存的闹钟 (点击列表行), 或系统时钟 `SET_ALARM` Intent 的草稿 ([ClockDraftActivity],
+ * 朗读, 贪睡, 1.3.0 的关闭挑战, 自动停止). 可编辑新闹钟 (列表的新建按钮), 已保存的闹钟 (点击列表行), 或系统时钟 `SET_ALARM` Intent 的草稿 ([ClockDraftActivity],
  * 来源 `intent`, T79). 保持 "默认" 的选项不写入, 由插件默认值决定 (P3.5). 保存时只写入改动; 日程有改动时同时启用已停用的闹钟. 缺少精确闹钟, 通知或
  * 全屏权限时, 横幅打开权限页 (P3.4). 本页不播放铃声, 也不朗读.
  */
@@ -185,6 +185,7 @@ internal object EditDialogs {
     const val SPEAK = "speak"
     const val SNOOZE = "snooze"
     const val AUTO_SILENCE = "autoSilence"
+    const val CHALLENGE = "challenge"
     const val HOLIDAYS = "holidays"
     const val HOLIDAY_REGION = "holidayRegion"
     const val DISCARD = "discard"
@@ -393,6 +394,7 @@ private fun EditScreen(mode: EditMode, onDirtyChange: (Boolean) -> Unit, onClose
         EditDialogs.LABEL -> LabelDialog(current.spec.label, close) { apply(current.withLabel(it)) }
         EditDialogs.SPEAK -> SpeakDialog(current.spec.speak, engines, close) { apply(current.withSpeak(it)) }
         EditDialogs.SNOOZE -> SnoozeDialog(current.spec.snooze, defaults, close, { apply(current.withSnooze(it)) })
+        EditDialogs.CHALLENGE -> ChallengeDialog(current.spec.dismiss, defaults.emergencyDismiss, close) { apply(current.withDismiss(it)) }
         EditDialogs.AUTO_SILENCE -> AutoSilenceDialog(current.spec.autoSilenceMinutes, defaults.autoSilenceFor(current.hasChallenge), close, { apply(current.withAutoSilence(it)) })
         EditDialogs.DISCARD -> MessageDialog(
             title = stringResource(R.string.edit_discard_title),
@@ -556,6 +558,13 @@ private fun EditContent(
         icon = R.drawable.ic_snooze_24,
         modifier = Modifier.testTag("chime.edit.snooze"),
         onClick = { onDialog(EditDialogs.SNOOZE) },
+    )
+    SettingsRow(
+        title = stringResource(R.string.edit_challenge),
+        summary = challengeText(spec.dismiss),
+        icon = R.drawable.ic_check_circle_24,
+        modifier = Modifier.testTag("chime.edit.challenge"),
+        onClick = { onDialog(EditDialogs.CHALLENGE) },
     )
     SettingsRow(
         title = stringResource(R.string.edit_auto_silence),

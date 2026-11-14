@@ -170,6 +170,20 @@ class SettingsActivityTest {
     }
 
     @Test
+    fun theEmergencyDismissSwitchIsSaved() {
+        open()
+        val store = RingDefaultsStore(context)
+        val tag = "chime.settings.emergencyDismiss"
+        if (defaults.emergencyDismiss) row(tag).assertIsOn() else row(tag).assertIsOff()
+        row(tag).performClick()
+        compose.waitUntil(WAIT_MILLIS) { store.get().emergencyDismiss != defaults.emergencyDismiss }
+        if (defaults.emergencyDismiss) row(tag).assertIsOff() else row(tag).assertIsOn()
+        waitForSnackbarGone()
+        row(tag).performClick()
+        compose.waitUntil(WAIT_MILLIS) { store.get().emergencyDismiss == defaults.emergencyDismiss }
+    }
+
+    @Test
     fun holidaySettingsAreSaved() {
         open()
         compose.waitUntil(WAIT_MILLIS) { compose.shows(hasTestTag("chime.settings.holidayRegion") and isEnabled()) }
