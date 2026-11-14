@@ -221,6 +221,7 @@ class RingActivityTest {
             // would show an adjustment; after the round the user's volume comes back.
             // zh-CN: 响铃期间闹钟音量流是响铃音量 (静音探针为最小值), 所以按音量加键能看出是否被调节; 本轮结束后恢复用户音量.
             val volume = audio.getStreamVolume(AudioManager.STREAM_ALARM)
+            waitForKeyFocus(screen)
             repeat(PRESSES) { instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_VOLUME_UP) }
             SystemClock.sleep(1_000)
             assertEquals("off: the round goes on", record.id, runtime.rings.sounding?.alarmId)
@@ -231,6 +232,8 @@ class RingActivityTest {
             runtime.defaults.set(defaults.copy(emergencyDismiss = true))
             instrumentation.runOnMainSync { screen.recreate() }
             compose.waitUntil(WAIT_MILLIS) { compose.onAllNodesWithTag(RingActivity.TAG_CHALLENGE_EMERGENCY).fetchSemanticsNodes().isNotEmpty() }
+            waitFor("the recreated ring screen resumes", WAIT_MILLIS) { resumedRingScreen().let { it != null && it !== screen } }
+            waitForKeyFocus(resumedRingScreen()!!)
             repeat(PRESSES - 1) { instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_VOLUME_UP) }
             SystemClock.sleep(300)
             assertEquals("on: ${PRESSES - 1} presses keep the round", record.id, runtime.rings.sounding?.alarmId)
@@ -291,6 +294,27 @@ class RingActivityTest {
         val screen = showRingScreen()
         compose.waitUntil(WAIT_MILLIS) { compose.onAllNodesWithTag(RingActivity.TAG_CHALLENGE).fetchSemanticsNodes().isNotEmpty() }
         return screen
+    }
+
+    /**
+     * Injected keys go to the focused window: wait until [screen] has it (a recreated screen gets it a moment after its first
+     * frame; a system "not responding" dialog keeps it, and the keys then adjust the system volume, 1.3.0 release run).
+     * zh-CN: 注入的按键发往拥有焦点的窗口: 等 [screen] 拿到焦点 (重建的界面在首帧之后才拿到; 系统 "无响应" 对话框会一直占着焦点, 按键改为调节系统音量, 1.3.0 发布前的运行).
+     */
+    private fun waitForKeyFocus(screen: RingActivity) {
+        val deadline = SystemClock.uptimeMillis() + WAIT_MILLIS
+        while (true) {
+            var focused = false
+            instrumentation.runOnMainSync { focused = screen.hasWindowFocus() }
+            if (focused) return
+            if (SystemClock.uptimeMillis() > deadline) {
+                val focus = instrumentation.uiAutomation.executeShellCommand("dumpsys window").use { fd ->
+                    android.os.ParcelFileDescriptor.AutoCloseInputStream(fd).bufferedReader().lineSequence().firstOrNull { "mCurrentFocus" in it }?.trim()
+                }
+                throw AssertionError("the ring screen has the key focus: not within $WAIT_MILLIS ms ($focus)")
+            }
+            SystemClock.sleep(100)
+        }
     }
 
     /** The next whole second at least [RING_SECONDS] away. zh-CN: 至少 [RING_SECONDS] 秒之后的整秒. */

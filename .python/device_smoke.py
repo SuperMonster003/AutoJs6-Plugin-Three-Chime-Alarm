@@ -12,9 +12,9 @@
 4. activation and getInfo: an AutoJs6 script (RunIntentActivity, as in 3-Macaw Speech) starts the Wake activity (it
    needs org.autojs.permission.PLUGIN, which the shell lacks), binds the INFO service explicitly and calls getInfo(),
    then binds the ALARM service, checks the IAlarmPlugin descriptor and, on a host with the alarm contract, reads the
-   capabilities (alarmFeatures [alarms, timers, stopwatch] since 1.1.0, holidays and beforeRing since 1.2.0, the permission states) and calls listAlarms once
+   capabilities (alarmFeatures [alarms, timers, stopwatch] since 1.1.0, holidays and beforeRing since 1.2.0, challenges since 1.3.0, the permission states) and calls listAlarms once
    (roadmap P2.5, P7.3). The
-   Wake start is confirmed from the ActivityManager log lines after a marker.
+   Wake start is confirmed from the ActivityManager lines of the system buffer since the run started.
 5. --screenshot <dir>: the script opens AutoJs6's Plugin Center and the screen is saved as
    plugin-center-<serial>-system-<light|dark>.png. The name records the system night mode, which picks the launcher
    icon variant; the Plugin Center itself follows the AutoJs6 theme setting, so check the picture for its theme. The
@@ -35,7 +35,6 @@ import subprocess
 import sys
 import tempfile
 import time
-import uuid
 from pathlib import Path
 
 HOST = "org.autojs.autojs6"
@@ -49,8 +48,8 @@ DISCOVERY = (
 )
 CAPABILITY_DESCRIPTOR = "org.autojs.plugin.alarm.api.IAlarmPlugin"
 # T25: the features the plugin declares, alarms since 1.0.0, timers and stopwatch since 1.1.0 (roadmap P7.3), holidays
-# and beforeRing since 1.2.0 (roadmap P8.3, P8.4).
-FEATURES = "alarms,timers,stopwatch,holidays,beforeRing"
+# and beforeRing since 1.2.0 (roadmap P8.3, P8.4), challenges since 1.3.0 (roadmap P9.4).
+FEATURES = "alarms,timers,stopwatch,holidays,beforeRing,challenges"
 PLUGIN_CENTER = "org.autojs.autojs.core.plugin.center.PluginCenterActivity"
 
 SCRIPT = """
@@ -281,16 +280,17 @@ def run(serial, args):
         found = discover(serial, action, category)
         report(f"discovery {action.rsplit('.', 1)[-1]}", found == [expected], f"{action} / {category}: {len(found)} service(s) {found}")
     adb(serial, "shell", "am", "force-stop", PLUGIN, check=False)
-    marker = f"chime-smoke-{uuid.uuid4().hex[:8]}"
-    adb(serial, "shell", "log", "-t", "ChimeSmoke", marker, check=False)
+    # The START line is in the system buffer; a busy main buffer (256 KB on G8441) can rotate a marker line out before the
+    # script ends, so the window is the device time taken here (1.3.0 release smoke). zh-CN: START 行在 system 缓冲区, 繁忙的
+    # main 缓冲区会在脚本结束前挤掉标记行, 所以改用此处取的设备时间作窗口.
+    since = adb(serial, "shell", "date", "'+%m-%d %H:%M:%S.000'", check=False).strip()
     mode = night_mode(serial)
     r = run_script(serial, bool(args.screenshot))
     if r is None:
         print(f"{name}: SMOKE FAIL (no script result: unlock the device; AutoJs6 needs all-files access)")
         return False
     steps = r.get("steps", {})
-    log = adb(serial, "shell", "logcat", "-d", "-v", "brief", check=False, timeout=60)
-    after = log[log.rfind(marker):] if marker in log else ""
+    after = adb(serial, "shell", "logcat", "-d", "-v", "brief", "-b", "system", "-T", f"'{since}'", check=False, timeout=60)
     wake_started = bool(re.search(rf"START .*cmp={re.escape(PLUGIN)}/\.WakeActivity", after))
     wake = steps.get("wake", {})
     report("wake", not wake.get("error") and wake_started,

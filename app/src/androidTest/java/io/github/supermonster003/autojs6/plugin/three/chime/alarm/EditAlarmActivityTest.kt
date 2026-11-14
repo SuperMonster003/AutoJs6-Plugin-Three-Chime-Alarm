@@ -214,7 +214,10 @@ class EditAlarmActivityTest {
             val dialog = "chime.edit.challengeDialog"
             compose.waitUntil(WAIT_MILLIS) { compose.onAllNodesWithTag(dialog).fetchSemanticsNodes().isNotEmpty() }
             assertTrue("script is only offered when a script set it", compose.onAllNodesWithTag("$dialog.${AlarmContract.CHALLENGE_SCRIPT}").fetchSemanticsNodes().isEmpty())
-            compose.onNodeWithTag("$dialog.${AlarmContract.CHALLENGE_SHAKE}").performClick()
+            // The dialog scrolls on small screens (360 x 640 dp of the API 24 CI profile): scroll each row into view before
+            // clicking it, or the click lands outside the dialog and closes it.
+            // zh-CN: 小屏 (API 24 CI 配置 360 x 640 dp) 上对话框会滚动: 点击前先把该行滚入视野, 否则点击落在对话框外并关闭它.
+            compose.onNodeWithTag("$dialog.${AlarmContract.CHALLENGE_SHAKE}").performScrollTo().performClick()
             compose.onNodeWithTag("$dialog.safety").performScrollTo()
             assertTrue("no warning while emergency dismiss is on", compose.onAllNodesWithTag("$dialog.emergencyOff").fetchSemanticsNodes().isEmpty())
             compose.onNodeWithTag("$dialog.confirm").performClick()
@@ -232,7 +235,7 @@ class EditAlarmActivityTest {
             row("chime.edit.challenge").performClick()
             compose.waitUntil(WAIT_MILLIS) { compose.onAllNodesWithTag(dialog).fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithTag("$dialog.emergencyOff").performScrollTo()
-            compose.onNodeWithTag("$dialog.${AlarmContract.CHALLENGE_NONE}").performClick()
+            compose.onNodeWithTag("$dialog.${AlarmContract.CHALLENGE_NONE}").performScrollTo().performClick()
             compose.onNodeWithTag("$dialog.confirm").performClick()
             compose.onNodeWithTag("chime.edit.save").performClick()
             waitForClosed()
