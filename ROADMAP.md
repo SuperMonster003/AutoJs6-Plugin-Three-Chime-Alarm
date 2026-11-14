@@ -256,6 +256,19 @@ T1 - T18 来自设计稿 (2026-11-03), T19 - T25 为立项时补充, T26 起由�
 | T252 | 1.2.0 的 tag `v1.2.0` 指向 APK 源提交 `2857b55` (versionCode 75); T250 / T251 的脚本修正与发布证据是其后的提交 (VERSION_BUILD 76 / 77), 不另发布. 先推送 `2857b55` 并等 CI 通过再打 tag, 之后推送其余提交 | 照 1.1.0 的做法 (tag 指向 APK 的源提交, 证据提交在后), 免得为测试脚本重新构建与复测 release 包. chime-p8-release 实施 | 无 |
 | T253 | 1.2.0 基线 (附录 D.2) 只复测响铃触发偏差与 release APK 体积; 待机一夜电量差, 保活 1 小时耗电, 保活时 PSS, 进程被杀后到点至响铃界面不复测 | P8 没有改前台服务与保活, 节假日数据只在算下一次响铃时读取, `beforeRing` 只多一次提前唤醒, 都不在待机或常驻时运行; XQ-AT72 是从 3-Tally 的 E4 手测借来的, 借用时间留给 `beforeRing` 联调. 带节假日的闹钟在进程被杀后到点的冷启动耗时没有单独测, 留到 1.3.0 的基线复测. chime-p8-release 实施 | 无 |
 | T254 | changelog 与 APK 内 (`assets/doc/CHANGELOG-*.md`) 的 1.2.0 日期保持 2026/11/13, 即源提交与构建, 验证的日期; 维护者放行时已过零点, 发布在 2026-11-14 00:16 (UTC 仍是 11-13), 不改 | 改日期要改源提交, 重建 release 包并复测. 放行题题干已写明. chime-p8-release 实施 | 无 |
+| T280 | `math` 的题目: 1 级 `a + b` 或 `a - b` (两数 10 - 99, 结果非负), 2 级 `a × b + c` (a 3 - 9, b 12 - 39, c 10 - 99), 3 级 `a × b + c` 或 `a × b - c` (a 与 b 12 - 39, c 100 - 999, 结果非负); 题数默认 3, 上限 20 (契约 `AlarmLimits`); 一轮的题由本轮 `occurrence` 派生的种子生成, 响铃界面重建后题目与已答题数不变, 下一轮重新出题; 答错清空输入, 题目不变; 题目在所有语言中从左到右显示 | 1 级是刚醒时也能做的门槛, 3 级要两步心算; 种子固定是为了转屏或界面被回收后不换题 (否则可以靠重建界面换简单题); 从右到左的段落会把 `56 - 12` 排成 `12 - 56`. chime-p9-plugin 实施 (`8930fe6`, `0c3f08d`) | P9.6 |
+| T281 | `shake` 的计数: 加速度 (含重力) 升到 2.0 g 及以上计一次, 与上一次至少相隔 300 ms, 下一次要先降到 1.5 g 以下; 默认 30 次, 上限 300; 挑战层显示进度条与已摇次数, 进度在界面重建后保留 | 静止的手机读数为 1 g, 拿稳或倾斜不计数, 一次猛甩只计一次. 模拟器用 `adb emu sensor set acceleration` 交替设 `0:24:0` (约 2.45 g) 与 `0:9.81:0`, 间隔 0.4 s 以上即可注入 (`.python/device_challenges.py` 的 shake 段). chime-p9-plugin 实施 | P9.6 |
+| T282 | `type`: 省略 `type.text` 时按本轮种子从界面语言的 8 句内置句子中选一句 (11 个 values 目录的字符串数组); 输入经 Unicode NFC 规范化后与文字比较, 忽略大小写与首尾空白; 输入框上限为 `MAX_TYPE_TEXT_CHARS` + 50 | 随机句子跟随界面语言, 用户不必输入外语; NFC 让组合字符与预组字符等价. chime-p9-plugin 实施 | P9.6 |
+| T283 | 紧急关闭: 挑战生效时 4 秒内按 5 次音量键 (上或下均可, 长按的自动重复不计) 立即关闭本轮, `dismiss` 事件带 `by: 'user'` 与 `challenge`; 设置页 "关闭挑战" 组的开关默认开, 可关; 挑战生效时音量键一律不调节音量 (开关关闭时也是); 开关开启时挑战层显示用法 | 每种挑战都要有自动停止之外的第二条出路 (D13 安全阀); 调低音量等于绕过挑战; `by: 'user'` 让脚本区分 "完成挑战" (`by: 'challenge'`) 与紧急关闭. chime-p9-plugin 实施 | P9.6 |
+| T284 | `script` 挑战的插件侧按 chime-p9-protocol.md 第 4 节: 本轮开始发声时设备未解锁 -> `locked`; 没有宿主绑定本轮 `ring` 且没有实时回调 -> `noScript`; `ring` 有序广播的应答至多等 15 s, 都没应答 -> `unavailable`, 有缺失 -> `launchFailed`; 有脚本启动或在运行时每 5 s 向这些宿主发有序广播 `request=scriptStatus`, 全部结束仍未关闭 -> `ended`, 从未启动 -> `launchFailed`, 宿主应答 `tracked: false` (没有记录, 宿主重启过) 记为 `ended`; 只有实时 `ring` 监听者时继续等, 最后一个离开 -> `noScript`; 每次退回在日志标签 ChimeTrigger 记 "script challenge <occurrence> fell back to <fallback>: <reason>", 不发事件 | 宿主在应答 `ring` 广播之后才真正启动脚本 (chime-p9-host.md "宿主侧事实" 第 1 条), 所以由插件轮询而不是宿主回调, 契约不改 (T25); 旧宿主对未知 `request` 不应答, 约 5 s 后按 `unavailable` 退回. 宿主侧的派生决定 (T310 - T314 起) 记在共享笔记 chime-p9-host.md, 批次 16 回填到本表. chime-p9-plugin 实施 (`c639ed3`) | P9.6 |
+| T285 | 关闭挑战是一轮响铃的属性 (`Ring.challenge`, 生效的挑战): 用户不能经通知或 `dismiss` 直接关闭, 只能在响铃界面完成挑战 (`by: 'challenge'`) 或紧急关闭 (T283); 脚本 `alarms.dismiss(id)` 与插件工具仍可直接关闭; `allowSnooze: false` 只拒绝用户贪睡; `script` 退回后本轮余下的时间显示 fallback 的挑战 (`none` 即普通滑块), 不另起一轮; `ring` 与 `dismiss` 事件带 `challenge` | 挑战约束的是刚醒的人, 不是脚本与工具; `script` 挑战本来就靠脚本关闭. chime-p9-plugin 实施 | P9.6 |
+| T286 | 响铃界面的挑战层放在关闭滑块的插槽 (P3.2 预留), 挑战生效时取代滑块; 每种挑战都显示距自动停止的剩余时间 (`m:ss`, 每秒倒数), 紧急关闭开启时显示其用法; `script` 显示正在等待脚本 | 两条出路要随时看得到 (P9.3 "挑战界面始终显示剩余自动停止时间"). chime-p9-plugin 实施 (`0c3f08d`) | P9.6 |
+| T287 | 设备没有加速度计时 `shake` 改出默认参数的 `math` (难度 2, 3 题), 挑战层写明原因, 日志记 "no accelerometer, math instead" | 否则这类设备上的 `shake` 闹钟只能等自动停止或紧急关闭. chime-p9-plugin 实施 | P9.6 |
+| T288 | 响铃界面内容放不下时可以滚动 (例如挑战的键盘弹出, 小屏或横屏) | 挑战层比滑块高, 键盘弹出后检查按钮可能被挡住. chime-p9-plugin 实施 | P9.6 |
+| T289 | 挑战闹钟的通知 "关闭" 按钮与系统 `DISMISS_ALARM` Intent 不直接关闭, 改为打开响铃界面的挑战层; `allowSnooze: false` 时通知不显示 "贪睡" 按钮 | 否则在通知栏一按就绕过挑战. chime-p9-plugin 实施 (`0c3f08d`) | P9.6 |
+| T290 | 插件工具 `alarm_add` / `alarm_update` 接受附录 A 第 8 节的 `dismiss` 分组, 但不含 `script`: `challenge: 'script'` 与 `script.fallback` 报 `INVALID_OPTIONS` (T17); `alarm_update` 把 `dismiss` 与已存的分组合并, `dismiss: null` 清除; 工具结果按附录 A 第 8 节的形式返回 `dismiss` (脚本设置的 `script` 也照样显示) | `script` 挑战要有绑定脚本才有意义, 工具不开放脚本绑定 (T17); 结果照样显示, 免得 AI 以为闹钟没有挑战而重复设置. chime-p9-plugin 实施 (`0758d0c`) | P9.6 |
+| T291 | 编辑页的挑战行与对话框: `none`, `math` (难度, 题数), `shake` (次数滑块 5 - 300, 步长 5), `type` (自定文字, 去掉首尾空白, 留空表示随机句子) 与 "允许贪睡"; `script` 只在脚本设置了它时出现, 保留其设置并显示 fallback, 页面不能自行选 `script`; 未改动的值保持存储形式 (未改动的对话框不写任何东西, 显式的默认值仍显式); 对话框说明自动停止与紧急关闭, 紧急关闭关闭时显示红色警告; 设置页新增 "关闭挑战" 组, 内含紧急关闭开关 | 与 P8 节假日对话框的 "不改动即不写" 一致; 选 `script` 需要脚本绑定, 编辑页做不到. chime-p9-plugin 实施 (`a501366`) | P9.6 |
+| T292 | 挑战闹钟未设 `autoSilenceMinutes` 时, 自动停止取设置页的 "自动停止" 与 30 分钟中较长的一个; 闹钟自己设的 1 - 60 照用 (例如脚本设 1 分钟) | P9.3 "挑战模式下默认 30"; 设置页的值更长时不缩短; 显式值是用户或脚本的选择. chime-p9-plugin 实施 (`8930fe6`) | P9.6 |
 
 ---
 
@@ -378,7 +391,7 @@ io.github.supermonster003.autojs6.plugin.three.chime.alarm
 | P6 | 1.0.0 | 文档, 声明, 四仓库同步, README / changelog / 截图, 发布与索引登记 | 完成 (chime-p6, 2026-11-08; 含 Q23 (b) 实施; 1.0.0 与修复 Q25 / Q27 的 1.0.1 已发布并登记索引, 见附录 G) |
 | P7 | 1.1.0 | 计时器与秒表 | 完成 (chime-p7-core 做 P7.1 / P7.2 / P7.3 插件侧 / P7.6, chime-p7-host 做 P7.3 宿主侧, chime-p7-ui 做 P7.3 联调 / P7.4 / P7.5, chime-p7-release 做 P7.7, 2026-11-12; 1.1.0 已发布并登记索引, 见附录 G) |
 | P8 | 1.2.0 | 节假日与 `beforeRing` | 完成 (1.2.0 已发布并登记索引, 见附录 G; P8.1 数据管线已提前完成: chime-p8-data, 2026-11-12, `holiday-calendars-v1` 已由维护者发布; chime-p8-plugin 做 P8.2 / P8.3 / P8.7 与 P8.4 插件侧, chime-p8-host 做 P8.5 与 P8.4 宿主侧, 2026-11-13; chime-p8-ui 做 P8.4 真机联调与 P8.6, 2026-11-13; chime-p8-release 做 P8.8, 2026-11-14) |
-| P9 | 1.3.0 | 关闭挑战 | 未开始 |
+| P9 | 1.3.0 | 关闭挑战 | 进行中 (批次 15: chime-p9-plugin 做 P9.1 / P9.3 / P9.5 与 P9.2 / P9.4 的插件侧, chime-p9-host 做宿主与文档, 2026-11-14; P9.1 / P9.5 完成, P9.3 只剩安全锁屏真机项, P9.2 / P9.4 的联调与宿主证据回填留给批次 16, P9.6 未开始) |
 
 依赖顺序:
 
@@ -699,23 +712,23 @@ P0 (插件骨架, 含 P0.2 评估)          P1.1 - P1.3 (宿主契约, 桥接, �
 
 ### P9.1 内置挑战
 
-- [ ] (插件) `math` (难度 1 - 3, 题数默认 3), `shake` (加速度计, 默认 30 次, 进度显示), `type` (随机一句或指定文字, 忽略大小写与首尾空白); 挑战进行中铃声继续, 可按 `allowSnooze` 贪睡. 证据: 提交 hash; JVM 测试 (题目生成与判定); E4.
+- [x] (插件) `math` (难度 1 - 3, 题数默认 3), `shake` (加速度计, 默认 30 次, 进度显示), `type` (随机一句或指定文字, 忽略大小写与首尾空白); 挑战进行中铃声继续, 可按 `allowSnooze` 贪睡. 证据: 提交 hash; JVM 测试 (题目生成与判定); E4. 证据 (E4, 2026-11-14, chime-p9-plugin): 提交 `8930fe6` (题目生成, 摇动计数, 输入比较, 挑战轮的关闭来源与自动停止, T280 - T283 / T285 / T292), `0c3f08d` (响铃界面挑战层, T286 - T289), `0ee16b4` (仪器测试与 `.python/device_challenges.py`); JVM 全部单测 366 / 366 通过, 其中 `ChallengesTest` 11 例 (三级题目的范围与答案非负, 默认题数, 种子固定, 答案接受各种文字的数字, 摇动的阈值 / 最小间隔 / 拿稳与倾斜不计, 输入忽略大小写首尾空白并按 NFC 比较, 随机句子由种子选), `RingChallengeTest` 10 例 (挑战轮带挑战与 30 分钟自动停止, 用户不能直接关闭而完成挑战可以, 脚本 / 工具 / 紧急关闭总能关闭, `allowSnooze` 为 false 只拒绝用户贪睡, 省略时可贪睡); 仪器测试 `RingActivityTest` 新增 3 例 (`math` 3 题答完以 `by: 'challenge'` 关闭且显示自动停止倒数, `type` 忽略大小写与首尾空白且 `allowSnooze: false` 隐藏贪睡, 音量键); 全量仪器测试 (emulator-5642, AVD_API_33) 63 例: 57 通过, 5 跳过 (由设备脚本驱动的探针), 1 失败是 `volumeKeysDismissOnlyWhileEmergencyDismissIsOn` 的断言时机 (本轮结束后音量已恢复成用户音量, 测试却拿它与响铃中的探针音量比较), 已在 `4179feb` 修正, 复跑 `RingActivityTest` 5 / 5; 设备: `py .python/device_challenges.py emulator-5642 run` 20 / 20 PASS (静音探针, 关屏后由全屏 Intent 打开的响铃界面; shake: `adb emu sensor` 注入 5 次约 2.4 g 的摇动后 `handled=true` 且本轮结束; emergency 段中 4 次按键后本轮仍在发声, 即挑战进行中铃声继续); E4: `py .python/device_screens.py emulator-5642 --screens challenges` 浅色 / 深色 12 张 PASS (emulator-5642 = AVD_API_33 只读实例, 1080 x 2400, 420 dpi, 设备语言英文), 其中 `ring-math` / `ring-shake` / `ring-type` 各两张是三种挑战层, 截图在调度共享笔记 `chime-p9-plugin-screenshots/`. 未覆盖: 挑战期间真实铃声与振动持续出声 (探针静音无振动) 与真机摇动, 列入维护者手测清单. 均只本地提交.
 
 ### P9.2 脚本条件
 
-- [ ] (插件 / 宿主) `challenge: 'script'`: 一直响到绑定脚本或任何脚本调用 `alarms.dismiss(id)`; `fallback` (默认 `none`) 的触发条件: 宿主不可用, 既无绑定脚本也无实时监听者, 设备未解锁, 绑定脚本启动失败或结束运行时仍未关闭. 证据: 两侧提交 hash; 设备: 每个 fallback 条件各触发一次.
+- [ ] (插件 / 宿主) `challenge: 'script'`: 一直响到绑定脚本或任何脚本调用 `alarms.dismiss(id)`; `fallback` (默认 `none`) 的触发条件: 宿主不可用, 既无绑定脚本也无实时监听者, 设备未解锁, 绑定脚本启动失败或结束运行时仍未关闭. 证据: 两侧提交 hash; 设备: 每个 fallback 条件各触发一次. 进度 (2026-11-14, chime-p9-plugin, 插件侧完成, 未勾选): 插件 `c639ed3` (T284: 按 chime-p9-protocol.md 第 4 节, 退回原因 `locked` / `noScript` / `unavailable` / `launchFailed` / `ended`, 退回后本轮余下的时间改出 `fallback` 的挑战, 默认 `none` 即普通滑块), JVM `ScriptChallengeWatcherTest` 14 例, `ScriptConditionTest` 4 例, `AnswerCollectorTest` 3 例, `RingChallengeTest` 中 `script` 3 例, 每个退回条件至少有一例; 宿主侧 `e323d560d5` (`scriptStatus` 应答, chime-p9-host, 见 chime-p9-host.md). 两侧合在同一宿主构建上逐条触发每个 fallback 条件留给批次 16.
 
 ### P9.3 安全阀
 
-- [ ] (插件) 挑战模式下 `autoSilenceMinutes` 默认 30, 上限 60, 到点发 `silence`; 紧急关闭 (连按 5 次音量键, 设置页默认开可关); 挑战界面始终显示剩余自动停止时间. 证据: 提交 hash; 设备: 紧急关闭在锁屏响铃时可用.
+- [ ] (插件) 挑战模式下 `autoSilenceMinutes` 默认 30, 上限 60, 到点发 `silence`; 紧急关闭 (连按 5 次音量键, 设置页默认开可关); 挑战界面始终显示剩余自动停止时间. 证据: 提交 hash; 设备: 紧急关闭在锁屏响铃时可用. 进度 (2026-11-14, chime-p9-plugin, 除安全锁屏真机项外完成, 未勾选): 自动停止 (T292: 未设 `autoSilenceMinutes` 时取设置页 "自动停止" 与 30 分钟中较长者, 闹钟自设 1 - 60 照用, 上限 60 由契约 `AlarmLimits` 校验, 到点发 `silence`) 提交 `8930fe6`, JVM `RingChallengeTest` 2 例; 紧急关闭 (T283: 4 秒内 5 次音量键, 设置页 "关闭挑战" 组开关默认开可关, 挑战生效时音量键不调节音量) 提交 `8930fe6` / `0c3f08d` / `a501366`, JVM `ChallengesTest` 2 例与 `RingChallengeTest`, 仪器测试 `volumeKeysDismissOnlyWhileEmergencyDismissIsOn` (开关关闭时 5 次音量加不关闭且音量不变; 开启后 4 次不关闭且音量不变, 第 5 次关闭, `dismiss` 带 `by: 'user'` 与 `challenge`, 之后恢复用户音量) 与 `SettingsActivityTest#theEmergencyDismissSwitchIsSaved`; 剩余时间 (T286) 每种挑战层都显示, 仪器测试 `mathChallengeShowsTheAutoStopAndEndsByChallenge`, 截图见 P9.1; 设备: `device_challenges.py` 的 emergency 段 (关屏后由全屏 Intent 打开的响铃界面, 4 次音量加后等过 4 秒窗口仍在发声且响铃音量 1 -> 1, 加减混按 5 次 `handled=true` 关闭, 用户闹钟音量 6 -> 6) 与 autostop 段 (`autoSilenceMinutes` 1, 无人作答 56 s 后自行结束, 之后无发声). 模拟器没有安全锁屏 (无锁屏密码); "紧急关闭在安全锁屏响铃时可用" 要设了锁屏密码的真机与维护者配合, 本批 XQ-AT72 由 paper-device 占用, 留给批次 16.
 
 ### P9.4 脚本 API 与事件
 
-- [ ] (宿主) `DismissOptions`, `Ringing.challenge`, `dismiss` 事件 `by: 'challenge'` 与 `challenge` 字段; 工具 `alarm_add` 不接受 `script` 挑战 (T17); 插件 `alarmFeatures` 加 `challenges`; 文档与 d.ts. 证据: 提交 hash.
+- [ ] (宿主) `DismissOptions`, `Ringing.challenge`, `dismiss` 事件 `by: 'challenge'` 与 `challenge` 字段; 工具 `alarm_add` 不接受 `script` 挑战 (T17); 插件 `alarmFeatures` 加 `challenges`; 文档与 d.ts. 证据: 提交 hash. 进度 (2026-11-14, chime-p9-plugin, 插件部分完成, 未勾选): 插件 `alarmFeatures` 加 `challenges`, 工具 `alarm_add` / `alarm_update` 接受 `dismiss` 但不接受 `script` (T290) 提交 `0758d0c`, JVM `ChimeToolCatalogTest` / `ChimeToolsTest` 新增 3 例; `ring` / `dismiss` 事件的 `challenge` 与 `by: 'challenge'` 在 `8930fe6` / `0c3f08d` (`RingChallengeTest`). 宿主与文档侧由 chime-p9-host 做 (宿主 `c5f26433e9` 等, 见 chime-p9-host.md); 本会话结束时该笔记的 "待回填" 尚未写出, 宿主证据回填与本条勾选留给批次 16.
 
 ### P9.5 界面
 
-- [ ] (插件) 响铃界面的挑战层 (P3.2 预留插槽), 编辑页挑战选项与说明, 设置页紧急关闭开关. 证据: 提交 hash; E4.
+- [x] (插件) 响铃界面的挑战层 (P3.2 预留插槽), 编辑页挑战选项与说明, 设置页紧急关闭开关. 证据: 提交 hash; E4. 证据 (E4, 2026-11-14, chime-p9-plugin): 提交 `0c3f08d` (挑战层取代滑块插槽, 剩余自动停止倒数, 紧急关闭用法, `script` 的等待提示, 内容放不下时可滚动, T286 / T288), `a501366` (编辑页挑战行与对话框, 设置页 "关闭挑战" 组的紧急关闭开关, 11 个 values 目录, T291), `0ee16b4` (仪器测试), `4179feb` (截图探针 `challenges` 模式); JVM: `ChallengeFormTest` 5 例, `RingViewTest` 新增 2 例, `StringResourceParityTest` 与 `ApplicationTextPunctuationTest` 均在 366 / 366 内通过; 仪器测试 `EditAlarmActivityTest#challengeRoundTrip`, `SettingsActivityTest#theEmergencyDismissSwitchIsSaved` 与 `RingActivityTest` 新增 3 例, 全量结果见 P9.1; E4: `py .python/device_screens.py emulator-5642 --screens challenges` 浅色 / 深色 12 张 PASS (emulator-5642 = AVD_API_33 只读实例, 1080 x 2400, 420 dpi, 设备语言英文): 编辑页挑战行, 挑战对话框, 设置页紧急关闭开关, `math` / `shake` / `type` 三种挑战层的响铃界面各明暗一张, 截图在调度共享笔记 `chime-p9-plugin-screenshots/`. 均只本地提交.
 
 ### P9.6 文档与 1.3.0 发布
 
