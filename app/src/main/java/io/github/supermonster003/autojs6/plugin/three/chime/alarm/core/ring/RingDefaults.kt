@@ -18,6 +18,11 @@ data class RingDefaults(
     val snoozeMinutes: Int = AlarmLimits.DEFAULT_SNOOZE_MINUTES,
     val snoozeMax: Int = AlarmLimits.DEFAULT_SNOOZE_MAX,
     val autoSilenceMinutes: Int = AlarmLimits.DEFAULT_AUTO_SILENCE_MINUTES,
+    /**
+     * Five volume key presses within 4 s dismiss a challenge alarm on the ringing screen (roadmap P9.3, T283); on by default.
+     * zh-CN: 响铃界面上 4 s 内连按 5 次音量键关闭挑战闹钟 (路线图 P9.3, T283); 默认开启.
+     */
+    val emergencyDismiss: Boolean = true,
 ) {
 
     /** These defaults with every number inside the protocol limits. zh-CN: 各数值都在协议范围内的默认值. */

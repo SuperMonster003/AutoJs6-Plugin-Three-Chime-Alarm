@@ -22,6 +22,7 @@ class RingDefaultsStore(context: Context) {
             snoozeMinutes = preferences.getInt(KEY_SNOOZE_MINUTES, protocol.snoozeMinutes),
             snoozeMax = preferences.getInt(KEY_SNOOZE_MAX, protocol.snoozeMax),
             autoSilenceMinutes = preferences.getInt(KEY_AUTO_SILENCE_MINUTES, protocol.autoSilenceMinutes),
+            emergencyDismiss = preferences.getBoolean(KEY_EMERGENCY_DISMISS, protocol.emergencyDismiss),
         ).sanitized()
     }.getOrDefault(RingDefaults.PROTOCOL)
 
@@ -40,6 +41,7 @@ class RingDefaultsStore(context: Context) {
             .putInt(KEY_SNOOZE_MINUTES, value.snoozeMinutes)
             .putInt(KEY_SNOOZE_MAX, value.snoozeMax)
             .putInt(KEY_AUTO_SILENCE_MINUTES, value.autoSilenceMinutes)
+            .putBoolean(KEY_EMERGENCY_DISMISS, value.emergencyDismiss)
             .commit()
     }.getOrDefault(false)
 
@@ -51,5 +53,6 @@ class RingDefaultsStore(context: Context) {
         const val KEY_SNOOZE_MINUTES = "snoozeMinutes"
         const val KEY_SNOOZE_MAX = "snoozeMax"
         const val KEY_AUTO_SILENCE_MINUTES = "autoSilenceMinutes"
+        const val KEY_EMERGENCY_DISMISS = "emergencyDismiss"
     }
 }

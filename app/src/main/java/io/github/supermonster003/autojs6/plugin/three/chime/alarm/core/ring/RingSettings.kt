@@ -1,6 +1,7 @@
 package io.github.supermonster003.autojs6.plugin.three.chime.alarm.core.ring
 
 import org.autojs.plugin.alarm.api.AlarmContract
+import org.autojs.plugin.alarm.api.AlarmDismiss
 import org.autojs.plugin.alarm.api.AlarmLimits
 import org.autojs.plugin.alarm.api.AlarmSpeak
 import org.autojs.plugin.alarm.api.AlarmSpec
@@ -10,10 +11,10 @@ import org.autojs.plugin.alarm.api.TimerSpec
  * What one alarm sounds like (roadmap P2.4, appendix A section 4.4), the plugin defaults applied to the stored options:
  * the sound [source] (`default`, `silent` or a ringtone uri), the alarm stream [volume] (null keeps the user's volume,
  * T14), the [rampSeconds] of the fade in, the [vibration] pattern (null without vibration, T61), the [speak] options,
- * the snooze limits and [autoSilenceMinutes].
+ * the snooze limits, [autoSilenceMinutes] and the [dismiss] challenge options (1.3.0, null without a challenge).
  * zh-CN: 一个闹钟的响铃内容 (路线图 P2.4, 附录 A 第 4.4 节), 已存选项套用插件默认值后的结果: 铃声 [source] (`default`, `silent` 或铃声 uri),
- * 闹钟流音量 [volume] (null 保持用户的音量, T14), 渐强时长 [rampSeconds], 振动节奏 [vibration] (null 不振动, T61), 朗读 [speak], 贪睡限制与
- * [autoSilenceMinutes].
+ * 闹钟流音量 [volume] (null 保持用户的音量, T14), 渐强时长 [rampSeconds], 振动节奏 [vibration] (null 不振动, T61), 朗读 [speak], 贪睡限制,
+ * [autoSilenceMinutes] 与关闭挑战选项 [dismiss] (1.3.0, 无挑战时为 null).
  */
 data class RingSettings(
     val source: String = AlarmContract.SOUND_DEFAULT,
@@ -25,7 +26,18 @@ data class RingSettings(
     val snoozeMinutes: Int = AlarmLimits.DEFAULT_SNOOZE_MINUTES,
     val snoozeMax: Int = AlarmLimits.DEFAULT_SNOOZE_MAX,
     val autoSilenceMinutes: Int = AlarmLimits.DEFAULT_AUTO_SILENCE_MINUTES,
+    val dismiss: AlarmDismiss? = null,
 ) {
+
+    /** The dismiss challenge (1.3.0), null without one. zh-CN: 关闭挑战 (1.3.0), 没有时为 null. */
+    val challenge: String? get() = dismiss?.challenge?.takeIf { it != AlarmContract.CHALLENGE_NONE }
+
+    /**
+     * Whether the user may snooze while a challenge is on (`dismiss.allowSnooze`, true when omitted); scripts and tools
+     * always may.
+     * zh-CN: 有挑战时用户能否贪睡 (`dismiss.allowSnooze`, 省略时为 true); 脚本与工具总是可以.
+     */
+    val allowSnooze: Boolean get() = dismiss?.allowSnooze ?: true
 
     /** The speech mode, `after` when omitted (appendix A section 4.4). zh-CN: 朗读方式, 省略时为 `after` (附录 A 第 4.4 节). */
     val speakMode: String get() = speak?.mode ?: AlarmContract.SPEAK_MODE_AFTER
@@ -83,6 +95,7 @@ data class RingSettings(
                 snoozeMinutes = snooze?.minutes ?: defaults.snoozeMinutes,
                 snoozeMax = snooze?.max ?: defaults.snoozeMax,
                 autoSilenceMinutes = spec.autoSilenceMinutes ?: defaults.autoSilenceFor(challenge != null),
+                dismiss = spec.dismiss?.takeIf { challenge != null },
             )
         }
 
