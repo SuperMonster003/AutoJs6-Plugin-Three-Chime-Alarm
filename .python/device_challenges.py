@@ -1,6 +1,6 @@
 """Dismiss challenge checks of 3-Chime Alarm on one device (roadmap P9.1, P9.3, 1.3.0).
 
-    py .python/device_challenges.py <serial> run [--no-install] [--cases shake,emergency,autostop]
+    py .python/device_challenges.py <serial> run [--no-install] [--cases shake,emergency,autostop] [--manual]
     py .python/device_challenges.py <serial> clear
 
 run: installs the debug APK (unless --no-install) and rings silent probes (`sound` silent at volume 0, no vibration)
@@ -13,6 +13,11 @@ run: installs the debug APK (unless --no-install) and rings silent probes (`soun
         it (`by: 'user'`) and the user's alarm volume is back afterwards; skipped when the emergency dismiss setting is
         off on the device (the script never changes the user's settings); the lock screen state is printed (an
         emulator has no secure lock screen, the secure case is the maintainer's step on a real device);
+        with --manual (a real device with a secure lock screen, roadmap P9.3) nothing is injected: the device must be
+        secure (a lock screen password), the screen is turned off so the ring screen opens over the locked keyguard,
+        the script prints what to do and waits up to 2 minutes for the maintainer's five volume key presses on the ring
+        screen, checks the dismissal, that the keyguard is still locked afterwards, and waits up to 2 minutes for the
+        maintainer to unlock;
     autostop: a `math` challenge with `autoSilenceMinutes` 1 ends by itself within about 75 seconds with no answer.
     The ring screen and notification lines of the log tell what happened (tag ChimeRing); probes carry the label
     prefix of `device_ring.py` and are removed afterwards.
@@ -21,6 +26,7 @@ clear: dismisses and removes the probe alarms of an interrupted run.
 Output: PASS / FAIL / SKIP per check and the key values only. Nothing here answers a system dialog.
 """
 import argparse
+import re
 import subprocess
 import sys
 import time
@@ -85,9 +91,56 @@ def sensor(device, value):
     subprocess.run(["adb", "-s", device.serial, "emu", "sensor", "set", "acceleration", value], capture_output=True, timeout=30)
 
 
-def case_emergency(device, report):
+def secure(device):
+    """Whether the device has a secure lock screen (a PIN, pattern or password): `isSecure` / `mIsSecure` of the window
+    policy dump (the wording differs between releases), else the lock settings."""
+    text = shell(device.serial, "dumpsys", "window", "policy", check=False)
+    found = re.search(r"\b(?:mIsSecure|isSecure|secure)=(true|false)", text, re.IGNORECASE)
+    if found:
+        return found.group(1).lower() == "true"
+    return shell(device.serial, "locksettings", "get-disabled", check=False).strip() == "false"
+
+
+def wait_state(device, key, value, seconds):
+    deadline = time.time() + seconds
+    while time.time() < deadline:
+        if device.hook("state").get(key) == value:
+            return True
+        time.sleep(2)
+    return False
+
+
+def case_emergency_manual(device, report):
+    """P9.3 on a real device: the maintainer presses the volume keys on the ring screen over the locked keyguard."""
+    if not report.check("emergency (manual) secure lock screen", secure(device), "a lock screen password is required"):
+        return
+    label = probe("emergency")
+    user_volume = device.hook("state").get("volume")
+    print("ACTION about 25 s from now the screen turns off and a silent probe with a math challenge rings over the lock screen;"
+          " on the ring screen press a volume key (up or down) 5 times within 4 seconds, do not unlock before that", flush=True)
+    alarm_id = challenge_ring(device, report, label, {"challenge": "math"})
+    if alarm_id is None:
+        return
+    state = device.hook("state")
+    report.check(f"{label} keyguard locked while it rings", state.get("keyguard") == "true", f"keyguard={state.get('keyguard')}")
+    print("ACTION ringing now: press a volume key 5 times within 4 seconds (waiting up to 2 minutes)", flush=True)
+    handled = wait_log(device, lambda tag, m: tag == "ChimeRing" and m.startswith("emergency dismiss on the ring screen:"), 120)
+    report.check(f"{label} {PRESSES} volume key presses on the locked device dismiss", handled is not None and handled.endswith("handled=true"),
+                 handled or "no emergency line in 2 minutes")
+    report.check(f"{label} round ended", ended(device, alarm_id, 15))
+    after = device.hook("state")
+    report.check(f"{label} keyguard still locked after the dismissal", after.get("keyguard") == "true", f"keyguard={after.get('keyguard')}")
+    report.check(f"{label} user alarm volume restored", after.get("volume") == user_volume, f"{user_volume} -> {after.get('volume')}")
+    print("ACTION dismissed: now unlock the device (waiting up to 2 minutes)", flush=True)
+    report.check(f"{label} unlocked by the maintainer", wait_state(device, "keyguard", "false", 120), "")
+
+
+def case_emergency(device, report, manual=False):
     if device.hook("state").get("emergencyDismiss") != "true":
         Report.skip("emergency", "the emergency dismiss setting is off on this device")
+        return
+    if manual:
+        case_emergency_manual(device, report)
         return
     label = probe("emergency")
     user_volume = device.hook("state").get("volume")
@@ -147,7 +200,7 @@ def run(serial, args):
         if "shake" in cases:
             case_shake(device, report)
         if "emergency" in cases:
-            case_emergency(device, report)
+            case_emergency(device, report, args.manual)
         if "autostop" in cases:
             case_autostop(device, report)
     finally:
@@ -171,6 +224,7 @@ def main(argv=None):
     run_parser = sub.add_parser("run")
     run_parser.add_argument("--no-install", action="store_true")
     run_parser.add_argument("--cases", default="shake,emergency,autostop")
+    run_parser.add_argument("--manual", action="store_true", help="emergency: the maintainer presses the keys on a real device with a secure lock screen")
     sub.add_parser("clear")
     args = parser.parse_args(argv)
     failed = {"run": run, "clear": clear}[args.command](args.serial, args)
