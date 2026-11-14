@@ -32,7 +32,8 @@ import org.json.JSONObject
  * - `snooze` / `dismiss`: sends the ring service the intent of the notification button for the probe `id` (all when
  *   omitted), the path the user takes;
  * - `state`: reports the ring state, the alarm stream volume and the saved user volume, the lock screen, the screen,
- *   the full screen and notification permissions and the active players with alarm usage;
+ *   the full screen and notification permissions, the active players with alarm usage, and (1.3.0, roadmap P9) the
+ *   dismiss challenge of the sounding ring and the emergency dismiss setting;
  * - `clear`: dismisses and removes every probe alarm;
  * - `keepalive`: sets "Keep running in background" (roadmap Q23 (b), T100) to `value` `on` / `off` and syncs the
  *   keep-alive service, or only reports it without a `value`;
@@ -46,7 +47,8 @@ import org.json.JSONObject
  * zh-CN: 仅 debug 构建: `.python/device_ring.py` 的探针 (路线图 P2.4). `am instrument` 会强行停止插件, 从而结束被测的响铃, 因此设备脚本改为向本接收器
  * 发送 shell 广播, 并从日志读取应答 (标签 [TAG], 每行以请求的 `token` 开头). 操作 (`op`): `add` 在 `inSeconds` 秒后添加一次性探针闹钟 `label`
  * (以 [LABEL_PREFIX] 开头), 附加 `options64` (JSON 对象的 Base64) 中的选项; `snooze` / `dismiss` 向响铃服务发送通知按钮的 Intent (针对探针 `id`,
- * 省略时为全部), 与用户的操作路径相同; `state` 报告响铃状态, 闹钟流音量与保存的用户音量, 锁屏, 屏幕, 全屏与通知权限, 以及闹钟用途的活动播放器;
+ * 省略时为全部), 与用户的操作路径相同; `state` 报告响铃状态, 闹钟流音量与保存的用户音量, 锁屏, 屏幕, 全屏与通知权限, 闹钟用途的活动播放器,
+ * 以及 (1.3.0, 路线图 P9) 发声闹钟的关闭挑战与紧急关闭设置;
  * `clear` 关闭并删除全部探针闹钟; `keepalive` 把 "保持后台运行" (路线图 Q23 (b), T100) 设为 `value` `on` / `off` 并同步保活服务, 不带 `value` 时只报告;
  * `timer_start` 是 `.python/device_timers.py` 的探针 (路线图 P7.1): 启动时长为 `millis` 的探针计时器 `label` (以 [TIMER_PREFIX] 开头), 无声且不振动,
  * `paused` 为 true 时随即暂停; `timers` 报告全部探针计时器 (状态, 剩余时间, 到点时刻, 启动序号) 与开机次数; `timer_clear` 取消全部探针计时器.
@@ -187,6 +189,8 @@ class RingDebugReceiver : BroadcastReceiver() {
             "keepAlive=${KeepAliveService.settings(context).enabled}",
             "keepAliveRunning=${KeepAliveService.running}",
             "enabledAlarms=${runtime.repository.list().count { it.enabled }}",
+            "challenge=${sounding?.challenge ?: "none"}",
+            "emergencyDismiss=${runtime.defaults.get().emergencyDismiss}",
         ).joinToString(" ")
     }
 
