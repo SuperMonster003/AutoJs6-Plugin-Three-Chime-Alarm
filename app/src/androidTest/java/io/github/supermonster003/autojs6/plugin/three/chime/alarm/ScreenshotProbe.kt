@@ -48,7 +48,10 @@ import java.time.ZoneId
  * `notice` for the ring notification shown while the device is in use, once in the system theme; `ring` for the ringing
  * screen; `all` for all four; `holidays`, not part of `all`, for the holiday screens of 1.2.0 (roadmap P8.6): the list
  * with the holiday data card, the editor of a holiday alarm and its holiday rows, the holiday mode dialog, the settings
- * page at its holiday rows and the region dialog, with their own sample alarms) with `screencap` into [DEVICE_DIR] as
+ * page at its holiday rows and the region dialog, with their own sample alarms; `challenges`, not part of `all`, for the
+ * dismiss challenges of 1.3.0 (roadmap P9.5): the editor of a `math` challenge alarm at its challenge row, the challenge
+ * dialog, the settings page at the emergency dismiss switch, then the ringing screen with the `math`, `shake` and
+ * `type` challenge layers) with `screencap` into [DEVICE_DIR] as
  * `<page>-<mode>.png`. The ringing screen is captured on the lock screen: the screen is turned off
  * before a silent sample alarm rings, so the full-screen intent opens it there; when it does not show within
  * [RING_SHOW_MILLIS] the screen is started directly and marked `direct` (`chimeRingDirectSeconds` waits longer for it,
@@ -59,7 +62,8 @@ import java.time.ZoneId
  * 对 `chimeModes` 所列的每种夜间模式 (默认 `light,dark`), 用 `screencap` 把 `chimeScreens` 所列的页面 (`pages` 为列表, 编辑页, 铃声页与设置页;
  * `clock` 为 1.1.0 的计时器页, 其自定义时长对话框与秒表页 (路线图 P7.4), 带示例计时器 (运行, 暂停, 就绪), 秒表空闲时另计四个示例圈; `notice` 为设备使用中时的响铃通知,
  * 按系统主题截一次; `ring` 为响铃界面; `all` 为四者; `holidays` 不属于 `all`, 为 1.2.0 的节假日界面 (路线图 P8.6): 带节假日数据卡片的列表, 节假日闹钟的编辑页
- * 及其节假日行, 节假日模式对话框, 停在节假日各行的设置页与地区对话框, 使用单独的示例闹钟) 存到 [DEVICE_DIR], 文件名 `<页面>-<模式>.png`. 响铃界面在锁屏上截取: 静音示例闹钟响铃前先关屏, 由全屏 Intent
+ * 及其节假日行, 节假日模式对话框, 停在节假日各行的设置页与地区对话框, 使用单独的示例闹钟; `challenges` 不属于 `all`, 为 1.3.0 的关闭挑战 (路线图 P9.5): `math` 挑战闹钟停在挑战行的编辑页,
+ * 挑战对话框, 停在紧急关闭开关的设置页, 然后是 `math`, `shake` 与 `type` 挑战层的响铃界面) 存到 [DEVICE_DIR], 文件名 `<页面>-<模式>.png`. 响铃界面在锁屏上截取: 静音示例闹钟响铃前先关屏, 由全屏 Intent
  * 在锁屏上打开它; [RING_SHOW_MILLIS] 内未出现时直接启动并标为 `direct` (`chimeRingDirectSeconds` 可延长对它的等待, 例如维护者应答系统的锁屏提示时). 结束时 (含中途失败) 恢复插件夜间模式, 删除示例闹钟与计时器, 并重置探针启动的秒表. 没有该参数时跳过, 因此
  * `connectedDebugAndroidTest` 不会改夜间模式, 也不会关屏.
  */
@@ -89,15 +93,20 @@ class ScreenshotProbe {
             val chinese = AppearancePreferences.resolve(context, HostAppearanceReader.read(context)).language.startsWith("zh")
             out.putString("chime.language", if (chinese) "zh" else "en")
             out.putString("chime.others", runtime.repository.list().size.toString())
-            val main = if (screens == HOLIDAYS) holidaySamples(chinese) else samples(chinese)
+            val main = when (screens) {
+                HOLIDAYS -> holidaySamples(chinese)
+                CHALLENGES -> challengeSample(chinese)
+                else -> samples(chinese)
+            }
             if (screens == "clock" || screens == "all") clockSamples(chinese, out)
             for (mode in modes) {
                 setNightMode(mode)
                 if (screens == "pages" || screens == "all") pages(mode, main, out)
                 if (screens == "clock" || screens == "all") clock(mode, out)
                 if (screens == HOLIDAYS) holidays(mode, main, out)
+                if (screens == CHALLENGES) challenges(mode, main, out)
             }
-            if (screens == "notice" || screens == "ring" || screens == "all") {
+            if (screens == "notice" || screens == "ring" || screens == "all" || screens == CHALLENGES) {
                 // `am instrument` leaves the plugin stopped; starting an activity first lets the alarm be delivered.
                 // zh-CN: `am instrument` 会让插件处于停止状态; 先启动一个 Activity, 闹钟才能送达.
                 // Behind the keyguard the list never shows; the start alone is enough. zh-CN: 锁屏时列表不会显示, 只启动即可.
@@ -116,12 +125,19 @@ class ScreenshotProbe {
                     ring(mode, chinese, out)
                 }
             }
+            if (screens == CHALLENGES) {
+                for (mode in modes) {
+                    setNightMode(mode)
+                    for ((challenge, dismiss) in CHALLENGE_RINGS) ring(mode, chinese, out, "ring-$challenge-$mode", dismiss)
+                }
+            }
         } catch (error: Throwable) {
             out.putString("chime.error", "${error.javaClass.simpleName}: ${error.message.orEmpty().take(160)}")
         } finally {
             finishAll()
             added.forEach { id ->
-                if (runtime.rings.ringing().any { it.id == id }) runtime.rings.dismiss(id, AlarmContract.BY_USER)
+                // `user` cannot end a challenge round (T285). zh-CN: `user` 不能结束有挑战的一轮 (T285).
+                if (runtime.rings.ringing().any { it.id == id }) runtime.rings.dismiss(id, AlarmContract.BY_TOOL)
                 runtime.repository.remove(id, AlarmContract.SOURCE_TOOL)
             }
             timers.forEach { id -> runCatching { runtime.userTimerApi.cancel(id) } }
@@ -190,6 +206,36 @@ class ScreenshotProbe {
         }
     }
 
+    /**
+     * The dismiss challenge sample (roadmap P9.5): a weekday alarm with a `math` challenge of level 2 and 3 problems.
+     * zh-CN: 关闭挑战示例 (路线图 P9.5): 工作日闹钟, `math` 挑战 2 级 3 题.
+     */
+    private fun challengeSample(chinese: Boolean): String = add(
+        mapOf(
+            "hour" to 6, "minute" to 30, "repeat" to "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR", "label" to if (chinese) "起床" else "Wake up",
+            "dismiss" to mapOf("challenge" to AlarmContract.CHALLENGE_MATH, "mathDifficulty" to 2, "mathCount" to 3),
+        ),
+        AlarmContract.SOURCE_USER,
+    )
+
+    /**
+     * The editor of the challenge sample at its challenge row, its challenge dialog and the settings page at the
+     * emergency dismiss switch (roadmap P9.5, T291).
+     * zh-CN: 挑战示例的编辑页 (停在挑战行), 挑战对话框与停在紧急关闭开关的设置页 (路线图 P9.5, T291).
+     */
+    private fun challenges(mode: String, main: String, out: Bundle) {
+        shot("challenges-edit-$mode", EditAlarmActivity.edit(context, main), listOf("chime.edit.content"), out) {
+            compose.onNodeWithTag("chime.edit.challenge").performScrollTo()
+        }
+        shot("challenges-dialog-$mode", EditAlarmActivity.edit(context, main), listOf("chime.edit.content"), out) {
+            compose.onNodeWithTag("chime.edit.challenge").performScrollTo().performClick()
+            compose.waitUntil(WAIT_MILLIS) { compose.onAllNodesWithTag("chime.edit.challengeDialog").fetchSemanticsNodes().isNotEmpty() }
+        }
+        shot("challenges-settings-$mode", Intent(context, SettingsActivity::class.java), listOf("chime.settings"), out, "chime.settings.vibrate") {
+            compose.onNodeWithTag("chime.settings.emergencyDismiss").performScrollTo()
+        }
+    }
+
     private fun add(options: Map<String, Any>, source: String): String = runtime.repository.add(options, source).id.also { added += it }
 
     private fun pages(mode: String, main: String, out: Bundle) {
@@ -253,18 +299,20 @@ class ScreenshotProbe {
 
     /**
      * Turns the screen off, lets a silent sample alarm ring and captures the ringing screen on the lock screen, then ends
-     * the round. zh-CN: 关屏, 让静音示例闹钟响铃, 在锁屏上截取响铃界面, 然后结束这次响铃.
+     * the round. With [dismiss] (the flat challenge options, roadmap P9.5) the screen shows that challenge layer; the
+     * result keys carry [name] without its `ring-` prefix.
+     * zh-CN: 关屏, 让静音示例闹钟响铃, 在锁屏上截取响铃界面, 然后结束这次响铃. 给出 [dismiss] (扁平的挑战选项, 路线图 P9.5) 时界面显示该挑战层;
+     * 结果键使用去掉 `ring-` 前缀的 [name].
      */
-    private fun ring(mode: String, chinese: Boolean, out: Bundle) {
-        val name = "ring-$mode"
+    private fun ring(mode: String, chinese: Boolean, out: Bundle, name: String = "ring-$mode", dismiss: Map<String, Any>? = null) {
+        val key = name.removePrefix("ring-")
         val at = (System.currentTimeMillis() / 1000 + RING_SECONDS) * 1000
-        val id = add(
-            mapOf(
-                "at" to at, "label" to if (chinese) "起床" else "Wake up", "snooze" to mapOf("minutes" to 10, "max" to 3),
-                "sound" to mapOf("source" to AlarmContract.SOUND_SILENT), "vibrate" to false,
-            ),
-            AlarmContract.SOURCE_USER,
+        val options = mutableMapOf<String, Any>(
+            "at" to at, "label" to if (chinese) "起床" else "Wake up", "snooze" to mapOf("minutes" to 10, "max" to 3),
+            "sound" to mapOf("source" to AlarmContract.SOUND_SILENT), "vibrate" to false,
         )
+        if (dismiss != null) options["dismiss"] = dismiss
+        val id = add(options, AlarmContract.SOURCE_USER)
         try {
             shell("input keyevent KEYCODE_SLEEP")
             waitFor("the sample alarm rings", RING_WAIT_MILLIS) { runtime.rings.sounding?.alarmId == id }
@@ -272,14 +320,14 @@ class ScreenshotProbe {
             // zh-CN: 插件能否使用全屏 Intent, 以及已发出的响铃通知是否带有它.
             val manager = context.getSystemService(NotificationManager::class.java)
             within(WAIT_MILLIS) { manager.activeNotifications.any { it.notification.channelId == ThreeChimeAlarmApplication.CHANNEL_RING } }
-            out.putString("chime.fullScreen.$mode", RingService.fullScreenAllowed(context).toString())
+            out.putString("chime.fullScreen.$key", RingService.fullScreenAllowed(context).toString())
             out.putString(
-                "chime.fullScreenIntent.$mode",
+                "chime.fullScreenIntent.$key",
                 manager.activeNotifications.filter { it.notification.channelId == ThreeChimeAlarmApplication.CHANNEL_RING }
                     .any { it.notification.fullScreenIntent != null }.toString(),
             )
             SystemClock.sleep(SETTLE_MILLIS)
-            out.putString("chime.record.$mode", ringRecord())
+            out.putString("chime.record.$key", ringRecord())
             var how = "lock"
             if (!within(RING_SHOW_MILLIS) { resumedRingScreen() != null }) {
                 how = "direct"
@@ -288,19 +336,21 @@ class ScreenshotProbe {
                 if (!within(PROMPT_MILLIS) { resumedRingScreen() != null }) {
                     // A system prompt in front of the lock screen (ColorOS asks whether the app may show there).
                     // zh-CN: 锁屏前的系统提示 (ColorOS 询问是否允许该应用在锁屏上显示).
-                    out.putString("chime.shot.prompt-$mode", capture("prompt-$mode"))
+                    out.putString("chime.shot.prompt-$key", capture("prompt-$key"))
                 }
                 val seconds = InstrumentationRegistry.getArguments().getString(ARGUMENT_DIRECT_SECONDS)?.toLongOrNull()
                 waitFor("the ring screen resumes", seconds?.times(1000)?.coerceAtLeast(WAIT_MILLIS) ?: WAIT_MILLIS) { resumedRingScreen() != null }
             }
-            compose.waitUntil(WAIT_MILLIS) { compose.onAllNodesWithTag(RingActivity.TAG_LABEL).fetchSemanticsNodes().isNotEmpty() }
+            val shown = if (dismiss != null) RingActivity.TAG_CHALLENGE_AUTO_STOP else RingActivity.TAG_LABEL
+            compose.waitUntil(WAIT_MILLIS) { compose.onAllNodesWithTag(shown).fetchSemanticsNodes().isNotEmpty() }
             SystemClock.sleep(SETTLE_MILLIS)
             out.putString("chime.shot.$name", capture(name))
-            out.putString("chime.ring.$mode", how)
+            out.putString("chime.ring.$key", how)
         } catch (error: Throwable) {
             out.putString("chime.shot.$name", "error:${error.javaClass.simpleName}: ${error.message.orEmpty().take(120)}")
         } finally {
-            runtime.rings.dismiss(id, AlarmContract.BY_USER)
+            // `user` cannot end a challenge round (T285). zh-CN: `user` 不能结束有挑战的一轮 (T285).
+            runtime.rings.dismiss(id, if (dismiss != null) AlarmContract.BY_TOOL else AlarmContract.BY_USER)
             within(WAIT_MILLIS) { resumedRingScreen() == null }
         }
     }
@@ -444,6 +494,14 @@ class ScreenshotProbe {
         const val ARGUMENT_DIRECT_SECONDS = "chimeRingDirectSeconds"
         const val DEVICE_DIR = "/data/local/tmp/chime-screens"
         const val HOLIDAYS = "holidays"
+        const val CHALLENGES = "challenges"
+
+        /** The ringing screens of `challenges`: name and flat dismiss options. zh-CN: `challenges` 的响铃界面: 名称与扁平的关闭选项. */
+        private val CHALLENGE_RINGS = listOf(
+            AlarmContract.CHALLENGE_MATH to mapOf<String, Any>("challenge" to AlarmContract.CHALLENGE_MATH, "mathDifficulty" to 2, "mathCount" to 3),
+            AlarmContract.CHALLENGE_SHAKE to mapOf<String, Any>("challenge" to AlarmContract.CHALLENGE_SHAKE, "shakeCount" to 30),
+            AlarmContract.CHALLENGE_TYPE to mapOf<String, Any>("challenge" to AlarmContract.CHALLENGE_TYPE, "allowSnooze" to false),
+        )
         private val HOME_TAGS = listOf("chime.home.list", "chime.emptyState")
         private const val WAIT_MILLIS = 10_000L
         private const val SETTLE_MILLIS = 1_500L

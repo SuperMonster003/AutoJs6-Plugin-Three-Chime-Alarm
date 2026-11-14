@@ -210,29 +210,37 @@ class RingActivityTest {
         val events = listen()
         val defaults = runtime.defaults.get()
         val audio = context.getSystemService(AudioManager::class.java)
+        val userVolume = audio.getStreamVolume(AudioManager.STREAM_ALARM)
         try {
             runtime.defaults.set(defaults.copy(emergencyDismiss = false))
             val record = probe("$label-keys", ringAt(), mapOf("challenge" to AlarmContract.CHALLENGE_MATH))
             waitFor("the alarm rings", RING_WAIT_MILLIS) { runtime.rings.sounding?.alarmId == record.id }
             val screen = showChallenge()
             assertTrue("no hint while off", compose.onAllNodesWithTag(RingActivity.TAG_CHALLENGE_EMERGENCY).fetchSemanticsNodes().isEmpty())
+            // While it rings the alarm stream holds the ring volume (the silent probe gives the minimum), so volume up
+            // would show an adjustment; after the round the user's volume comes back.
+            // zh-CN: 响铃期间闹钟音量流是响铃音量 (静音探针为最小值), 所以按音量加键能看出是否被调节; 本轮结束后恢复用户音量.
             val volume = audio.getStreamVolume(AudioManager.STREAM_ALARM)
-            repeat(PRESSES) { instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_VOLUME_DOWN) }
+            repeat(PRESSES) { instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_VOLUME_UP) }
             SystemClock.sleep(1_000)
             assertEquals("off: the round goes on", record.id, runtime.rings.sounding?.alarmId)
-            assertEquals("the volume keys do not change the volume", volume, audio.getStreamVolume(AudioManager.STREAM_ALARM))
+            assertEquals("off: the volume keys do not change the volume", volume, audio.getStreamVolume(AudioManager.STREAM_ALARM))
 
             // The screen reads the setting when the ring state changes; recreate it after switching on.
             // zh-CN: 界面在响铃状态变化时读取设置; 开启后重建界面.
             runtime.defaults.set(defaults.copy(emergencyDismiss = true))
             instrumentation.runOnMainSync { screen.recreate() }
             compose.waitUntil(WAIT_MILLIS) { compose.onAllNodesWithTag(RingActivity.TAG_CHALLENGE_EMERGENCY).fetchSemanticsNodes().isNotEmpty() }
-            repeat(PRESSES) { instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_VOLUME_UP) }
+            repeat(PRESSES - 1) { instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_VOLUME_UP) }
+            SystemClock.sleep(300)
+            assertEquals("on: ${PRESSES - 1} presses keep the round", record.id, runtime.rings.sounding?.alarmId)
+            assertEquals("on: the volume keys do not change the volume", volume, audio.getStreamVolume(AudioManager.STREAM_ALARM))
+            instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_VOLUME_DOWN)
             waitFor("the round ends", WAIT_MILLIS) { runtime.rings.ringing().none { it.id == record.id } }
             val dismiss = dismissOf(events, record.id)
             assertEquals(AlarmContract.BY_USER, dismiss.by)
             assertEquals(AlarmContract.CHALLENGE_MATH, dismiss.challenge)
-            assertEquals("the volume keys do not change the volume", volume, audio.getStreamVolume(AudioManager.STREAM_ALARM))
+            waitFor("the user's alarm volume is back", WAIT_MILLIS) { audio.getStreamVolume(AudioManager.STREAM_ALARM) == userVolume }
             assertFalse(events.any { it.type == AlarmContract.EVENT_DISMISS && it.by == AlarmContract.BY_CHALLENGE })
             waitFor("the ring screen closes", WAIT_MILLIS) { resumedRingScreen() == null }
         } finally {

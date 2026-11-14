@@ -1,6 +1,6 @@
-"""Screenshots of 3-Chime Alarm on one device (roadmap P3.6 and the E4 checks of P3.1 - P3.5, P7.4 and P8.6).
+"""Screenshots of 3-Chime Alarm on one device (roadmap P3.6 and the E4 checks of P3.1 - P3.5, P7.4, P8.6 and P9.5).
 
-    py .python/device_screens.py <serial> --out DIR [--screens all|pages|clock|notice|ring|holidays] [--modes light,dark] [--no-install]
+    py .python/device_screens.py <serial> --out DIR [--screens all|pages|clock|notice|ring|holidays|challenges] [--modes light,dark] [--no-install]
                                  [--keep-test-package] [--direct-seconds N]
 
 1. install: `adb install -r -t` of the newest debug APK and its androidTest APK (the plugin keeps its data and its
@@ -19,6 +19,9 @@
    (workdays, daily skipping holidays from New Year's Day of next year, daily on holidays only) and captures the list
    with the holiday data card, the editor (the next ring with the holidays skipped and the estimated year hint), its
    holiday rows, the holiday mode dialog, the settings page at the holiday rows and the default region dialog.
+   `challenges` (1.3.0, roadmap P9.5, not part of `all`) adds a weekday alarm with a `math` challenge and captures its
+   editor at the challenge row, the challenge dialog and the settings page at the emergency dismiss switch, then the
+   ringing screen on the lock screen with the `math`, `shake` and `type` challenge layers (`ring-<challenge>-<mode>`).
    The pages that read the ringtones in the background are captured once their rows are enabled (the time is printed);
    one whose rows are still disabled after 15 s is closed and opened once more, and its line says "reopened once".
 4. the captures are pulled into DIR as `<page>-<mode>.png` and removed from the device; the plugin is started once
@@ -99,11 +102,11 @@ def run(serial, args):
             target = out_dir / f"{name}.png"
             pulled = subprocess.run(["adb", "-s", serial, "pull", where, str(target)], capture_output=True, text=True, timeout=120)
             size = png_size(target) if pulled.returncode == 0 and target.exists() else None
-            mode = name.rsplit("-", 1)[-1]
             how = ""
             if name.startswith("ring-"):
-                how = (f", {values.get(f'chime.ring.{mode}')} (full-screen allowed {values.get(f'chime.fullScreen.{mode}')}, "
-                       f"notification carries it {values.get(f'chime.fullScreenIntent.{mode}')})")
+                key = name[len("ring-"):]
+                how = (f", {values.get(f'chime.ring.{key}')} (full-screen allowed {values.get(f'chime.fullScreen.{key}')}, "
+                       f"notification carries it {values.get(f'chime.fullScreenIntent.{key}')})")
             if f"chime.ready.{name}" in values:
                 how += f", rows enabled after {values[f'chime.ready.{name}']} ms"
             if values.get(f"chime.reopened.{name}") == "true":
@@ -120,7 +123,7 @@ def run(serial, args):
         if not args.keep_test_package:
             out = subprocess.run(["adb", "-s", serial, "uninstall", schedule.TEST_PACKAGE], capture_output=True, text=True, timeout=120)
             report.check("androidTest APK uninstalled", out.returncode == 0)
-    if args.screens in ("ring", "all"):
+    if args.screens in ("ring", "all", "challenges"):
         print("    note: the device is at its lock screen now")
     print(f"{serial}: SCREENS {'PASS' if report.ok else 'FAIL'}")
     return report.ok
@@ -130,7 +133,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("serial")
     parser.add_argument("--out", required=True, help="the directory for the captures")
-    parser.add_argument("--screens", default="all", choices=["all", "pages", "clock", "notice", "ring", "holidays"])
+    parser.add_argument("--screens", default="all", choices=["all", "pages", "clock", "notice", "ring", "holidays", "challenges"])
     parser.add_argument("--modes", default="light,dark", help="plugin night modes, from light and dark")
     parser.add_argument("--direct-seconds", type=int, help="wait this long for a ring screen started directly (a system "
                                                                  "lock screen prompt answered by the maintainer)")
