@@ -263,7 +263,11 @@
     <string name="permissions_vendor_banner">Notificaciones de banner</string>
     <string name="permissions_vendor_banner_guide">El sistema no informa de este estado. Activa \"Banner\" en los ajustes de notificaciones de este complemento; si no, la pantalla de alarma no se abre sola en la pantalla de bloqueo, salvo que se permita mostrar sobre otras apps.</string>
     <string name="plugin_description">Alarma, temporizadores y cronómetro con reglas de repetición de calendario, festivos, desafíos para descartar, lectura en voz alta y scripts al sonar la alarma</string>
-    <string name="release_history_title">Historial de versiones</string>
+    <string name="release_history">Historial de versiones</string>
+    <string name="release_history_collapse_all">Contraer todo</string>
+    <string name="release_history_collapsed">Contraído</string>
+    <string name="release_history_expand_all">Expandir todo</string>
+    <string name="release_history_expanded">Expandido</string>
     <string name="release_history_unavailable">No se pudo cargar el historial de versiones</string>
     <string name="ring_action_dismiss">Descartar</string>
     <string name="ring_action_snooze">Posponer</string>
@@ -343,7 +347,7 @@
     <string name="settings_night_mode">Modo nocturno</string>
     <string name="settings_notices_summary">Mozilla Public License 2.0 y avisos de terceros</string>
     <string name="settings_region_format">Región y formato</string>
-    <string name="settings_release_history_summary">Leer el historial de versiones incluido en el complemento</string>
+    <string name="settings_release_history_summary">Consultar el historial de versiones incluido en la aplicación</string>
     <string name="settings_save_failed">No se pudo guardar el ajuste</string>
     <string name="settings_saved">Guardado</string>
     <string name="settings_stopwatch_notification">Notificación del cronómetro</string>

@@ -4,6 +4,13 @@
 
 ******
 
+# v1.3.1
+
+###### 2026/11/19
+
+* `Fix` The plugin information in the AutoJs6 Plugin center showed the "Supported ABIs" of this plugin as "Unknown"; it now shows arm64-v8a, armeabi-v7a, x86_64 and x86
+* `Improvement` The release history page now expands and collapses by version: a collapsed version shows its date and the number of entries per category, an expanded one names each category once; all versions can be expanded or collapsed at once, and the newest one opens expanded; the page is titled "Release history" (formerly "Version history") with the plugin name as the subtitle, and its entries in the "About" section of the settings and in the update dialog are renamed to match
+
 # v1.3.0
 
 ###### 2026/11/14

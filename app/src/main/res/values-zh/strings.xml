@@ -263,8 +263,12 @@
     <string name="permissions_vendor_banner">横幅通知</string>
     <string name="permissions_vendor_banner_guide">系统不提供此项状态. 请在本插件的通知设置中勾选 \"横幅\", 否则锁屏时不会自动打开响铃界面 (允许悬浮窗时除外).</string>
     <string name="plugin_description">闹钟, 计时器与秒表, 支持日历重复规则, 节假日与关闭挑战, 朗读响铃与响铃时联动脚本</string>
-    <string name="release_history_title">版本历史</string>
-    <string name="release_history_unavailable">无法加载版本历史</string>
+    <string name="release_history">发行历史</string>
+    <string name="release_history_collapse_all">收起全部</string>
+    <string name="release_history_collapsed">已收起</string>
+    <string name="release_history_expand_all">展开全部</string>
+    <string name="release_history_expanded">已展开</string>
+    <string name="release_history_unavailable">无法加载发行历史</string>
     <string name="ring_action_dismiss">关闭</string>
     <string name="ring_action_snooze">贪睡</string>
     <string name="ring_challenge_auto_stop">%1$d:%2$02d 后自动停止</string>
@@ -343,7 +347,7 @@
     <string name="settings_night_mode">夜间模式</string>
     <string name="settings_notices_summary">Mozilla Public License 2.0 与第三方声明</string>
     <string name="settings_region_format">地区与格式</string>
-    <string name="settings_release_history_summary">查看插件内置的发行历史</string>
+    <string name="settings_release_history_summary">查看应用内置的发行历史</string>
     <string name="settings_save_failed">无法保存设置</string>
     <string name="settings_saved">已保存</string>
     <string name="settings_stopwatch_notification">秒表通知</string>

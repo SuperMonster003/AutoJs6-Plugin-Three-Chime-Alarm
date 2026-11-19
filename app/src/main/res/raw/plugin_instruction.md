@@ -1,19 +1,66 @@
-3-Chime Alarm is the alarm plugin of AutoJs6 and also an alarm clock app that works on its own without AutoJs6. Alarms repeat by RFC 5545 calendar rules (for example the last Friday of every month, or every 3 days from a given date); a ringing alarm can read text aloud, start a script or notify a running script. Since 1.1.0 it also offers several timers running at once and a stopwatch. Since 1.2.0 an alarm can skip holidays, ring only on holidays or ring on every workday (makeup workdays included), and a script can decide before the ring whether this one rings. Since 1.3.0 an alarm can require solving math problems, shaking the phone, typing a sentence or a confirmation by a script before it can be dismissed, always keeping two ways out: auto stop and emergency dismiss.
+3-Chime Alarm is an alarm, timer and stopwatch app that also works on its own, without AutoJs6. Alarms can repeat by calendar rules, skip holidays or ring only on holidays, read text aloud when they ring, and require a challenge to be completed before they can be dismissed. With AutoJs6, scripts can manage alarms and timers, and chosen scripts can start automatically when an alarm rings or another event occurs.
 
-> Version 1.3.0 provides alarms (with holiday rules, decisions by a script before the ring and dismiss challenges), timers and the stopwatch, the plugin screens, the plugin tools and the `alarms` script module. Enabling the plugin in the Plugin Center, the plugin tools and the `alarms` module need AutoJs6 6.8.1 (internal build 6641) or later; with older AutoJs6 versions (including 6.8.0) the plugin works only as a standalone alarm clock app.
+### Getting started
 
-### Features
+1. Open 3-Chime Alarm. When the home screen shows the "Alarms may not ring properly" notice, tap it and go through the "Permissions and background" page item by item.
+2. Tap the "New alarm" button in the lower right corner, set the time, repeat and sound, then tap "Save".
+3. Use the bottom navigation to switch to "Timers" or "Stopwatch"; tap the "Settings" button in the top bar to set defaults such as sound, vibration and snooze.
+4. To use the plugin in scripts, enable it in the "Plugin center" of AutoJs6.
 
-- Alarms: one-time or repeating alarms. Repeat rules cover weekdays, the nth weekday of a month, the end of a month, day intervals, end dates and counts; single dates can be excluded, or only the next ring skipped.
-- Ringing: a system ringtone or imported local audio, spoken text, independent volume with a fade-in, custom vibration, snooze and auto silence, and a full screen ringing screen on the lock screen; alarms due at the same time ring one after another.
-- On time: alarms are rescheduled automatically after a reboot, a time or time zone change and a plugin update, and ring even before the first unlock after a reboot; an alarm missed while the device was off rings within 5 minutes, later it only leaves a notification.
-- Script hooks: an alarm or a timer can register script files that AutoJs6 starts on ring, snooze, dismiss and other events, so scripts need not keep running; a running script can also listen to these events live.
-- Plugin tools: add, query, change and remove alarms (dismiss challenges included, except the script condition), handle a ringing alarm, start, list and control timers, and look up holidays through the MCP Server plugin or `plugins.tools.call` (nine `alarm_*` tools, three `timer_*` tools and `holiday_check`).
-- System clock: set, show, dismiss and snooze requests for alarms and set, show and dismiss requests for timers from other apps can be handled by the plugin.
-- Screens: language, night mode and theme color follow AutoJs6 by default and can be set separately; the launcher icon can be switched; the settings screen sets the default ringtone, vibration, snooze and auto silence, and whether emergency dismiss is allowed.
-- Timers and stopwatch: up to 20 timers at once with pause, resume, extra time and reset; a running timer shows its countdown in the notification shade, where it can be paused, extended by 1 minute or cancelled; timers keep counting across a reboot and ring like alarms. The stopwatch records laps (up to 100) and marks the fastest and the slowest lap. The bottom navigation switches between alarms, timers and the stopwatch.
-- Holidays: an alarm can be set to "Skip holidays", "Only on holidays" or "Only on workdays" (rings on every workday, makeup workdays included, never on weekends or holidays). Data for 250 countries and regions (with more than 600 subdivisions) from 2020 to 2035 is built in, generated from the open source project python-holidays; updates are checked every week and downloaded data is signature checked. Years not yet announced are estimated by rule and marked "estimated"; in a year without data the alarm rings by its repeat rule alone.
-- Decided by a script before the ring: a registered script is started by AutoJs6 before the ring (60 seconds by default, 15 seconds to 5 minutes) and can skip this ring, or let it ring with a different label, sound, spoken text or vibration this time only; when the script does not decide in time, fails or AutoJs6 is unavailable, the alarm rings as usual.
-- Dismiss challenges: an alarm can require solving math problems (easy, medium or hard, 3 problems by default), shaking the phone (30 shakes by default) or typing a sentence (your own, or a random built-in one) before it can be dismissed, and can allow or forbid snoozing during the challenge; while a challenge is in effect, the "Dismiss" button of the notification and dismiss requests from other apps open the challenge on the ringing screen. Every challenge keeps two ways out: auto stop (when not set on the alarm, the longer of the default on the settings screen and 30 minutes, with the time left shown on the ringing screen) and emergency dismiss (5 presses of a volume key within 4 seconds while the ringing screen is in front, also on the lock screen; can be turned off on the settings screen). AutoJs6 scripts can also set a script condition: the alarm rings until a script dismisses it, and when no script can run (for example before the first unlock after a reboot, or after the script has ended) it falls back to the chosen challenge at once.
+### Main features
 
-Usage, permissions and the FAQ are on the [project page](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm); the script API is in the [AutoJs6 documentation](https://docs.autojs6.com/#/alarms).
+- **Repeat**: choose "Every day", "Monday to Friday", "Weekends" or "Choose days"; "Advanced rule" supports calendar rules such as the nth weekday of a month, the end of a month or every few days, and "Skipped dates" can be added.
+- **Ringing**: use a system sound or an imported local audio file, and set the text for "Read aloud", vibration and snooze; a full screen ringing screen appears on the lock screen, and alarms that go off at the same time ring one after another.
+- **Holidays**: the "Holidays" row on the edit page offers "Skip holidays", "Only on holidays" or "Only on workdays" (makeup workdays included). Data for 250 countries and regions is built in, and updates are checked weekly.
+- **Dismiss challenge**: the "Dismiss challenge" row can require "Math problems", "Shake" or "Type text" to be completed before the alarm can be dismissed. Every challenge keeps two ways out: "Auto stop" and "Emergency dismiss".
+- **Timers and stopwatch**: up to 20 timers run at once and can be controlled from the notification with "Pause", "+1 min" or "Cancel"; the stopwatch has a "Lap" button and marks the fastest and slowest laps.
+- **On time**: alarms are rescheduled automatically after a restart or a change of time or time zone, and ring even before the first unlock after booting; an alarm missed while the device was off still rings if it is turned on within 5 minutes, otherwise a notification is left.
+- **System clock requests**: handles requests from other apps such as calendars and voice assistants to set an alarm, set a timer or dismiss an alarm.
+- **Appearance**: "Language", "Night mode" and "Theme color" follow AutoJs6 by default and can also be set separately in the settings; the "Launcher icon" can be switched as well.
+- **Plugin tools**: create, query and change alarms, control timers and look up holidays through the MCP Server plugin or `plugins.tools.call`.
+
+### Using it in scripts
+
+Rhino scripts in AutoJs6 use the alarms and timers through the global module `alarms`. The example below creates a 7:30 alarm for workdays, registers a script to run when the alarm is dismissed, then starts a 25 minute timer:
+
+```js
+let a = alarms.add({ time: '07:30', repeat: [1, 2, 3, 4, 5], label: 'Wake up' });
+console.log(a.repeatText, new Date(a.nextTrigger));
+a.bind('./after-wake.js', { events: ['dismiss'] });
+
+let t = alarms.timers.start('25m', { label: 'Pomodoro' });
+console.log(t.id, new Date(t.endsAt).toLocaleTimeString());
+```
+
+- Alarms and timers created by scripts also appear in the plugin and can be changed there; scripts can also read and change alarms created in the plugin.
+- A script registered with `bind` is started by AutoJs6 when the event occurs and does not need to keep running; a running script can listen in real time with `alarms.on('ring', ...)`.
+- Node.js and Bun scripts have no `alarms` module; they can use `engines.execScript` to run a Rhino script that uses it.
+- See [AutoJs6 docs > alarms](https://docs.autojs6.com/#/alarms) for the full usage, including holidays, letting a script decide before an alarm rings and dismiss challenges.
+
+### Requirements
+
+- Android 7.0 or later. Alarms, timers and the stopwatch do not need AutoJs6.
+- The `alarms` module and the plugin tools need AutoJs6 6.8.1 or later, with this plugin enabled in the "Plugin center".
+- The exact alarm permission lets alarms ring on time, and on Android 12 and 12L "Alarms & reminders" must be allowed in the system settings; the notification permission shows ringing alarms and running timers.
+- The full screen alert permission shows the ringing screen on the lock screen; the overlay permission is optional and opens the ringing screen when the system does not show full screen alerts.
+- On the "Permissions and background" page, it is best to turn off battery optimization, lift background restrictions and allow autostart, so that the system does not stop the plugin in the background.
+
+### FAQ
+
+**Alarms when AutoJs6 is not running**
+
+The plugin schedules alarms itself, so they ring as usual when AutoJs6 is not running. Registered scripts are started by AutoJs6, which the plugin wakes up; after AutoJs6 has been force stopped, scripts do not start until AutoJs6 is opened again.
+
+**Why the Plugin center of AutoJs6 6.8.0 cannot enable this plugin**
+
+Enabling this plugin in the Plugin center needs AutoJs6 6.8.1 or later. On earlier versions of AutoJs6, the plugin still works as a standalone alarm app.
+
+**When alarms do not ring on time**
+
+Tap the notice on the home screen and go through the "Permissions and background" page item by item; on ColorOS, also handle the "Auto launch list" row on the same page. After the plugin has been force stopped, alarms that are due do not ring; opening the plugin once restores them.
+
+**When a dismiss challenge cannot be completed**
+
+While the ringing screen is in the foreground (including on the lock screen), pressing a volume key 5 times within 4 seconds dismisses the alarm in an emergency; this can be turned off in the settings. Otherwise the alarm stops after the auto stop duration, which is at least 30 minutes unless set separately.
+
+Permissions, system clock requests and holiday data are described in detail on the [project page](https://github.com/SuperMonster003/AutoJs6-Plugin-Three-Chime-Alarm).

@@ -11,6 +11,7 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 
 plugins {
+    id("io.github.supermonster003.autojs6-native-alignment")
     id("org.autojs.build.utils")
     id("org.autojs.build.versions")
     id("org.autojs.build.signs")
@@ -111,6 +112,13 @@ run {
 val nativeAbis = listOf("arm64-v8a", "armeabi-v7a", "x86_64", "x86")
 val allowedNativeLibraries = listOf("libandroidx.graphics.path.so")
 val nativePageAlignment = 16384L
+
+// The shared gate (platform-versions native-alignment) also checks every assembled APK and writes the
+// org.autojs.plugin.contract.SUPPORTED_ABIS meta-data (the four ABIs above), which the host's Plugin Center and the
+// official index read; without it both showed the supported ABIs as unknown (plugin-center P21.1).
+// zh-CN: 共享门禁 (platform-versions native-alignment) 同时检查每个已装配的 APK, 并写入 org.autojs.plugin.contract.SUPPORTED_ABIS
+// meta-data (即上面四个 ABI), 供宿主插件中心与官方索引读取; 没有它时两处都把支持的 ABI 显示为未知 (plugin-center P21.1).
+nativeAlignment { expectNoNativeLibraries.set(false) }
 
 fun elfMinimumLoadAlignment(bytes: ByteArray): Long {
     check(bytes.size > 0x40 && bytes[0] == 0x7F.toByte() && bytes[1] == 'E'.code.toByte() && bytes[2] == 'L'.code.toByte() && bytes[3] == 'F'.code.toByte()) {
@@ -304,9 +312,11 @@ android {
     }
 
     // Single APK (roadmap T20, T34): no `splits` block and PluginInfo.supportedAbis is an explicit empty array; the only
-    // native code is the Compose graphics-path library, kept uncompressed so it maps straight from the APK.
+    // native code is the Compose graphics-path library, kept uncompressed so it maps straight from the APK. The supported
+    // ABIs reach the host and the official index through the SUPPORTED_ABIS meta-data written by `nativeAlignment` below.
     // zh-CN: 单 APK (路线图 T20, T34): 没有 `splits` 块, PluginInfo.supportedAbis 为显式空数组; 唯一的原生代码是 Compose 的
-    // graphics-path 库, 不压缩存储, 直接从 APK 映射.
+    // graphics-path 库, 不压缩存储, 直接从 APK 映射. 支持的 ABI 经下方 `nativeAlignment` 写入的 SUPPORTED_ABIS meta-data
+    // 交给宿主与官方索引.
     packaging {
         jniLibs.useLegacyPackaging = false
         resources.pickFirsts.addAll(

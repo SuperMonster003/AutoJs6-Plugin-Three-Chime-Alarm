@@ -263,7 +263,11 @@
     <string name="permissions_vendor_banner">Notifications en bannière</string>
     <string name="permissions_vendor_banner_guide">Le système n\'indique pas cet état. Activez \"Bannière\" dans les réglages de notification de ce plugin, sinon l\'écran de sonnerie ne s\'ouvre pas seul sur l\'écran de verrouillage, sauf si l\'affichage par-dessus les autres applis est autorisé.</string>
     <string name="plugin_description">Réveil, minuteurs et chronomètre avec règles de répétition de calendrier, jours fériés, défis d\'arrêt, sonnerie parlée et scripts déclenchés à la sonnerie</string>
-    <string name="release_history_title">Historique des versions</string>
+    <string name="release_history">Historique des versions</string>
+    <string name="release_history_collapse_all">Tout réduire</string>
+    <string name="release_history_collapsed">Réduit</string>
+    <string name="release_history_expand_all">Tout développer</string>
+    <string name="release_history_expanded">Développé</string>
     <string name="release_history_unavailable">Impossible de charger l\'historique des versions</string>
     <string name="ring_action_dismiss">Arrêter</string>
     <string name="ring_action_snooze">Répéter</string>
@@ -343,7 +347,7 @@
     <string name="settings_night_mode">Mode nuit</string>
     <string name="settings_notices_summary">Mozilla Public License 2.0 et mentions de tiers</string>
     <string name="settings_region_format">Région et format</string>
-    <string name="settings_release_history_summary">Lire l\'historique des versions inclus dans le plugin</string>
+    <string name="settings_release_history_summary">Consulter l\'historique des versions inclus dans l\'application</string>
     <string name="settings_save_failed">Impossible d\'enregistrer le paramètre</string>
     <string name="settings_saved">Enregistré</string>
     <string name="settings_stopwatch_notification">Notification du chronomètre</string>

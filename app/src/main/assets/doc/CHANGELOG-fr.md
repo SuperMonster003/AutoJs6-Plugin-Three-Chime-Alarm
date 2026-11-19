@@ -4,6 +4,13 @@
 
 ******
 
+# v1.3.1
+
+###### 2026/11/19
+
+* `Correctif` Les informations du plugin dans le Centre des plugins d'AutoJs6 indiquaient "Inconnu" pour les "ABI prises en charge" de ce plugin; elles indiquent maintenant arm64-v8a, armeabi-v7a, x86_64 et x86
+* `Amélioration` La page Historique des versions se développe et se réduit désormais par version: une version réduite affiche sa date et le nombre d'entrées par catégorie, une version développée ne nomme chaque catégorie qu'une fois; toutes les versions peuvent être développées ou réduites d'un coup, et la plus récente s'ouvre développée; la page a pour sous-titre le nom du plugin
+
 # v1.3.0
 
 ###### 2026/11/14

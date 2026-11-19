@@ -288,6 +288,13 @@ Les plans, décisions de conception et l'avancement sont suivis sous forme de li
 
 ******
 
+#### v1.3.1
+
+_2026/11/19_
+
+- `Correctif` Les informations du plugin dans le Centre des plugins d'AutoJs6 indiquaient "Inconnu" pour les "ABI prises en charge" de ce plugin; elles indiquent maintenant arm64-v8a, armeabi-v7a, x86_64 et x86
+- `Amélioration` La page Historique des versions se développe et se réduit désormais par version: une version réduite affiche sa date et le nombre d'entrées par catégorie, une version développée ne nomme chaque catégorie qu'une fois; toutes les versions peuvent être développées ou réduites d'un coup, et la plus récente s'ouvre développée; la page a pour sous-titre le nom du plugin
+
 #### v1.3.0
 
 _2026/11/14_
@@ -313,19 +320,6 @@ _2026/11/13_
 - `Fonctionnalité` Décision d'un script avant la sonnerie (beforeRing): un script enregistré est lancé avant la sonnerie (60 secondes par défaut, de 15 secondes à 5 minutes) et peut sauter cette sonnerie, ou la laisser sonner avec un autre libellé, son, texte lu ou vibreur pour cette fois; si le script ne décide pas à temps, échoue ou si AutoJs6 n'est pas disponible, l'alarme sonne comme prévu
 - `Fonctionnalité` Nouveautés du module de script AutoJs6: alarms.holidays (lister les régions, savoir si un jour est férié ou ouvré, lister les jours fériés d'une année, consulter et actualiser les données), l'option holidays des alarmes, skip / ring de l'événement beforeRing, et les warnings de alarms.capabilities() sur les données manquantes et les années estimées (demande AutoJs6 6.8.1; voir la [documentation d'AutoJs6](https://docs.autojs6.com/#/alarms))
 - `Fonctionnalité` Nouvel outil du plugin holiday_check pour savoir, via le plugin MCP Server ou plugins.tools.call, si un jour est férié ou ouvré dans une région et le nom du jour férié; alarm_add et alarm_update acceptent l'option holidays
-
-#### v1.1.0
-
-_2026/11/12_
-
-- `Note` alarms.timers et alarms.stopwatch dans les scripts demandent AutoJs6 6.8.1 (version interne 6641) ou ultérieure et ce plugin en version 1.1.0 ou ultérieure; avec le plugin 1.0.x, les appels échouent avec un message invitant à mettre à jour le plugin
-- `Fonctionnalité` Minuteurs: jusqu'à 20 minuteurs simultanés, avec une durée prédéfinie (de 1 minute à 1 heure) ou personnalisée (de 1 seconde à 100 heures) et un libellé facultatif; ils se mettent en pause, reprennent, se prolongent d'une minute et se réinitialisent, et sonnent comme les alarmes à la fin
-- `Fonctionnalité` Un minuteur en cours affiche son compte à rebours dans le volet des notifications, d'où il peut être mis en pause, prolongé d'une minute ou annulé; les minuteurs continuent après un redémarrage, et un minuteur arrivé à échéance pendant que l'appareil était éteint sonne après le démarrage (avec plus de 5 minutes de retard, il ne laisse qu'une notification manquée)
-- `Fonctionnalité` Chronomètre: démarrage, pause, reprise et réinitialisation, jusqu'à 100 tours, avec le tour le plus rapide et le plus lent signalés; pendant qu'il tourne, il s'affiche dans le volet des notifications, ce qui se désactive dans le groupe "Minuteurs et chronomètre" des paramètres
-- `Fonctionnalité` La barre de navigation du bas passe entre les pages des alarmes, des minuteurs et du chronomètre
-- `Fonctionnalité` Nouveaux alarms.timers et alarms.stopwatch dans le module de script AutoJs6 (demande AutoJs6 6.8.1): démarrage, consultation, pause, reprise, ajout ou retrait de temps, réinitialisation et annulation des minuteurs, scripts enregistrés sur un minuteur et lancés à la sonnerie et à d'autres événements, et contrôle du chronomètre avec ses tours (voir la [documentation d'AutoJs6](https://docs.autojs6.com/#/alarms))
-- `Fonctionnalité` Nouveaux outils du plugin timer_start, timer_list et timer_control pour démarrer, lister, mettre en pause, reprendre, prolonger, réinitialiser et annuler des minuteurs via le plugin MCP Server ou plugins.tools.call
-- `Fonctionnalité` Horloge du système: les demandes de minuteur sont aussi traitées; d'autres applications peuvent faire démarrer un minuteur au plugin, ouvrir l'écran des minuteurs ou arrêter un minuteur qui sonne
 
 ##### Pour plus d'historique des versions
 

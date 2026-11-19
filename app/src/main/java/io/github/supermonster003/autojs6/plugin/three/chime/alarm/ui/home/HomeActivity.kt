@@ -88,7 +88,7 @@ import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.permissions
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.permissions.Permissions
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.permissions.PermissionsActivity
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.permissions.titleOf
-import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.release.ReleaseHistoryActivity
+import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.release.openReleaseHistory
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.holiday.HolidayStatusCard
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.holiday.HolidayView
 import io.github.supermonster003.autojs6.plugin.three.chime.alarm.ui.holiday.statusLines
@@ -181,7 +181,7 @@ class HomeActivity : StandaloneActivity() {
         UpdateDialogs(
             updates,
             onOpenRelease = { url -> runCatching { startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) } },
-            onReleaseHistory = { startActivity(Intent(this, ReleaseHistoryActivity::class.java)) },
+            onReleaseHistory = { openReleaseHistory() },
         )
     }
 

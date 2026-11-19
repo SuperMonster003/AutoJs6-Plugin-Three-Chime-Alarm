@@ -263,8 +263,12 @@
     <string name="permissions_vendor_banner">배너 알림</string>
     <string name="permissions_vendor_banner_guide">시스템이 이 항목의 상태를 제공하지 않습니다. 이 플러그인의 알림 설정에서 \"배너\"를 켜세요. 켜지 않으면 다른 앱 위에 표시를 허용하지 않은 한 잠금 화면에서 알람 화면이 자동으로 열리지 않습니다.</string>
     <string name="plugin_description">달력 반복 규칙, 공휴일, 해제 챌린지, 음성 읽기 알람, 알람이 울릴 때 스크립트 연동을 지원하는 알람, 타이머, 스톱워치 앱</string>
-    <string name="release_history_title">버전 기록</string>
-    <string name="release_history_unavailable">버전 기록을 불러올 수 없습니다</string>
+    <string name="release_history">릴리스 기록</string>
+    <string name="release_history_collapse_all">모두 접기</string>
+    <string name="release_history_collapsed">접힘</string>
+    <string name="release_history_expand_all">모두 펼치기</string>
+    <string name="release_history_expanded">펼쳐짐</string>
+    <string name="release_history_unavailable">릴리스 기록을 불러올 수 없습니다</string>
     <string name="ring_action_dismiss">해제</string>
     <string name="ring_action_snooze">다시 알림</string>
     <string name="ring_challenge_auto_stop">%1$d:%2$02d 후 자동 중지</string>
@@ -343,7 +347,7 @@
     <string name="settings_night_mode">야간 모드</string>
     <string name="settings_notices_summary">Mozilla Public License 2.0 및 서드파티 고지</string>
     <string name="settings_region_format">지역 및 형식</string>
-    <string name="settings_release_history_summary">플러그인에 포함된 릴리스 기록 보기</string>
+    <string name="settings_release_history_summary">앱에 포함된 릴리스 기록을 확인합니다</string>
     <string name="settings_save_failed">설정을 저장할 수 없습니다</string>
     <string name="settings_saved">저장됨</string>
     <string name="settings_stopwatch_notification">스톱워치 알림</string>

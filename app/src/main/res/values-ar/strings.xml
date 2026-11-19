@@ -263,7 +263,11 @@
     <string name="permissions_vendor_banner">إشعارات اللافتة</string>
     <string name="permissions_vendor_banner_guide">لا يوفر النظام حالة هذا العنصر. فعّل \"لافتة\" في إعدادات إشعارات هذه الإضافة وإلا فلن تفتح شاشة الرنين تلقائيا على شاشة القفل ما لم يُسمح بالظهور فوق التطبيقات الأخرى.</string>
     <string name="plugin_description">منبه ومؤقتات وساعة إيقاف بقواعد تكرار تقويمية ومراعاة العطلات وتحديات الإيقاف وقراءة صوتية وتشغيل السكربتات عند الرنين</string>
-    <string name="release_history_title">سجل الإصدارات</string>
+    <string name="release_history">سجل الإصدارات</string>
+    <string name="release_history_collapse_all">طيّ الكل</string>
+    <string name="release_history_collapsed">مطوي</string>
+    <string name="release_history_expand_all">توسيع الكل</string>
+    <string name="release_history_expanded">موسَّع</string>
     <string name="release_history_unavailable">تعذر تحميل سجل الإصدارات</string>
     <string name="ring_action_dismiss">إيقاف</string>
     <string name="ring_action_snooze">غفوة</string>
@@ -343,7 +347,7 @@
     <string name="settings_night_mode">الوضع الليلي</string>
     <string name="settings_notices_summary">رخصة Mozilla Public License 2.0 وإشعارات الجهات الخارجية</string>
     <string name="settings_region_format">المنطقة والتنسيق</string>
-    <string name="settings_release_history_summary">قراءة سجل الإصدارات المضمن في الإضافة</string>
+    <string name="settings_release_history_summary">عرض سجل الإصدارات المضمن في التطبيق</string>
     <string name="settings_save_failed">تعذر حفظ الإعداد</string>
     <string name="settings_saved">تم الحفظ</string>
     <string name="settings_stopwatch_notification">إشعار ساعة الإيقاف</string>

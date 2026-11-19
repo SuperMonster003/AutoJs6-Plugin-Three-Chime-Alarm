@@ -288,6 +288,13 @@ Plans, design decisions and progress are tracked as a checklist in ROADMAP.md. U
 
 ******
 
+#### v1.3.1
+
+_2026/11/19_
+
+- `Fix` The plugin information in the AutoJs6 Plugin center showed the "Supported ABIs" of this plugin as "Unknown"; it now shows arm64-v8a, armeabi-v7a, x86_64 and x86
+- `Improvement` The release history page now expands and collapses by version: a collapsed version shows its date and the number of entries per category, an expanded one names each category once; all versions can be expanded or collapsed at once, and the newest one opens expanded; the page is titled "Release history" (formerly "Version history") with the plugin name as the subtitle, and its entries in the "About" section of the settings and in the update dialog are renamed to match
+
 #### v1.3.0
 
 _2026/11/14_
@@ -313,19 +320,6 @@ _2026/11/13_
 - `Feature` Decided by a script before the ring (beforeRing): a registered script is started before the ring (60 seconds by default, 15 seconds to 5 minutes) and can skip this ring, or let it ring with a different label, sound, spoken text or vibration this time only; when the script does not decide in time, fails or AutoJs6 is unavailable, the alarm rings as usual
 - `Feature` New in the AutoJs6 script module: alarms.holidays (list regions, tell holidays and workdays, list a year's holidays, show and refresh the data), the holidays option of alarms, skip / ring of the beforeRing event, and warnings in alarms.capabilities() about missing data and estimated years (needs AutoJs6 6.8.1; see the [AutoJs6 documentation](https://docs.autojs6.com/#/alarms))
 - `Feature` New plugin tool holiday_check tells through the MCP Server plugin or plugins.tools.call whether a day is a holiday or a workday in a region and the holiday's name; alarm_add and alarm_update accept the holidays option
-
-#### v1.1.0
-
-_2026/11/12_
-
-- `Hint` alarms.timers and alarms.stopwatch in scripts need AutoJs6 6.8.1 (internal build 6641) or later and this plugin 1.1.0 or later; with plugin 1.0.x the calls fail with a message asking to update the plugin
-- `Feature` Timers: up to 20 timers at once, with a preset length (1 minute to 1 hour) or a custom one (1 second to 100 hours) and an optional label; timers can be paused, resumed, extended by 1 minute and reset, and ring like alarms when they end
-- `Feature` A running timer shows its countdown in the notification shade, where it can be paused, extended by 1 minute or cancelled; timers keep counting after a reboot, and a timer that ended while the device was off rings after the boot (if it is more than 5 minutes overdue, only a missed notification is left)
-- `Feature` Stopwatch: start, pause, resume and reset, up to 100 laps, with the fastest and the slowest lap marked; while it runs it shows in the notification shade, which can be turned off in the "Timers and stopwatch" group of the settings
-- `Feature` The bottom navigation switches between the alarms, timers and stopwatch pages
-- `Feature` New alarms.timers and alarms.stopwatch in the AutoJs6 script module (needs AutoJs6 6.8.1): starting, querying, pausing, resuming, adding or removing time, resetting and cancelling timers, scripts registered for a timer to start on ring and other events, and controlling the stopwatch with laps (see [AutoJs6 documentation](https://docs.autojs6.com/#/alarms))
-- `Feature` New plugin tools timer_start, timer_list and timer_control to start, list, pause, resume, extend, reset and cancel timers through the MCP Server plugin or plugins.tools.call
-- `Feature` System clock: timer requests are handled too; other apps can have the plugin start a timer, open the timers page or dismiss a ringing timer
 
 ##### For more release history, refer to
 

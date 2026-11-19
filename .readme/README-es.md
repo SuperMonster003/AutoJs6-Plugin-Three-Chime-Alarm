@@ -288,6 +288,13 @@ Los planes, las decisiones de diseño y el progreso se registran como lista de v
 
 ******
 
+#### v1.3.1
+
+_2026/11/19_
+
+- `Corrección` La información del complemento en el Centro de plugins de AutoJs6 mostraba "Desconocido" en las "ABI compatibles" de este complemento; ahora muestra arm64-v8a, armeabi-v7a, x86_64 y x86
+- `Mejora` La página Historial de versiones ahora se expande y contrae por versión: una versión contraída muestra su fecha y el número de entradas por categoría, una expandida nombra cada categoría una sola vez; todas las versiones se pueden expandir o contraer a la vez y la más reciente se abre expandida; la página lleva el nombre del complemento como subtítulo
+
 #### v1.3.0
 
 _2026/11/14_
@@ -313,19 +320,6 @@ _2026/11/13_
 - `Función` Decisión de un script antes de sonar (beforeRing): un script registrado se inicia antes de sonar (60 segundos de forma predeterminada, de 15 segundos a 5 minutos) y puede omitir esta vez o dejarla sonar con otra etiqueta, otro sonido, otro texto leído u otra vibración solo esta vez; si el script no decide a tiempo, falla o AutoJs6 no está disponible, la alarma suena como siempre
 - `Función` Novedades del módulo de scripts de AutoJs6: alarms.holidays (listar regiones, saber si un día es festivo o laborable, listar los festivos de un año, consultar y actualizar los datos), la opción holidays de las alarmas, skip / ring del evento beforeRing y los warnings de alarms.capabilities() sobre datos que faltan y años estimados (requiere AutoJs6 6.8.1; consulte la [documentación de AutoJs6](https://docs.autojs6.com/#/alarms))
 - `Función` Nueva herramienta del complemento holiday_check para saber, mediante el complemento MCP Server o plugins.tools.call, si un día es festivo o laborable en una región y el nombre del festivo; alarm_add y alarm_update aceptan la opción holidays
-
-#### v1.1.0
-
-_2026/11/12_
-
-- `Aviso` alarms.timers y alarms.stopwatch en los scripts requieren AutoJs6 6.8.1 (compilación interna 6641) o posterior y este complemento en la versión 1.1.0 o posterior; con el complemento 1.0.x las llamadas fallan con un mensaje que pide actualizar el complemento
-- `Función` Temporizadores: hasta 20 temporizadores a la vez, con una duración predefinida (de 1 minuto a 1 hora) o personalizada (de 1 segundo a 100 horas) y una etiqueta opcional; se pueden pausar, reanudar, alargar 1 minuto y restablecer, y al terminar suenan como las alarmas
-- `Función` Un temporizador en marcha muestra su cuenta atrás en el panel de notificaciones, desde donde se puede pausar, alargar 1 minuto o cancelar; los temporizadores siguen contando tras un reinicio, y uno que terminó con el dispositivo apagado suena después del arranque (si lleva más de 5 minutos de retraso, solo deja una notificación de perdido)
-- `Función` Cronómetro: iniciar, pausar, reanudar y restablecer, hasta 100 vueltas, con la vuelta más rápida y la más lenta señaladas; mientras está en marcha aparece en el panel de notificaciones, lo que se puede desactivar en el grupo "Temporizadores y cronómetro" de los ajustes
-- `Función` La barra de navegación inferior cambia entre las páginas de alarmas, temporizadores y cronómetro
-- `Función` Nuevos alarms.timers y alarms.stopwatch en el módulo de scripts de AutoJs6 (requiere AutoJs6 6.8.1): iniciar, consultar, pausar, reanudar, añadir o quitar tiempo, restablecer y cancelar temporizadores, scripts registrados en un temporizador que se inician al sonar y en otros eventos, y control del cronómetro con sus vueltas (consulte la [documentación de AutoJs6](https://docs.autojs6.com/#/alarms))
-- `Función` Nuevas herramientas del complemento timer_start, timer_list y timer_control para iniciar, listar, pausar, reanudar, alargar, restablecer y cancelar temporizadores mediante el complemento MCP Server o plugins.tools.call
-- `Función` Reloj del sistema: también atiende solicitudes de temporizador; otras aplicaciones pueden hacer que el complemento inicie un temporizador, abra la pantalla de temporizadores o apague un temporizador que suena
 
 ##### Para más historial de versiones
 

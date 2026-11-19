@@ -4,6 +4,13 @@
 
 ******
 
+# v1.3.1
+
+###### 2026/11/19
+
+* `Corrección` La información del complemento en el Centro de plugins de AutoJs6 mostraba "Desconocido" en las "ABI compatibles" de este complemento; ahora muestra arm64-v8a, armeabi-v7a, x86_64 y x86
+* `Mejora` La página Historial de versiones ahora se expande y contrae por versión: una versión contraída muestra su fecha y el número de entradas por categoría, una expandida nombra cada categoría una sola vez; todas las versiones se pueden expandir o contraer a la vez y la más reciente se abre expandida; la página lleva el nombre del complemento como subtítulo
+
 # v1.3.0
 
 ###### 2026/11/14
