@@ -273,12 +273,22 @@ class HomePagesTest {
 
     private fun waitShown(tag: String, unmerged: Boolean = false) = compose.waitUntil(WAIT_MILLIS) { compose.shows(hasTestTag(tag), unmerged) }
 
-    /** Scrolls the timer list to the card of [id] and clicks [tag]. zh-CN: 把计时器列表滚动到 [id] 的卡片并点击 [tag]. */
+    /**
+     * Scrolls the timer list to the card of [id] and clicks [tag]. The store has a new timer before the list has its card,
+     * so the list must know the key before it can scroll to it.
+     * zh-CN: 把计时器列表滚动到 [id] 的卡片并点击 [tag]. 新计时器先进入存储, 列表稍后才有它的卡片, 所以先等列表认得这个 key 再滚动.
+     */
     private fun tap(id: String, tag: String) {
+        compose.waitUntil(WAIT_MILLIS) { timerListIndexOf(id) >= 0 }
         compose.onNodeWithTag("chime.timers.list").performScrollToKey(id)
         waitShown(tag)
         compose.onNodeWithTag(tag).performClick()
     }
+
+    /** The index of [key] in the timer list, -1 while the list (or the key) is not there. zh-CN: [key] 在计时器列表中的位置, 列表或该 key 还没有时为 -1. */
+    private fun timerListIndexOf(key: Any): Int = runCatching {
+        compose.onNodeWithTag("chime.timers.list").fetchSemanticsNode().config[SemanticsProperties.IndexForKey](key)
+    }.getOrDefault(-1)
 
     private fun waitForNewTimer(): String {
         var id: String? = null
